@@ -1,0 +1,10 @@
+name = "canon-enrichment"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "1cdb8ed8c09144f1956a7f7fa24b566e"
+
+# Set secrets via CLI (never put actual keys here):
+#   wrangler secret put SERPAPI_KEY
