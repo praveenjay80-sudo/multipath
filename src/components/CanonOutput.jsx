@@ -45,7 +45,7 @@ function BookIcon() {
   );
 }
 
-export default function CanonOutput({ parsed, isStreaming, getCitation, onExplain, getExplanation }) {
+export default function CanonOutput({ parsed, isStreaming, getCitation, getVerification, onExplain, getExplanation }) {
   if (!parsed) return null;
 
   return (
@@ -64,6 +64,7 @@ export default function CanonOutput({ parsed, isStreaming, getCitation, onExplai
               key={tier.sectionKey}
               tier={tier}
               getCitation={getCitation}
+              getVerification={getVerification}
               onExplain={onExplain}
               getExplanation={getExplanation}
               isLastStreaming={isStreaming && idx === parsed.tiers.length - 1}

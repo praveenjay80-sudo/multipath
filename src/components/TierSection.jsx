@@ -1,8 +1,13 @@
 import BookEntry from './BookEntry';
 
-export default function TierSection({ tier, isLastStreaming, getCitation, onExplain, getExplanation }) {
+export default function TierSection({ tier, isLastStreaming, getCitation, getVerification, onExplain, getExplanation }) {
   const { config, isPaper } = tier;
   const isInverted = config.invertHeader;
+
+  // Compute section-level verification stats (only when enrichment has run)
+  const verifiedCount = tier.entries?.filter(e => getVerification?.(e.title)?.found === true).length ?? null;
+  const unverifiedCount = tier.entries?.filter(e => getVerification?.(e.title)?.found === false).length ?? null;
+  const enrichmentRan = tier.entries?.some(e => getVerification?.(e.title) !== null) ?? false;
 
   return (
     <div className={`border-l-4 ${config.border} bg-white shadow-sm overflow-hidden`}>
@@ -24,6 +29,16 @@ export default function TierSection({ tier, isLastStreaming, getCitation, onExpl
             {tier.entries?.length > 0 && (
               <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${config.badge}`}>
                 {tier.entries.length} {tier.entries.length === 1 ? 'work' : 'works'}
+              </span>
+            )}
+            {enrichmentRan && unverifiedCount > 0 && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 font-medium">
+                {unverifiedCount} unverified
+              </span>
+            )}
+            {enrichmentRan && unverifiedCount === 0 && verifiedCount > 0 && (
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isInverted ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                ✓ all verified
               </span>
             )}
             {isLastStreaming && (
@@ -48,6 +63,7 @@ export default function TierSection({ tier, isLastStreaming, getCitation, onExpl
               entry={entry}
               isPaper={isPaper}
               citationData={getCitation?.(entry.title)}
+              verification={getVerification?.(entry.title)}
               onExplain={onExplain}
               explanation={getExplanation?.(entry.title)}
             />

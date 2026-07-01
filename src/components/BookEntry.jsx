@@ -72,7 +72,7 @@ function renderExplanation(text) {
   });
 }
 
-export default function BookEntry({ entry, isPaper, citationData: cit, onExplain, explanation }) {
+export default function BookEntry({ entry, isPaper, citationData: cit, verification, onExplain, explanation }) {
   const [showExplain, setShowExplain] = useState(false);
 
   function handleExplainToggle() {
@@ -85,6 +85,9 @@ export default function BookEntry({ entry, isPaper, citationData: cit, onExplain
   const isLoading = explanation === 'loading';
   const isError = explanation === 'error';
   const hasExplanation = explanation && explanation !== 'loading' && explanation !== 'error';
+
+  const isUnverified = verification && !verification.found;
+  const hasYearMismatch = verification?.yearMismatch;
 
   return (
     <div className="py-5 border-b border-stone-100 last:border-0 last:pb-0">
@@ -101,6 +104,27 @@ export default function BookEntry({ entry, isPaper, citationData: cit, onExplain
           </span>
         )}
       </div>
+
+      {/* Verification warnings */}
+      {isUnverified && (
+        <div className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 mb-2 border rounded ${
+          isPaper
+            ? 'bg-red-50 border-red-200 text-red-700'
+            : 'bg-amber-50 border-amber-200 text-amber-700'
+        }`}>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M5 1L9 9H1L5 1Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+            <path d="M5 4v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            <circle cx="5" cy="7.5" r="0.5" fill="currentColor"/>
+          </svg>
+          {isPaper ? 'Paper not found in CrossRef or OpenAlex — verify manually' : 'Not indexed in academic databases'}
+        </div>
+      )}
+      {hasYearMismatch && (
+        <div className="inline-flex items-center gap-1.5 text-xs px-2 py-1 mb-2 ml-2 bg-amber-50 border border-amber-200 text-amber-700 rounded">
+          Year: Claude says {hasYearMismatch.llm}, database says {hasYearMismatch.db}
+        </div>
+      )}
 
       {/* Badges */}
       {cit && (cit.fwci != null || cit.isOA || cit.scholarLink || cit.doi || cit.type || cit.venue) && (

@@ -13,34 +13,57 @@ import { useWorkExplainer } from './hooks/useWorkExplainer';
 import { parseCanon } from './utils/parseCanon';
 import { copyMarkdown } from './utils/exportMarkdown';
 
+function WorkRow({ w }) {
+  return (
+    <div className="pb-3 border-b border-stone-100 last:border-0 last:pb-0">
+      <div className="flex flex-wrap items-baseline gap-2">
+        <span className="font-semibold text-sm text-stone-800">{w.title}</span>
+        {w.year && <span className="text-stone-400 text-xs">({w.year})</span>}
+      </div>
+      {w.authors && <div className="text-xs text-stone-500 mt-0.5">{w.authors}</div>}
+      <div className="flex flex-wrap gap-2 mt-1.5">
+        {w.citationCount != null && (
+          <span className="text-xs font-mono text-stone-500">{w.citationCount.toLocaleString()} citations</span>
+        )}
+        {w.fwci != null && <span className="text-xs text-stone-500">FWCI {w.fwci.toFixed(2)}</span>}
+        {w.venue && <span className="text-xs text-stone-400 italic">{w.venue}</span>}
+        {w.isOA && w.oaUrl && (
+          <a href={w.oaUrl} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 hover:underline">Open Access</a>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function MissingWorksPanel({ missing }) {
   if (!missing.length) return null;
+  const definitive = missing.filter(w => w.gapTier === 'definitive');
+  const possible = missing.filter(w => w.gapTier === 'possible');
   return (
-    <div className="mt-6 border border-amber-200 bg-amber-50 p-5">
-      <h3 className="text-xs font-mono uppercase tracking-widest text-amber-700 mb-3">
-        High-Impact Works Not in This Canon
-      </h3>
-      <div className="space-y-3">
-        {missing.map((w, i) => (
-          <div key={i} className="pb-3 border-b border-amber-100 last:border-0 last:pb-0">
-            <div className="flex flex-wrap items-baseline gap-2">
-              <span className="font-semibold text-sm text-stone-800">{w.title}</span>
-              {w.year && <span className="text-stone-400 text-xs">({w.year})</span>}
-            </div>
-            {w.authors && <div className="text-xs text-stone-500 mt-0.5">{w.authors}</div>}
-            <div className="flex flex-wrap gap-2 mt-1.5">
-              {w.citationCount != null && (
-                <span className="text-xs font-mono text-stone-500">{w.citationCount.toLocaleString()} citations</span>
-              )}
-              {w.fwci != null && <span className="text-xs text-stone-500">FWCI {w.fwci.toFixed(2)}</span>}
-              {w.venue && <span className="text-xs text-stone-400 italic">{w.venue}</span>}
-              {w.isOA && w.oaUrl && (
-                <a href={w.oaUrl} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 hover:underline">Open Access</a>
-              )}
-            </div>
+    <div className="mt-6 space-y-4">
+      {definitive.length > 0 && (
+        <div className="border border-red-200 bg-red-50 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-red-600 shrink-0">
+              <path d="M6 1L11 10H1L6 1Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+              <path d="M6 4.5v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              <circle cx="6" cy="8" r="0.6" fill="currentColor"/>
+            </svg>
+            <h3 className="text-xs font-mono uppercase tracking-widest text-red-700">
+              Likely Missing — {definitive.length} high-impact {definitive.length === 1 ? 'work' : 'works'} with 5k+ citations not in canon
+            </h3>
           </div>
-        ))}
-      </div>
+          <div className="space-y-3">{definitive.map((w, i) => <WorkRow key={i} w={w} />)}</div>
+        </div>
+      )}
+      {possible.length > 0 && (
+        <div className="border border-amber-200 bg-amber-50 p-5">
+          <h3 className="text-xs font-mono uppercase tracking-widest text-amber-700 mb-3">
+            Possibly Missing — {possible.length} cited {possible.length === 1 ? 'work' : 'works'} (500–5k citations) not in canon
+          </h3>
+          <div className="space-y-3">{possible.map((w, i) => <WorkRow key={i} w={w} />)}</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -215,6 +238,7 @@ export default function App() {
                 parsed={parsed}
                 isStreaming={gen.phase === 'composing' || isRefining}
                 getCitation={getCitation}
+                getVerification={enrichment.getVerification}
                 onExplain={explainer.explain}
                 getExplanation={explainer.getExplanation}
               />
