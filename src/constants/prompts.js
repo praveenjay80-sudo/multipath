@@ -130,6 +130,8 @@ Non-specialist entry points only. Popular science written by masters for general
 
 ### Core
 Every genuinely foundational work regardless of difficulty. Graduate textbooks, mathematical treatises, theoretical masterworks. If every practitioner has read it or should read it, it belongs here. Apply the Textbook Tiers Check — tiers (b) and (c) must appear unless the field genuinely has none. 5–10 works.
+
+STRICT ORDERING OF TEXTBOOKS WITHIN CORE: List textbooks in strictly increasing difficulty — most accessible first, most advanced last. Difficulty order: Undergraduate → Early Graduate → Graduate → Research Level. Never place a graduate-level textbook before an undergraduate or early-graduate one. If two books share a difficulty level, put the more concrete/applied one first. Monographs and treatises may follow the textbook at the same level.
 BREADTH TEST: Core textbooks must cover the field's full scope at their level, not a single sub-application. A book on only ONE corner of the field (a specialized technique, a single application domain) belongs in Technical Depth.
 
 ### Technical Depth
@@ -229,7 +231,9 @@ Produce the canon in this exact format:
 ## Canon: [SUBFIELD NAME]
 
 ### Core Textbooks
-The standard texts every serious student of this subfield must work through — from the accessible undergraduate introduction to the graduate-level mastery text. Apply the Textbook Tiers Check above. 3–6 works.
+The standard texts every serious student of this subfield must work through. Apply the Textbook Tiers Check above. 3–6 works.
+
+STRICT ORDERING RULE: List textbooks in strictly increasing difficulty — most accessible first, most advanced last. Never place a graduate-level text before an early-graduate or undergraduate text. The first entry must be the one a student with only undergraduate background can open on day one. Order is determined by the Difficulty field: Undergraduate → Early Graduate → Graduate → Research Level. If two books share a difficulty level, put the more concrete/applied one first.
 
 BREADTH TEST: Each Core Textbook must cover the full intellectual scope of the subfield at its level — not a single application, special case, or sub-area of it. If a book covers only ONE corner of the subfield (e.g., thermal effects, curved-space formulation, supersymmetric extension, a single technique), it belongs in Research Monographs regardless of how excellent or widely used it is.
 Example: For "Quantum Field Theory", Peskin & Schroeder qualifies (covers canonical quantization, path integrals, renormalization, gauge theories). Kapusta "Finite-Temperature Field Theory" does NOT qualify — it covers only one application of QFT.
