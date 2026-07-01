@@ -17,7 +17,9 @@ function titlesMatch(a, b) {
   const wa = titleWords(a), wb = titleWords(b);
   if (!wa.length || !wb.length) return false;
   const shared = wa.filter(w => wb.includes(w)).length;
-  const threshold = Math.max(1, Math.floor(Math.min(wa.length, wb.length) * 0.5));
+  // 0.75 threshold prevents false matches between same-author books with partial title overlap
+  // (e.g. "Pattern Recognition and Machine Learning" vs "Neural Networks for Pattern Recognition")
+  const threshold = Math.max(1, Math.floor(Math.min(wa.length, wb.length) * 0.75));
   return shared >= threshold;
 }
 

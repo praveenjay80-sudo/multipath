@@ -1,3 +1,5 @@
+import { syllabusSearch } from './syllabusHarvest';
+
 const OA_BASE   = 'https://api.openalex.org';
 const S2_BASE   = 'https://api.semanticscholar.org/graph/v1';
 const OL_BASE   = 'https://openlibrary.org';
@@ -245,7 +247,7 @@ async function harvestOpenLibrary(topic, limit = 30) {
 }
 
 // ── Merge & deduplicate ──────────────────────────────────────────────────────
-function titleWords(t) {
+export function titleWords(t) {
   return (t || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 3);
 }
 
@@ -273,6 +275,8 @@ function mergeWorks(lists) {
       existing.venue = existing.venue || work.venue;
       existing.isTextbook  = existing.isTextbook  || work.isTextbook;
       existing.isRecent    = existing.isRecent    || work.isRecent;
+      existing.teachingScore = Math.max(existing.teachingScore || 0, work.teachingScore || 0);
+      existing.syllabusCount = Math.max(existing.syllabusCount || 0, work.syllabusCount || 0);
       if (!existing.year && work.year) existing.year = work.year;
       if (!existing.authors && work.authors) existing.authors = work.authors;
       // Promote type: if any source calls it a book, it's a book
@@ -286,10 +290,10 @@ function mergeWorks(lists) {
 
 // ── Export ───────────────────────────────────────────────────────────────────
 export async function harvestAll(topic, onProgress) {
-  onProgress?.('Querying OpenAlex (papers, books, recent)...');
+  onProgress?.('Querying OpenAlex, Semantic Scholar, Open Syllabus...');
 
-  // Fire all 7 sources in parallel
-  const [oaPapers, oaBooks, oaRecent, s2Papers, s2Textbooks, gbBooks, olBooks] = await Promise.all([
+  // Fire all 8 sources in parallel
+  const [oaPapers, oaBooks, oaRecent, s2Papers, s2Textbooks, gbBooks, olBooks, syllabusBooks] = await Promise.all([
     harvestOAPapers(topic, 60),
     harvestOABooks(topic, 30),
     harvestOARecent(topic, 20),
@@ -297,6 +301,7 @@ export async function harvestAll(topic, onProgress) {
     harvestS2Textbooks(topic, 20),
     harvestGoogleBooks(topic, 20),
     harvestOpenLibrary(topic, 30),
+    syllabusSearch(topic, 25),
   ]);
 
   const counts = {
@@ -307,11 +312,12 @@ export async function harvestAll(topic, onProgress) {
     'S2 textbooks':   s2Textbooks.length,
     'Google Books':   gbBooks.length,
     'Open Library':   olBooks.length,
+    'Open Syllabus':  syllabusBooks.length,
   };
 
-  onProgress?.(`Merging ${Object.values(counts).reduce((a,b)=>a+b,0)} raw results from 7 sources...`);
+  onProgress?.(`Merging ${Object.values(counts).reduce((a,b)=>a+b,0)} raw results from 8 sources...`);
 
-  const merged = mergeWorks([oaPapers, oaBooks, oaRecent, s2Papers, s2Textbooks, gbBooks, olBooks]);
+  const merged = mergeWorks([oaPapers, oaBooks, oaRecent, s2Papers, s2Textbooks, gbBooks, olBooks, syllabusBooks]);
 
   return { merged, counts };
 }

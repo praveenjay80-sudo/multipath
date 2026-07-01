@@ -103,6 +103,14 @@ export const DATA_FIRST_COMPOSE_PROMPT = `You are composing an authoritative sch
 
 Your job: ORGANISE and DESCRIBE these verified works into the canon taxonomy. You are curating, not inventing.
 
+━━━ SYLLABUS SIGNAL ━━━
+
+Works marked "SYLLABUS: assigned in N courses" come from the Open Syllabus Project — direct evidence of actual university assignment. This is the strongest possible signal of textbook canonicity and classroom adoption. Treat it as follows:
+- A book with SYLLABUS data is confirmed canonical for university courses — include it in Core unless a specificity or breadth test fails
+- SYLLABUS data determines difficulty tier: works with very high course counts are typically undergraduate-level standards; specialist works appear in fewer, more advanced courses
+- For ORDERING within Core Textbooks: sort SYLLABUS works by course count (highest count = most broadly assigned = typically most introductory); a book assigned in 5,000 courses is almost certainly more accessible than one assigned in 500
+- If two works compete for the same slot and one has SYLLABUS data, prefer the one with SYLLABUS data
+
 ━━━ EXCEPTION RULES ━━━
 
 SPECIFICITY RULE: Every work in the canon must have this topic as its primary or central subject. A work that covers this topic as one chapter among many does NOT belong here. Prefer works that are specifically about this field over general works with higher citation counts that merely include it.
@@ -204,6 +212,11 @@ Rules:
 - Prefer well-established subfield names used in academic departments and syllabi`;
 
 export const SUBFIELD_COMPOSE_PROMPT = `You are composing a focused subfield reading canon from a ranked list of real, verified works retrieved from OpenAlex, Semantic Scholar, Open Library, and Google Books. Produce exactly three sections.
+
+SYLLABUS SIGNAL: Works marked "SYLLABUS: assigned in N courses" come from the Open Syllabus Project — direct evidence of actual university assignment. This is the strongest canonicity signal available:
+- Include all SYLLABUS-confirmed works that pass the specificity and breadth tests
+- For ordering Core Textbooks: sort by course count (highest = most broadly assigned = typically most introductory); a book in 5,000 courses is almost certainly more accessible than one in 500
+- Prefer SYLLABUS-confirmed works over equally-cited works without syllabus data
 
 Rules:
 1. SPECIFICITY FIRST: Every work selected must have this specific subfield as its PRIMARY subject. A general textbook that includes one chapter on this subfield does NOT qualify. Ask: "Would a reader pick up this book specifically to learn THIS subfield?" If no — exclude it, regardless of citation count or prestige.
