@@ -164,7 +164,7 @@ export function useEnrichment() {
             },
           }));
 
-          if (dbFound) {
+          if (verifiedFound) {
             foundCount++;
             setFound(foundCount);
             setCitations(prev => ({

@@ -1,53 +1,123 @@
-const EMPTY_STATE = `Enter any academic topic above and click Explore. The field's subfields will appear here for navigation.`;
+import { TOP_LEVEL_FIELDS } from '../constants/academicFields';
 
 function formatDate(iso) {
   const d = new Date(iso);
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function TaxonomyNav({ topic, taxonomy, currentCanonTopic, onSelectTopic, onSelectSubfield, disabled }) {
+function ChevronIcon({ open }) {
+  return (
+    <svg
+      width="10" height="10" viewBox="0 0 10 10" fill="none"
+      className={`shrink-0 transition-transform ${open ? 'rotate-90' : ''}`}
+    >
+      <path d="M3 2l4 3-4 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SpinnerDot() {
+  return (
+    <span className="inline-flex gap-0.5 ml-1">
+      <span className="loading-dot" />
+      <span className="loading-dot" />
+      <span className="loading-dot" />
+    </span>
+  );
+}
+
+function FieldNav({
+  activeCanonTopic,
+  onClickTopLevel, onClickSubfield, onClickSubSubfield,
+  isExpanded, getChildren, isLoading,
+  disabled,
+}) {
   return (
     <div className="mb-5">
-      <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-0.5">
-        {taxonomy.domain}
-      </p>
-      <p className="text-xs text-stone-400 mb-3">{taxonomy.subject}</p>
+      <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-2">Fields</p>
+      <ul className="space-y-0">
+        {TOP_LEVEL_FIELDS.map(field => {
+          const expanded = isExpanded(field);
+          const subfields = getChildren(field);
+          const loading = isLoading(field);
+          const isActive = activeCanonTopic === field;
 
-      <ul className="space-y-0.5">
-        {/* Main topic — full canon */}
-        <li>
-          <button
-            onClick={() => onSelectTopic(topic)}
-            disabled={disabled}
-            className={`w-full text-left px-2 py-2 text-sm font-semibold transition-colors disabled:opacity-40 ${
-              currentCanonTopic === topic
-                ? 'bg-stone-900 text-white'
-                : 'text-stone-800 hover:bg-stone-100'
-            }`}
-          >
-            {topic}
-            <span className={`block text-xs font-normal mt-0.5 ${currentCanonTopic === topic ? 'text-stone-300' : 'text-stone-400'}`}>
-              full canon
-            </span>
-          </button>
-        </li>
+          return (
+            <li key={field}>
+              {/* Top-level field */}
+              <button
+                onClick={() => onClickTopLevel(field)}
+                disabled={disabled}
+                className={`w-full text-left px-2 py-1.5 text-sm flex items-center justify-between gap-1 transition-colors disabled:opacity-40 ${
+                  isActive
+                    ? 'bg-stone-900 text-white'
+                    : 'text-stone-700 hover:bg-stone-100'
+                }`}
+              >
+                <span className="truncate">{field}</span>
+                <span className={isActive ? 'text-stone-300' : 'text-stone-400'}>
+                  {loading ? <SpinnerDot /> : <ChevronIcon open={expanded} />}
+                </span>
+              </button>
 
-        {/* Subfields */}
-        {taxonomy.subfields.map(sf => (
-          <li key={sf}>
-            <button
-              onClick={() => onSelectSubfield(sf)}
-              disabled={disabled}
-              className={`w-full text-left px-2 py-1.5 text-sm transition-colors disabled:opacity-40 border-l-2 ml-2 ${
-                currentCanonTopic === sf
-                  ? 'border-stone-900 bg-stone-900 text-white'
-                  : 'border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 hover:bg-stone-50'
-              }`}
-            >
-              {sf}
-            </button>
-          </li>
-        ))}
+              {/* Subfields */}
+              {expanded && subfields && subfields.length > 0 && (
+                <ul className="ml-2 border-l border-stone-200">
+                  {subfields.map(sf => {
+                    const sfKey = `${field}::${sf}`;
+                    const sfExpanded = isExpanded(sfKey);
+                    const sfChildren = getChildren(sfKey);
+                    const sfLoading = isLoading(sfKey);
+                    const sfActive = activeCanonTopic === sf;
+
+                    return (
+                      <li key={sf}>
+                        <button
+                          onClick={() => onClickSubfield(field, sf)}
+                          disabled={disabled}
+                          className={`w-full text-left px-2 py-1 text-sm flex items-center justify-between gap-1 transition-colors disabled:opacity-40 ${
+                            sfActive
+                              ? 'bg-stone-900 text-white'
+                              : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
+                          }`}
+                        >
+                          <span className="truncate">{sf}</span>
+                          <span className={sfActive ? 'text-stone-300' : 'text-stone-400'}>
+                            {sfLoading ? <SpinnerDot /> : <ChevronIcon open={sfExpanded} />}
+                          </span>
+                        </button>
+
+                        {/* Sub-subfields */}
+                        {sfExpanded && sfChildren && sfChildren.length > 0 && (
+                          <ul className="ml-2 border-l border-stone-100">
+                            {sfChildren.map(ssf => {
+                              const ssfActive = activeCanonTopic === ssf;
+                              return (
+                                <li key={ssf}>
+                                  <button
+                                    onClick={() => onClickSubSubfield(ssf)}
+                                    disabled={disabled}
+                                    className={`w-full text-left px-2 py-1 text-xs flex items-center transition-colors disabled:opacity-40 ${
+                                      ssfActive
+                                        ? 'bg-stone-900 text-white'
+                                        : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
+                                    }`}
+                                  >
+                                    <span className="truncate">{ssf}</span>
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
@@ -55,26 +125,25 @@ function TaxonomyNav({ topic, taxonomy, currentCanonTopic, onSelectTopic, onSele
 
 export default function Sidebar({
   history, onLoad, onDelete, onClearAll,
-  taxonomy, currentTopic, currentCanonTopic,
-  onSelectTopic, onSelectSubfield, disabled,
+  activeCanonTopic,
+  onClickTopLevel, onClickSubfield, onClickSubSubfield,
+  isExpanded, getChildren, isLoading,
+  disabled,
 }) {
-  const hasTaxonomy = taxonomy && currentTopic;
-
   return (
     <div className="flex flex-col h-full">
-      {hasTaxonomy && (
-        <>
-          <TaxonomyNav
-            topic={currentTopic}
-            taxonomy={taxonomy}
-            currentCanonTopic={currentCanonTopic}
-            onSelectTopic={onSelectTopic}
-            onSelectSubfield={onSelectSubfield}
-            disabled={disabled}
-          />
-          {history.length > 0 && <div className="border-t border-stone-200 mb-4" />}
-        </>
-      )}
+      <FieldNav
+        activeCanonTopic={activeCanonTopic}
+        onClickTopLevel={onClickTopLevel}
+        onClickSubfield={onClickSubfield}
+        onClickSubSubfield={onClickSubSubfield}
+        isExpanded={isExpanded}
+        getChildren={getChildren}
+        isLoading={isLoading}
+        disabled={disabled}
+      />
+
+      {history.length > 0 && <div className="border-t border-stone-200 mb-4" />}
 
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-xs font-mono uppercase tracking-widest text-stone-500">
@@ -88,9 +157,7 @@ export default function Sidebar({
         )}
       </div>
 
-      {history.length === 0 && !hasTaxonomy ? (
-        <p className="text-xs text-stone-400 leading-relaxed">{EMPTY_STATE}</p>
-      ) : history.length === 0 ? null : (
+      {history.length > 0 && (
         <ul className="space-y-0.5 flex-1 overflow-y-auto">
           {history.map(item => (
             <li key={item.id} className="group flex items-start gap-1">

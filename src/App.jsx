@@ -10,7 +10,7 @@ import { useCanonGenerator } from './hooks/useCanonGenerator';
 import { useCanonHistory } from './hooks/useCanonHistory';
 import { useEnrichment } from './hooks/useEnrichment';
 import { useWorkExplainer } from './hooks/useWorkExplainer';
-import { useTaxonomy } from './hooks/useTaxonomy';
+import { useFieldNavigation } from './hooks/useFieldNavigation';
 import { parseCanon } from './utils/parseCanon';
 import { copyMarkdown } from './utils/exportMarkdown';
 
@@ -118,7 +118,7 @@ export default function App() {
   const hist = useCanonHistory();
   const enrichment = useEnrichment();
   const explainer = useWorkExplainer(gen.topic);
-  const taxonomy = useTaxonomy();
+  const fieldNav = useFieldNavigation();
   const [inputTopic, setInputTopic] = useState('');
   const [shake, setShake] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -129,7 +129,6 @@ export default function App() {
   const isRefining = gen.phase === 'refining';
   const hasOutput = !!gen.content && gen.phase !== 'idle';
 
-  // Trigger background CrossRef + OpenAlex enrichment once composition completes
   const prevPhase = useRef(null);
   useMemo(() => {
     if (gen.phase === 'complete' && prevPhase.current === 'composing' && parsed) {
@@ -165,20 +164,22 @@ export default function App() {
     if (!inputTopic.trim()) { triggerShake(); return; }
     gen.reset();
     enrichment.clear();
-    taxonomy.clear();
-    taxonomy.fetch(inputTopic.trim());
-  }
-
-  function handleSelectSubfield(subfield) {
-    enrichment.clear();
-    taxonomy.clear();
-    gen.generateCanon(subfield, 'subfield');
-  }
-
-  function handleGenerateBroadly() {
-    enrichment.clear();
-    taxonomy.clear();
     gen.generateCanon(inputTopic.trim(), 'full');
+  }
+
+  function handleClickTopLevel(field) {
+    fieldNav.clickTopLevel(field);
+  }
+
+  function handleClickSubfield(parent, sf) {
+    enrichment.clear();
+    fieldNav.clickSubfield(parent, sf);
+    gen.generateCanon(sf, 'subfield');
+  }
+
+  function handleClickSubSubfield(ssf) {
+    enrichment.clear();
+    gen.generateCanon(ssf, 'subfield');
   }
 
   function handleSave() {
@@ -188,7 +189,6 @@ export default function App() {
   function handleLoad(item) {
     setInputTopic(item.topic);
     enrichment.clear();
-    taxonomy.clear();
     gen.loadContent(item.topic, item.content);
     setMobileSidebarOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -197,7 +197,6 @@ export default function App() {
   function handleNew() {
     gen.reset();
     enrichment.clear();
-    taxonomy.clear();
     setInputTopic('');
   }
 
@@ -222,24 +221,6 @@ export default function App() {
               disabled={isGenerating || isRefining}
             />
 
-            {/* Taxonomy loading */}
-            {taxonomy.loading && (
-              <div className="mt-6 flex items-center gap-2.5 text-sm text-stone-400">
-                <span className="flex gap-0.5">
-                  <span className="loading-dot" />
-                  <span className="loading-dot" />
-                  <span className="loading-dot" />
-                </span>
-                Mapping subfields...
-              </div>
-            )}
-
-            {/* Idle guidance after taxonomy loads */}
-            {taxonomy.taxonomy && gen.phase === 'idle' && !gen.content && (
-              <div className="mt-6 border border-stone-200 bg-stone-50 px-6 py-5 text-sm text-stone-500">
-                Select a subfield or the full field from the sidebar to generate its canon.
-              </div>
-            )}
 
             {/* Harvest + scoring phases */}
             {(gen.phase === 'harvesting' || gen.phase === 'scoring') && (
@@ -312,11 +293,13 @@ export default function App() {
                 onLoad={handleLoad}
                 onDelete={hist.deleteCanon}
                 onClearAll={hist.clearAll}
-                taxonomy={taxonomy.taxonomy}
-                currentTopic={inputTopic}
-                currentCanonTopic={gen.topic}
-                onSelectTopic={handleGenerateBroadly}
-                onSelectSubfield={handleSelectSubfield}
+                activeCanonTopic={gen.topic}
+                onClickTopLevel={handleClickTopLevel}
+                onClickSubfield={handleClickSubfield}
+                onClickSubSubfield={handleClickSubSubfield}
+                isExpanded={fieldNav.isExpanded}
+                getChildren={fieldNav.getChildren}
+                isLoading={fieldNav.isLoading}
                 disabled={isGenerating || isRefining}
               />
             </div>
@@ -328,7 +311,7 @@ export default function App() {
         onClick={() => setMobileSidebarOpen(true)}
         className="lg:hidden fixed bottom-6 right-6 bg-stone-900 text-white text-xs px-4 py-2.5 shadow-lg font-mono uppercase tracking-wider"
       >
-        {taxonomy.taxonomy ? `Topics` : `Saved${hist.history.length > 0 ? ` (${hist.history.length})` : ''}`}
+        {`Fields${hist.history.length > 0 ? ` · ${hist.history.length} saved` : ''}`}
       </button>
 
       {mobileSidebarOpen && (
@@ -337,7 +320,7 @@ export default function App() {
           <div className="relative bg-white max-h-[70vh] overflow-y-auto p-6 shadow-xl">
             <div className="flex items-center justify-between mb-6">
               <span className="text-xs font-mono uppercase tracking-widest text-stone-500">
-                {taxonomy.taxonomy ? 'Topics & Saved' : 'Saved Canons'}
+                Fields & Saved
               </span>
               <button onClick={() => setMobileSidebarOpen(false)} className="text-stone-400 hover:text-stone-700">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -350,11 +333,13 @@ export default function App() {
               onLoad={handleLoad}
               onDelete={hist.deleteCanon}
               onClearAll={hist.clearAll}
-              taxonomy={taxonomy.taxonomy}
-              currentTopic={inputTopic}
-              currentCanonTopic={gen.topic}
-              onSelectTopic={handleGenerateBroadly}
-              onSelectSubfield={handleSelectSubfield}
+              activeCanonTopic={gen.topic}
+              onClickTopLevel={handleClickTopLevel}
+              onClickSubfield={handleClickSubfield}
+              onClickSubSubfield={handleClickSubSubfield}
+              isExpanded={fieldNav.isExpanded}
+              getChildren={fieldNav.getChildren}
+              isLoading={fieldNav.isLoading}
               disabled={isGenerating || isRefining}
             />
           </div>
