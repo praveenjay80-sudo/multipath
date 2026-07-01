@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { TAXONOMY_SYSTEM_PROMPT } from '../constants/prompts';
 
 const MODEL = 'claude-haiku-4-5-20251001';
@@ -35,11 +35,9 @@ export function useFieldNavigation() {
   // expanded: Set of expanded item names
   const [expanded, setExpanded] = useState(new Set());
   const [loadingField, setLoadingField] = useState(null);
-  const apiKeyRef = useRef(null);
 
-  // Read api key from localStorage (same key used elsewhere in app)
   function getApiKey() {
-    return localStorage.getItem('anthropic_api_key') || '';
+    return import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('canon_api_key') || '';
   }
 
   const clickTopLevel = useCallback(async (field) => {
