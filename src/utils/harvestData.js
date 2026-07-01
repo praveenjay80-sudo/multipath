@@ -133,6 +133,7 @@ async function harvestS2Textbooks(topic, limit = 20) {
     `${topic} textbook`,
     `fundamentals of ${topic}`,
     `principles of ${topic}`,
+    `advanced ${topic}`,
   ];
   const fields = 'title,authors,year,citationCount,influentialCitationCount,externalIds';
   const results = await Promise.all(
