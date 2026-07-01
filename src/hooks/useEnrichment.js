@@ -133,17 +133,33 @@ export function useEnrichment() {
             oaLookup(entry.title),
           ]);
 
-          const dbFound = !!(cr || oa);
           const dbYear = cr?.year ?? oa?.year ?? null;
           const llmYear = entry.year ? parseInt(entry.year) : null;
           const yearDiff = dbYear && llmYear ? Math.abs(dbYear - llmYear) : 0;
 
+          // Author disambiguation — detect title-collision false matches
+          // (e.g. Hatcher "Algebraic Topology" matching Spanier's same-titled book)
+          const lastNameOf = (name) =>
+            (name || '').split(/[\s,]+/).filter(Boolean).pop()?.toLowerCase() || '';
+          const entryLastName = lastNameOf(entry.author?.split(',')[0]);
+          const dbLastName = lastNameOf(cr?.firstAuthor ?? oa?.firstAuthor);
+          const isTitleCollision = entryLastName.length > 3 && dbLastName.length > 3 &&
+            !dbLastName.includes(entryLastName) && !entryLastName.includes(dbLastName);
+
+          // Reprint suppression — pre-1975 papers indexed under their collected-volume year
+          // (e.g. Weinberg 1967 showing as 1992 because reprinted in a collection)
+          const isLikelyReprint = !!(llmYear && dbYear && dbYear > llmYear &&
+            (dbYear - llmYear) > 20 && llmYear < 1975);
+
+          const verifiedFound = !!(cr || oa) && !isTitleCollision;
+          const showYearMismatch = yearDiff > 2 && !isLikelyReprint && !isTitleCollision;
+
           setVerifications(prev => ({
             ...prev,
             [citationKey(entry.title)]: {
-              found: dbFound,
-              source: cr ? 'crossref' : oa ? 'openalex' : null,
-              yearMismatch: yearDiff > 2 ? { llm: llmYear, db: dbYear } : null,
+              found: verifiedFound,
+              source: verifiedFound ? (cr ? 'crossref' : 'openalex') : null,
+              yearMismatch: showYearMismatch ? { llm: llmYear, db: dbYear } : null,
               dbFirstAuthor: cr?.firstAuthor ?? oa?.firstAuthor ?? null,
             },
           }));

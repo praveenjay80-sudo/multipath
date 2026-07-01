@@ -146,6 +146,8 @@ Then address this in What's Missing. 2–5 works, or the fallback text above.
 6–10 papers foundational enough to sit alongside books. Prioritise by influential citation count. Papers that created subfields, introduced universally-used methods, settled major debates.
 FRAMEWORK PRIORITY: Papers that created the mathematical language or framework used by other papers in this list must appear, even if their citation scores are lower. Do not list papers that USE a framework without listing the paper that INTRODUCED that framework.
 
+ORIGINAL SOURCE RULE: Every paper entry must cite the ORIGINAL paper by the ORIGINAL author(s) — never a textbook, monograph, or secondary source. If you know a result primarily through a secondary text, trace it back to the original paper and cite that.
+
 ### The One Book
 One paragraph: which single work best captures the intellectual core, and precisely why — name the specific understanding it conveys that no other single work does.
 
@@ -238,6 +240,8 @@ Example: For "Quantum Field Theory", Peskin & Schroeder qualifies (covers canoni
 The papers that defined, created, or decisively shaped this subfield. Ordered by foundational importance, not date. 4–8 papers.
 
 COMPLETENESS CHECK: Do not omit papers that CREATED the mathematical framework later used by other papers in this list. Framework-creating papers (the paper that introduced the formalism, the symmetry principle, the fundamental equation) take priority over papers that applied that framework to achieve results. A paper cannot be foundational without the paper that created the language it speaks.
+
+ORIGINAL SOURCE RULE: Every paper entry must cite the ORIGINAL paper by the ORIGINAL author(s) — never a textbook, monograph, or secondary source that describes or collects those results. If you know a result primarily through a textbook (e.g., you know Steenrod squares through Mosher-Tangora), find and cite Steenrod's actual paper. Author field = the person(s) who proved the result, not the person who wrote a book about it.
 
 [entries]
 
