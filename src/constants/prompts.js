@@ -105,6 +105,8 @@ Your job: ORGANISE and DESCRIBE these verified works into the canon taxonomy. Yo
 
 ━━━ EXCEPTION RULES ━━━
 
+SPECIFICITY RULE: Every work in the canon must have this topic as its primary or central subject. A work that covers this topic as one chapter among many does NOT belong here. Prefer works that are specifically about this field over general works with higher citation counts that merely include it.
+
 TEXTBOOK TIERS CHECK — before finalising Core, verify all four tiers are represented:
   (a) Popular/accessible introduction → Orientation (no prerequisites, general audience)
   (b) Standard undergraduate textbook → Core, Undergraduate difficulty (the book every undergraduate course assigns)
@@ -198,14 +200,25 @@ Rules:
 export const SUBFIELD_COMPOSE_PROMPT = `You are composing a focused subfield reading canon from a ranked list of real, verified works retrieved from OpenAlex, Semantic Scholar, Open Library, and Google Books. Produce exactly three sections.
 
 Rules:
-1. Select from the provided ranked list. Do not invent works not in the list.
-2. TEXTBOOK TIERS CHECK — verify both tiers are present:
-   (a) Standard undergraduate textbook → Core Textbooks, Undergraduate difficulty
-   (b) Dominant graduate textbook → Core Textbooks, Graduate difficulty
+1. SPECIFICITY FIRST: Every work selected must have this specific subfield as its PRIMARY subject. A general textbook that includes one chapter on this subfield does NOT qualify. Ask: "Would a reader pick up this book specifically to learn THIS subfield?" If no — exclude it, regardless of citation count or prestige.
+   Examples:
+   - Subfield "Stochastic Processes": Karatzas & Shreve "Brownian Motion and Stochastic Calculus" qualifies; Durrett "Probability: Theory and Examples" (general probability) does not.
+   - Subfield "Quantum Information": Nielsen & Chuang qualifies; Sakurai "Modern Quantum Mechanics" does not.
+   - Subfield "Markov Chains": Norris "Markov Chains" qualifies; Ross "Introduction to Probability Models" (covers many topics) does not.
+   Apply this test strictly to every work, including additions.
+
+2. Select from the provided ranked list after applying rule 1.
+
+3. TEXTBOOK TIERS CHECK — verify both tiers are present:
+   (a) Standard undergraduate textbook primarily about this subfield → Core Textbooks, Undergraduate difficulty
+   (b) Dominant graduate textbook primarily about this subfield → Core Textbooks, Graduate difficulty
    Add missing canonical textbooks as [STANDARD TEXTBOOK — not in citation databases].
-3. Add up to 2 pre-1970 foundational works absent from the list as [HISTORICAL — predates citation indexing].
-4. Total additions (textbooks + historical) combined: no more than 4 works.
-5. DISCARD SERIALS — omit any "Advances in / Annual Review / Proceedings of / Handbook of / Encyclopedia of / Lecture Notes" title.
+
+4. Add up to 2 pre-1970 foundational works absent from the list as [HISTORICAL — predates citation indexing].
+
+5. Total additions (textbooks + historical) combined: no more than 4 works.
+
+6. DISCARD SERIALS — omit any "Advances in / Annual Review / Proceedings of / Handbook of / Encyclopedia of / Lecture Notes" title.
 
 Produce the canon in this exact format:
 

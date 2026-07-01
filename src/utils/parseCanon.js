@@ -216,7 +216,13 @@ function parseEntry(lines) {
   const firstLine = filtered[0];
   if (!firstLine.match(/^\*\*.+\*\*/)) return null;
 
-  const titleContent = firstLine.replace(/^\*\*|\*\*\s*$/g, '').trim();
+  // Strip [STANDARD TEXTBOOK...] and [HISTORICAL...] annotation tags from title line
+  const cleanFirst = firstLine.replace(/\s*\[(?:STANDARD TEXTBOOK|HISTORICAL)[^\]]*\]/gi, '').trim();
+  const titleContent = cleanFirst.replace(/^\*\*|\*\*\s*$/g, '').trim();
+
+  // Skip entries that are just annotation tags with no real title
+  if (!titleContent || titleContent.startsWith('[')) return null;
+
   const { title, author, year } = parseTitleLine(titleContent);
 
   const entry = { title, author, year };
