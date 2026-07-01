@@ -6,7 +6,6 @@ import ActionBar from './components/ActionBar';
 import LoadingState from './components/LoadingState';
 import CandidatePreview from './components/CandidatePreview';
 import ApiKeyInput from './components/ApiKeyInput';
-import TaxonomyBrowser from './components/TaxonomyBrowser';
 import { useCanonGenerator } from './hooks/useCanonGenerator';
 import { useCanonHistory } from './hooks/useCanonHistory';
 import { useEnrichment } from './hooks/useEnrichment';
@@ -231,19 +230,15 @@ export default function App() {
                   <span className="loading-dot" />
                   <span className="loading-dot" />
                 </span>
-                Analysing topic...
+                Mapping subfields...
               </div>
             )}
 
-            {/* Taxonomy browser */}
-            {taxonomy.taxonomy && gen.phase === 'idle' && (
-              <TaxonomyBrowser
-                topic={inputTopic}
-                taxonomy={taxonomy.taxonomy}
-                onSelectSubfield={handleSelectSubfield}
-                onGenerateBroadly={handleGenerateBroadly}
-                disabled={isGenerating || isRefining}
-              />
+            {/* Idle guidance after taxonomy loads */}
+            {taxonomy.taxonomy && gen.phase === 'idle' && !gen.content && (
+              <div className="mt-6 border border-stone-200 bg-stone-50 px-6 py-5 text-sm text-stone-500">
+                Select a subfield or the full field from the sidebar to generate its canon.
+              </div>
             )}
 
             {/* Harvest + scoring phases */}
@@ -317,6 +312,12 @@ export default function App() {
                 onLoad={handleLoad}
                 onDelete={hist.deleteCanon}
                 onClearAll={hist.clearAll}
+                taxonomy={taxonomy.taxonomy}
+                currentTopic={inputTopic}
+                currentCanonTopic={gen.topic}
+                onSelectTopic={handleGenerateBroadly}
+                onSelectSubfield={handleSelectSubfield}
+                disabled={isGenerating || isRefining}
               />
             </div>
           </div>
@@ -327,7 +328,7 @@ export default function App() {
         onClick={() => setMobileSidebarOpen(true)}
         className="lg:hidden fixed bottom-6 right-6 bg-stone-900 text-white text-xs px-4 py-2.5 shadow-lg font-mono uppercase tracking-wider"
       >
-        Saved {hist.history.length > 0 && `(${hist.history.length})`}
+        {taxonomy.taxonomy ? `Topics` : `Saved${hist.history.length > 0 ? ` (${hist.history.length})` : ''}`}
       </button>
 
       {mobileSidebarOpen && (
@@ -335,14 +336,27 @@ export default function App() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileSidebarOpen(false)} />
           <div className="relative bg-white max-h-[70vh] overflow-y-auto p-6 shadow-xl">
             <div className="flex items-center justify-between mb-6">
-              <span className="text-xs font-mono uppercase tracking-widest text-stone-500">Saved Canons</span>
+              <span className="text-xs font-mono uppercase tracking-widest text-stone-500">
+                {taxonomy.taxonomy ? 'Topics & Saved' : 'Saved Canons'}
+              </span>
               <button onClick={() => setMobileSidebarOpen(false)} className="text-stone-400 hover:text-stone-700">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
                 </svg>
               </button>
             </div>
-            <Sidebar history={hist.history} onLoad={handleLoad} onDelete={hist.deleteCanon} onClearAll={hist.clearAll} />
+            <Sidebar
+              history={hist.history}
+              onLoad={handleLoad}
+              onDelete={hist.deleteCanon}
+              onClearAll={hist.clearAll}
+              taxonomy={taxonomy.taxonomy}
+              currentTopic={inputTopic}
+              currentCanonTopic={gen.topic}
+              onSelectTopic={handleGenerateBroadly}
+              onSelectSubfield={handleSelectSubfield}
+              disabled={isGenerating || isRefining}
+            />
           </div>
         </div>
       )}
