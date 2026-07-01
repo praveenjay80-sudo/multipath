@@ -130,6 +130,7 @@ Non-specialist entry points only. Popular science written by masters for general
 
 ### Core
 Every genuinely foundational work regardless of difficulty. Graduate textbooks, mathematical treatises, theoretical masterworks. If every practitioner has read it or should read it, it belongs here. Apply the Textbook Tiers Check — tiers (b) and (c) must appear unless the field genuinely has none. 5–10 works.
+BREADTH TEST: Core textbooks must cover the field's full scope at their level, not a single sub-application. A book on only ONE corner of the field (a specialized technique, a single application domain) belongs in Technical Depth.
 
 ### Technical Depth
 Works presupposing complete Core mastery: research monographs for active specialists, advanced PhD seminar texts, narrow sub-problem treatments. Also place here: scholarly historical or philosophical analysis of the field written for specialists (e.g., detailed conceptual histories requiring prior mastery of the subject). 3–6 works.
@@ -143,6 +144,7 @@ Then address this in What's Missing. 2–5 works, or the fallback text above.
 
 ### Seminal Papers
 6–10 papers foundational enough to sit alongside books. Prioritise by influential citation count. Papers that created subfields, introduced universally-used methods, settled major debates.
+FRAMEWORK PRIORITY: Papers that created the mathematical language or framework used by other papers in this list must appear, even if their citation scores are lower. Do not list papers that USE a framework without listing the paper that INTRODUCED that framework.
 
 ### The One Book
 One paragraph: which single work best captures the intellectual core, and precisely why — name the specific understanding it conveys that no other single work does.
@@ -227,15 +229,20 @@ Produce the canon in this exact format:
 ### Core Textbooks
 The standard texts every serious student of this subfield must work through — from the accessible undergraduate introduction to the graduate-level mastery text. Apply the Textbook Tiers Check above. 3–6 works.
 
+BREADTH TEST: Each Core Textbook must cover the full intellectual scope of the subfield at its level — not a single application, special case, or sub-area of it. If a book covers only ONE corner of the subfield (e.g., thermal effects, curved-space formulation, supersymmetric extension, a single technique), it belongs in Research Monographs regardless of how excellent or widely used it is.
+Example: For "Quantum Field Theory", Peskin & Schroeder qualifies (covers canonical quantization, path integrals, renormalization, gauge theories). Kapusta "Finite-Temperature Field Theory" does NOT qualify — it covers only one application of QFT.
+
 [entries]
 
 ### Foundational Papers
 The papers that defined, created, or decisively shaped this subfield. Ordered by foundational importance, not date. 4–8 papers.
 
+COMPLETENESS CHECK: Do not omit papers that CREATED the mathematical framework later used by other papers in this list. Framework-creating papers (the paper that introduced the formalism, the symmetry principle, the fundamental equation) take priority over papers that applied that framework to achieve results. A paper cannot be foundational without the paper that created the language it speaks.
+
 [entries]
 
 ### Research Monographs
-Advanced books beyond the standard graduate curriculum: specialist references, research-level theoretical treatments, important monographs read primarily by active researchers and advanced PhD students. 2–4 works.
+Advanced books beyond the standard graduate curriculum: specialist references, research-level theoretical treatments, monographs read primarily by active researchers. This section also absorbs specialized textbooks that cover only ONE sub-application of the field (thermal methods, curved-space formulation, SUSY, lattice techniques, etc.) — even if pedagogically written. 2–4 works.
 
 [entries]
 
