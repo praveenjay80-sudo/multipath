@@ -50,6 +50,27 @@ export const SECTION_CONFIG = {
     headerBorder: 'border-b border-violet-100',
     dot: 'bg-violet-600',
   },
+  // Subfield canon sections
+  textbooks: {
+    key: 'textbooks',
+    label: 'Core Textbooks',
+    accent: 'text-amber-800',
+    badge: 'bg-amber-100 text-amber-800 border border-amber-200',
+    border: 'border-l-amber-500',
+    headerBg: 'bg-amber-50',
+    headerBorder: 'border-b border-amber-100',
+    dot: 'bg-amber-500',
+  },
+  monographs: {
+    key: 'monographs',
+    label: 'Research Monographs',
+    accent: 'text-blue-800',
+    badge: 'bg-blue-100 text-blue-800 border border-blue-200',
+    border: 'border-l-blue-600',
+    headerBg: 'bg-blue-50',
+    headerBorder: 'border-b border-blue-100',
+    dot: 'bg-blue-600',
+  },
 };
 
 // Backward compat for saved canons using old Tier N format
@@ -67,7 +88,9 @@ function classifySection(heading) {
   if (h === 'core') return 'core';
   if (/^technical[\s-]*depth$/.test(h)) return 'technical-depth';
   if (h === 'contemporary') return 'contemporary';
-  if (/^seminal\s*papers?$/.test(h)) return 'papers';
+  if (/^(seminal|foundational)\s*papers?$/.test(h)) return 'papers';
+  if (/^core\s+textbooks?$/.test(h)) return 'textbooks';
+  if (/^research\s+monographs?$/.test(h)) return 'monographs';
   return null;
 }
 
@@ -109,6 +132,7 @@ export function parseCanon(markdown) {
         description,
         entries,
       });
+
       continue;
     }
 

@@ -42,7 +42,7 @@ export default function CanonInput({ value, onChange, onGenerate, onQuickGenerat
           disabled={disabled}
           className="px-6 py-2.5 bg-stone-900 text-white text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {disabled ? 'Generating...' : 'Generate Canon'}
+          {disabled ? 'Generating...' : 'Explore'}
         </button>
       </div>
     </div>

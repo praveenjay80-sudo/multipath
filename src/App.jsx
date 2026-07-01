@@ -6,10 +6,12 @@ import ActionBar from './components/ActionBar';
 import LoadingState from './components/LoadingState';
 import CandidatePreview from './components/CandidatePreview';
 import ApiKeyInput from './components/ApiKeyInput';
+import TaxonomyBrowser from './components/TaxonomyBrowser';
 import { useCanonGenerator } from './hooks/useCanonGenerator';
 import { useCanonHistory } from './hooks/useCanonHistory';
 import { useEnrichment } from './hooks/useEnrichment';
 import { useWorkExplainer } from './hooks/useWorkExplainer';
+import { useTaxonomy } from './hooks/useTaxonomy';
 import { parseCanon } from './utils/parseCanon';
 import { copyMarkdown } from './utils/exportMarkdown';
 
@@ -117,6 +119,7 @@ export default function App() {
   const hist = useCanonHistory();
   const enrichment = useEnrichment();
   const explainer = useWorkExplainer(gen.topic);
+  const taxonomy = useTaxonomy();
   const [inputTopic, setInputTopic] = useState('');
   const [shake, setShake] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -161,8 +164,22 @@ export default function App() {
 
   function handleGenerate() {
     if (!inputTopic.trim()) { triggerShake(); return; }
+    gen.reset();
     enrichment.clear();
-    gen.generateCanon(inputTopic.trim());
+    taxonomy.clear();
+    taxonomy.fetch(inputTopic.trim());
+  }
+
+  function handleSelectSubfield(subfield) {
+    enrichment.clear();
+    taxonomy.clear();
+    gen.generateCanon(subfield, 'subfield');
+  }
+
+  function handleGenerateBroadly() {
+    enrichment.clear();
+    taxonomy.clear();
+    gen.generateCanon(inputTopic.trim(), 'full');
   }
 
   function handleSave() {
@@ -172,6 +189,7 @@ export default function App() {
   function handleLoad(item) {
     setInputTopic(item.topic);
     enrichment.clear();
+    taxonomy.clear();
     gen.loadContent(item.topic, item.content);
     setMobileSidebarOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -180,6 +198,7 @@ export default function App() {
   function handleNew() {
     gen.reset();
     enrichment.clear();
+    taxonomy.clear();
     setInputTopic('');
   }
 
@@ -203,6 +222,29 @@ export default function App() {
               shake={shake}
               disabled={isGenerating || isRefining}
             />
+
+            {/* Taxonomy loading */}
+            {taxonomy.loading && (
+              <div className="mt-6 flex items-center gap-2.5 text-sm text-stone-400">
+                <span className="flex gap-0.5">
+                  <span className="loading-dot" />
+                  <span className="loading-dot" />
+                  <span className="loading-dot" />
+                </span>
+                Analysing topic...
+              </div>
+            )}
+
+            {/* Taxonomy browser */}
+            {taxonomy.taxonomy && gen.phase === 'idle' && (
+              <TaxonomyBrowser
+                topic={inputTopic}
+                taxonomy={taxonomy.taxonomy}
+                onSelectSubfield={handleSelectSubfield}
+                onGenerateBroadly={handleGenerateBroadly}
+                disabled={isGenerating || isRefining}
+              />
+            )}
 
             {/* Harvest + scoring phases */}
             {(gen.phase === 'harvesting' || gen.phase === 'scoring') && (

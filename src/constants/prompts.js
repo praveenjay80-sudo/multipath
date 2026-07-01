@@ -181,6 +181,68 @@ After the complete canon, add:
 ### Revision Notes
 [2–3 sentences: exactly what changed, what was added or removed, and the specific reasoning — be precise]`;
 
+export const TAXONOMY_SYSTEM_PROMPT = `Given an academic topic, return a JSON object placing it in the academic hierarchy and listing its main subfields.
+
+Respond with ONLY valid JSON, no markdown, no explanation:
+{
+  "domain": "Top-level academic domain (e.g. Natural Sciences, Humanities, Social Sciences, Formal Sciences, Applied Sciences)",
+  "subject": "The subject or discipline (e.g. Physics, Philosophy, Mathematics, Economics)",
+  "subfields": ["4-8 specific subfields, each specific enough to have its own distinct reading canon"]
+}
+
+Rules:
+- subfields must be genuine intellectual subdivisions with their own canonical literature
+- If the topic is already very specific, return 4-6 sub-aspects or adjacent areas
+- Prefer well-established subfield names used in academic departments and syllabi`;
+
+export const SUBFIELD_COMPOSE_PROMPT = `You are composing a focused subfield reading canon from a ranked list of real, verified works retrieved from OpenAlex, Semantic Scholar, Open Library, and Google Books. Produce exactly three sections.
+
+Rules:
+1. Select from the provided ranked list. Do not invent works not in the list.
+2. TEXTBOOK TIERS CHECK — verify both tiers are present:
+   (a) Standard undergraduate textbook → Core Textbooks, Undergraduate difficulty
+   (b) Dominant graduate textbook → Core Textbooks, Graduate difficulty
+   Add missing canonical textbooks as [STANDARD TEXTBOOK — not in citation databases].
+3. Add up to 2 pre-1970 foundational works absent from the list as [HISTORICAL — predates citation indexing].
+4. Total additions (textbooks + historical) combined: no more than 4 works.
+5. DISCARD SERIALS — omit any "Advances in / Annual Review / Proceedings of / Handbook of / Encyclopedia of / Lecture Notes" title.
+
+Produce the canon in this exact format:
+
+## Canon: [SUBFIELD NAME]
+
+### Core Textbooks
+The standard texts every serious student of this subfield must work through — from the accessible undergraduate introduction to the graduate-level mastery text. Apply the Textbook Tiers Check above. 3–6 works.
+
+[entries]
+
+### Foundational Papers
+The papers that defined, created, or decisively shaped this subfield. Ordered by foundational importance, not date. 4–8 papers.
+
+[entries]
+
+### Research Monographs
+Advanced books beyond the standard graduate curriculum: specialist references, research-level theoretical treatments, important monographs read primarily by active researchers and advanced PhD students. 2–4 works.
+
+[entries]
+
+---
+
+For each BOOK entry:
+**[Title] — [Author(s)] ([Year])**
+*Description:* [2–3 sentences: what it covers and what distinguishes it]
+*Why canonical:* [The specific idea, theorem, framework, or method this work established — no vague claims]
+*Key chapters:* [2–4 actual chapter titles with descriptions, separated by semicolons]
+*Difficulty:* [Undergraduate / Early Graduate / Graduate / Research Level]
+*Prerequisites:* [1–3 specific prerequisites]
+
+For each PAPER entry:
+**[Title] — [Author(s)] ([Year])**
+*Description:* [2–3 sentences: problem, approach, key result]
+*Core contribution:* [The single most important idea or result — stated precisely]
+*Why canonical:* [What specifically changed in the field after this paper]
+*Access:* [arXiv / Journal / DOI]`;
+
 export const CANDIDATE_MESSAGES = [
   'Surveying the literature...',
   'Identifying candidate works...',

@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   DATA_FIRST_COMPOSE_PROMPT,
+  SUBFIELD_COMPOSE_PROMPT,
   REFINE_SYSTEM_PROMPT,
   HARVEST_MESSAGES,
   SCORE_MESSAGES,
@@ -94,7 +95,7 @@ export function useCanonGenerator() {
     setLoadingMessage('');
   }
 
-  const generateCanon = useCallback(async (inputTopic) => {
+  const generateCanon = useCallback(async (inputTopic, mode = 'full') => {
     abortRef.current?.abort();
     abortRef.current = new AbortController();
     const { signal } = abortRef.current;
@@ -136,14 +137,14 @@ export function useCanonGenerator() {
         `Total raw results: ${totalRaw} → ${merged.length} unique after deduplication\n` +
         `Showing top ${top.length} ranked by composite bibliometric score.\n\n`;
 
-      const composeMessage =
-        `Topic: ${inputTopic}\n\n` +
-        harvestSummary +
-        `Ranked verified works:\n${formatForCompose(top)}\n\n` +
-        `Compose the authoritative canon selecting from these verified works. You may add up to 5 historical works you know to be foundational but which predate digital citation indexing (mark them [HISTORICAL]).`;
+      const isSubfield = mode === 'subfield';
+      const systemPrompt = isSubfield ? SUBFIELD_COMPOSE_PROMPT : DATA_FIRST_COMPOSE_PROMPT;
+      const composeMessage = isSubfield
+        ? `Subfield: ${inputTopic}\n\n${harvestSummary}Ranked verified works:\n${formatForCompose(top)}\n\nCompose the focused subfield canon. Add missing standard textbooks as [STANDARD TEXTBOOK — not in citation databases].`
+        : `Topic: ${inputTopic}\n\n${harvestSummary}Ranked verified works:\n${formatForCompose(top)}\n\nCompose the authoritative canon selecting from these verified works. You may add up to 5 historical works you know to be foundational but which predate digital citation indexing (mark them [HISTORICAL]).`;
 
       let result = '';
-      for await (const token of streamCompletion(DATA_FIRST_COMPOSE_PROMPT, composeMessage, signal, 10000)) {
+      for await (const token of streamCompletion(systemPrompt, composeMessage, signal, 10000)) {
         result += token;
         setContent(result);
       }
