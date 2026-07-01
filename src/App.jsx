@@ -296,7 +296,7 @@ export default function App() {
             )}
           </div>
 
-          <div className="hidden lg:block w-64 shrink-0 py-12">
+          <div className="hidden lg:block w-80 shrink-0 py-12">
             <div className="sticky top-12">
               <Sidebar
                 history={hist.history}
@@ -311,7 +311,6 @@ export default function App() {
                 isSubfieldExpanded={fieldNav.isSubfieldExpanded}
                 getSubfields={fieldNav.getSubfields}
                 getSubSubfields={fieldNav.getSubSubfields}
-                isLoading={fieldNav.isLoading}
                 disabled={isGenerating || isRefining}
               />
             </div>
@@ -349,9 +348,10 @@ export default function App() {
               onClickTopLevel={handleClickTopLevel}
               onClickSubfield={handleClickSubfield}
               onClickSubSubfield={handleClickSubSubfield}
-              isExpanded={fieldNav.isExpanded}
-              getChildren={fieldNav.getChildren}
-              isLoading={fieldNav.isLoading}
+              isFieldExpanded={fieldNav.isFieldExpanded}
+              isSubfieldExpanded={fieldNav.isSubfieldExpanded}
+              getSubfields={fieldNav.getSubfields}
+              getSubSubfields={fieldNav.getSubSubfields}
               disabled={isGenerating || isRefining}
             />
           </div>

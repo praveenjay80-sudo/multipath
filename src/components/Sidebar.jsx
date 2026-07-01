@@ -9,20 +9,10 @@ function ChevronIcon({ open }) {
   return (
     <svg
       width="10" height="10" viewBox="0 0 10 10" fill="none"
-      className={`shrink-0 transition-transform ${open ? 'rotate-90' : ''}`}
+      className={`shrink-0 transition-transform duration-150 ${open ? 'rotate-90' : ''}`}
     >
       <path d="M3 2l4 3-4 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
-  );
-}
-
-function SpinnerDots() {
-  return (
-    <span className="inline-flex gap-0.5">
-      <span className="loading-dot" />
-      <span className="loading-dot" />
-      <span className="loading-dot" />
-    </span>
   );
 }
 
@@ -30,13 +20,13 @@ function FieldNav({
   activeCanonTopic,
   onClickTopLevel, onClickSubfield, onClickSubSubfield,
   isFieldExpanded, isSubfieldExpanded,
-  getSubfields, getSubSubfields, isLoading,
+  getSubfields, getSubSubfields,
   disabled,
 }) {
   return (
     <div className="mb-5">
       <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-2">Fields</p>
-      <ul className="space-y-0">
+      <ul>
         {TOP_LEVEL_FIELDS.map(field => {
           const expanded = isFieldExpanded(field);
           const subfields = getSubfields(field);
@@ -44,6 +34,7 @@ function FieldNav({
 
           return (
             <li key={field}>
+              {/* Level 1 */}
               <button
                 onClick={() => onClickTopLevel(field)}
                 disabled={disabled}
@@ -57,48 +48,47 @@ function FieldNav({
                 </span>
               </button>
 
-              {expanded && subfields.length > 0 && (
-                <ul className="ml-2 border-l border-stone-200">
+              {expanded && (
+                <ul className="ml-3 border-l border-stone-200">
                   {subfields.map(sf => {
                     const sfKey = `${field}::${sf}`;
                     const sfExpanded = isSubfieldExpanded(sfKey);
-                    const sfChildren = getSubSubfields(sfKey);
-                    const sfLoading = isLoading(sfKey);
                     const sfActive = activeCanonTopic === sf;
+                    const subSubfields = getSubSubfields(field, sf);
 
                     return (
                       <li key={sf}>
+                        {/* Level 2 */}
                         <button
                           onClick={() => onClickSubfield(field, sf)}
                           disabled={disabled}
-                          className={`w-full text-left px-2 py-1 text-sm flex items-center justify-between gap-1 transition-colors disabled:opacity-40 ${
-                            sfActive
-                              ? 'bg-stone-900 text-white'
-                              : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
+                          className={`w-full text-left pl-2 pr-1 py-1 text-sm flex items-center justify-between gap-1 transition-colors disabled:opacity-40 ${
+                            sfActive ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
                           }`}
                         >
                           <span className="truncate">{sf}</span>
-                          <span className={sfActive ? 'text-stone-300' : 'text-stone-400'}>
-                            {sfLoading ? <SpinnerDots /> : <ChevronIcon open={sfExpanded} />}
-                          </span>
+                          {subSubfields.length > 0 && (
+                            <span className={sfActive ? 'text-stone-300' : 'text-stone-400'}>
+                              <ChevronIcon open={sfExpanded} />
+                            </span>
+                          )}
                         </button>
 
-                        {sfExpanded && sfChildren && sfChildren.length > 0 && (
-                          <ul className="ml-2 border-l border-stone-100">
-                            {sfChildren.map(ssf => {
+                        {sfExpanded && subSubfields.length > 0 && (
+                          <ul className="ml-3 border-l border-stone-100">
+                            {subSubfields.map(ssf => {
                               const ssfActive = activeCanonTopic === ssf;
                               return (
                                 <li key={ssf}>
+                                  {/* Level 3 */}
                                   <button
                                     onClick={() => onClickSubSubfield(ssf)}
                                     disabled={disabled}
-                                    className={`w-full text-left px-2 py-1 text-xs transition-colors disabled:opacity-40 ${
-                                      ssfActive
-                                        ? 'bg-stone-900 text-white'
-                                        : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
+                                    className={`w-full text-left pl-2 pr-1 py-0.5 text-xs transition-colors disabled:opacity-40 ${
+                                      ssfActive ? 'bg-stone-900 text-white' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
                                     }`}
                                   >
-                                    <span className="truncate">{ssf}</span>
+                                    {ssf}
                                   </button>
                                 </li>
                               );
@@ -123,7 +113,7 @@ export default function Sidebar({
   activeCanonTopic,
   onClickTopLevel, onClickSubfield, onClickSubSubfield,
   isFieldExpanded, isSubfieldExpanded,
-  getSubfields, getSubSubfields, isLoading,
+  getSubfields, getSubSubfields,
   disabled,
 }) {
   return (
@@ -137,7 +127,6 @@ export default function Sidebar({
         isSubfieldExpanded={isSubfieldExpanded}
         getSubfields={getSubfields}
         getSubSubfields={getSubSubfields}
-        isLoading={isLoading}
         disabled={disabled}
       />
 
