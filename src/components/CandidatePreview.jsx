@@ -1,48 +1,82 @@
-function citKey(title) {
-  return title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 60);
+const SOURCE_LABELS = {
+  'openalex': { label: 'OA', color: 'text-blue-600 bg-blue-50 border-blue-100' },
+  'semantic-scholar': { label: 'S2', color: 'text-violet-600 bg-violet-50 border-violet-100' },
+  'open-library': { label: 'OL', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
+};
+
+function SourceBadge({ source }) {
+  const cfg = SOURCE_LABELS[source] || { label: source, color: 'text-stone-500 bg-stone-50 border-stone-100' };
+  return (
+    <span className={`text-xs font-mono px-1 py-0.5 border rounded ${cfg.color}`}>
+      {cfg.label}
+    </span>
+  );
 }
 
-export default function CandidatePreview({ candidates, citations, progress }) {
-  if (!candidates.length) return null;
+export default function CandidatePreview({ candidates, harvestCounts }) {
+  if (!candidates?.length) return null;
 
-  const verified = candidates.filter(c => citations[citKey(c.title)] != null).length;
+  const books  = candidates.filter(w => w.type === 'book' || (w.editionCount || 0) > 0).length;
+  const papers = candidates.length - books;
 
   return (
-    <div className="mt-8 border border-stone-200 bg-white">
-      <div className="px-5 py-3.5 border-b border-stone-100 flex items-center justify-between">
-        <span className="text-xs font-mono uppercase tracking-widest text-stone-500">
-          Verifying Impact
-        </span>
-        <span className="text-xs font-mono text-stone-400">
-          {verified}/{candidates.length} verified
-        </span>
+    <div className="mt-6 border border-stone-200 bg-white">
+      <div className="px-5 py-3.5 border-b border-stone-100">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-mono uppercase tracking-widest text-stone-500">
+            Harvested from Real Databases
+          </span>
+          <span className="text-xs font-mono text-stone-400">
+            {candidates.length} unique works · {papers} papers · {books} books
+          </span>
+        </div>
+        {harvestCounts && (
+          <div className="flex gap-3 mt-1">
+            <span className="text-xs text-blue-600">OpenAlex: {harvestCounts.openalex}</span>
+            <span className="text-xs text-violet-600">Semantic Scholar: {harvestCounts.semanticScholar}</span>
+            <span className="text-xs text-emerald-600">Open Library: {harvestCounts.openLibrary}</span>
+          </div>
+        )}
       </div>
 
-      <div className="divide-y divide-stone-50 max-h-72 overflow-y-auto">
-        {candidates.map((c, i) => {
-          const cit = citations[citKey(c.title)];
-          const done = cit != null;
+      <div className="divide-y divide-stone-50 max-h-80 overflow-y-auto">
+        {candidates.slice(0, 60).map((w, i) => {
+          const isBook = w.type === 'book' || (w.editionCount || 0) > 0;
+          const signal = isBook && w.editionCount
+            ? `${w.editionCount} ed.`
+            : w.influentialCitationCount
+            ? `${w.influentialCitationCount} infl.`
+            : w.citationCount
+            ? `${w.citationCount.toLocaleString()} cit.`
+            : null;
+
           return (
             <div key={i} className="px-5 py-2 flex items-center gap-3">
-              <span className={`text-xs font-mono shrink-0 w-3 ${done ? 'text-emerald-500' : 'text-stone-200'}`}>
-                {done ? '✓' : '·'}
+              <span className="text-xs font-mono text-stone-300 shrink-0 w-5 text-right">{i + 1}</span>
+              <span className={`text-xs shrink-0 px-1 py-0.5 rounded font-mono ${
+                isBook ? 'text-amber-600 bg-amber-50' : 'text-stone-400 bg-stone-50'
+              }`}>
+                {isBook ? 'B' : 'P'}
               </span>
-              <span className={`text-sm flex-1 truncate ${done ? 'text-stone-700' : 'text-stone-400'}`}>
-                {c.title}
-                {c.author && (
-                  <span className={`ml-1.5 ${done ? 'text-stone-400' : 'text-stone-300'}`}>
-                    — {c.author}
-                  </span>
+              <span className="text-sm flex-1 truncate text-stone-700">
+                {w.title}
+                {w.authors && <span className="ml-1.5 text-stone-400">— {w.authors}</span>}
+              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {(w.sources || [w.source]).map(s => <SourceBadge key={s} source={s} />)}
+                {signal && (
+                  <span className="text-xs font-mono text-stone-500 ml-1">{signal}</span>
                 )}
-              </span>
-              {cit?.citationCount != null && (
-                <span className="text-xs font-mono text-stone-500 shrink-0">
-                  {cit.citationCount.toLocaleString()}
-                </span>
-              )}
+              </div>
             </div>
           );
         })}
+      </div>
+
+      <div className="px-5 py-2.5 border-t border-stone-100 bg-stone-50">
+        <p className="text-xs text-stone-400">
+          Ranked by composite score: influential citations (papers) · edition count (books) · cross-source appearances · FWCI
+        </p>
       </div>
     </div>
   );

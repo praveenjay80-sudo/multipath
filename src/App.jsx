@@ -123,7 +123,7 @@ export default function App() {
 
   const parsed = useMemo(() => parseCanon(gen.content), [gen.content]);
 
-  const isGenerating = ['candidates', 'enriching', 'composing'].includes(gen.phase);
+  const isGenerating = ['harvesting', 'scoring', 'composing'].includes(gen.phase);
   const isRefining = gen.phase === 'refining';
   const hasOutput = !!gen.content && gen.phase !== 'idle';
 
@@ -204,21 +204,22 @@ export default function App() {
               disabled={isGenerating || isRefining}
             />
 
-            {/* Phase loading states (candidates + composing) */}
-            {isGenerating && gen.phase !== 'enriching' && (
-              <LoadingState phase={gen.phase} message={gen.loadingMessage} />
-            )}
-
-            {/* Phase 2: live candidate verification */}
-            {gen.phase === 'enriching' && (
+            {/* Harvest + scoring phases */}
+            {(gen.phase === 'harvesting' || gen.phase === 'scoring') && (
               <>
                 <LoadingState phase={gen.phase} message={gen.loadingMessage} />
-                <CandidatePreview
-                  candidates={gen.candidates}
-                  citations={gen.candidateCitations}
-                  progress={gen.enrichProgress}
-                />
+                {gen.harvestedWorks.length > 0 && (
+                  <CandidatePreview
+                    candidates={gen.harvestedWorks}
+                    harvestCounts={gen.harvestCounts}
+                  />
+                )}
               </>
+            )}
+
+            {/* Composing phase */}
+            {gen.phase === 'composing' && (
+              <LoadingState phase={gen.phase} message={gen.loadingMessage} />
             )}
 
             {isRefining && <LoadingState phase="refining" message={gen.loadingMessage} />}

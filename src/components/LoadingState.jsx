@@ -1,7 +1,7 @@
 const STEPS = [
-  { key: 'candidates', label: 'Candidates', n: 1 },
-  { key: 'enriching', label: 'Impact', n: 2 },
-  { key: 'composing', label: 'Canon', n: 3 },
+  { key: 'harvesting', label: 'Harvest', n: 1 },
+  { key: 'scoring',    label: 'Score',   n: 2 },
+  { key: 'composing',  label: 'Canon',   n: 3 },
 ];
 
 export default function LoadingState({ phase, message }) {
@@ -18,9 +18,9 @@ export default function LoadingState({ phase, message }) {
             return (
               <div key={s.key} className="flex items-center gap-2">
                 <div className={`w-5 h-5 flex items-center justify-center text-xs font-mono border
-                  ${done ? 'bg-stone-900 border-stone-900 text-white'
-                    : active ? 'border-stone-500 text-stone-700 bg-white'
-                    : 'border-stone-200 text-stone-300 bg-white'}`}>
+                  ${done   ? 'bg-stone-900 border-stone-900 text-white'
+                  : active ? 'border-stone-500 text-stone-700 bg-white'
+                  :          'border-stone-200 text-stone-300 bg-white'}`}>
                   {done ? '✓' : s.n}
                 </div>
                 <span className={`text-xs ${active ? 'text-stone-800 font-medium' : done ? 'text-stone-500' : 'text-stone-300'}`}>

@@ -1,21 +1,20 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
-  CANDIDATE_SYSTEM_PROMPT,
-  COMPOSE_SYSTEM_PROMPT,
+  DATA_FIRST_COMPOSE_PROMPT,
   REFINE_SYSTEM_PROMPT,
-  CANDIDATE_MESSAGES,
-  ENRICH_MESSAGES,
-  COMPOSE_MESSAGES,
+  HARVEST_MESSAGES,
+  SCORE_MESSAGES,
+  DATA_COMPOSE_MESSAGES,
   REFINE_MESSAGES,
 } from '../constants/prompts';
-
-const WORKER_URL = import.meta.env.VITE_WORKER_URL || '';
+import { harvestAll } from '../utils/harvestData';
+import { rankWorks, formatForCompose } from '../utils/scoreWorks';
 
 function resolveApiKey() {
   return import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('canon_api_key') || '';
 }
 
-async function* streamCompletion(systemPrompt, userMessage, signal, maxTokens = 8000) {
+async function* streamCompletion(systemPrompt, userMessage, signal, maxTokens = 10000) {
   const apiKey = resolveApiKey();
   if (!apiKey) throw new Error('No API key set. Enter your Anthropic API key in the settings panel.');
 
@@ -68,68 +67,13 @@ async function* streamCompletion(systemPrompt, userMessage, signal, maxTokens = 
   }
 }
 
-function parseCandidates(text) {
-  return text.split('\n')
-    .map(l => l.trim())
-    .filter(l => l.startsWith('CANDIDATE:'))
-    .map(l => {
-      const parts = l.slice('CANDIDATE:'.length).trim().split('|').map(p => p.trim());
-      if (parts.length < 2 || !parts[0]) return null;
-      return {
-        title: parts[0],
-        author: parts[1] || '',
-        year: parts[2] || '',
-        type: (parts[3] || '').toLowerCase().includes('paper') ? 'paper' : 'book',
-        reason: parts[4] || '',
-      };
-    })
-    .filter(Boolean);
-}
-
-function citKey(title) {
-  return title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 60);
-}
-
-async function scholarLookup(title, author) {
-  if (!WORKER_URL) return null;
-  try {
-    const params = new URLSearchParams({ title, ...(author ? { author } : {}) });
-    const res = await fetch(`${WORKER_URL}/enrich?${params}`);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch { return null; }
-}
-
-function titleWords(t) {
-  return t.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 3);
-}
-function titlesMatch(a, b) {
-  const wa = titleWords(a), wb = titleWords(b);
-  if (!wa.length || !wb.length) return false;
-  const shared = wa.filter(w => wb.includes(w)).length;
-  return shared >= Math.max(1, Math.floor(Math.min(wa.length, wb.length) * 0.5));
-}
-
-async function crossrefFallback(title, author) {
-  const q = [title, author].filter(Boolean).join(' ');
-  try {
-    const res = await fetch(`https://api.crossref.org/works?query=${encodeURIComponent(q)}&rows=3&mailto=canon-app@example.com`);
-    if (!res.ok) return null;
-    const { message } = await res.json();
-    const match = (message?.items || []).find(item => titlesMatch((item.title || [])[0] || '', title));
-    if (!match) return null;
-    return { citationCount: match['is-referenced-by-count'] ?? null };
-  } catch { return null; }
-}
-
 export function useCanonGenerator() {
   const [phase, setPhase] = useState('idle');
   const [content, setContent] = useState('');
   const [topic, setTopic] = useState('');
   const [error, setError] = useState(null);
-  const [candidates, setCandidates] = useState([]);
-  const [candidateCitations, setCandidateCitations] = useState({});
-  const [enrichProgress, setEnrichProgress] = useState({ current: 0, total: 0 });
+  const [harvestedWorks, setHarvestedWorks] = useState([]);
+  const [harvestCounts, setHarvestCounts] = useState(null);
   const [refinements, setRefinements] = useState([]);
   const [loadingMessage, setLoadingMessage] = useState('');
   const abortRef = useRef(null);
@@ -158,59 +102,47 @@ export function useCanonGenerator() {
     setTopic(inputTopic);
     setContent('');
     setError(null);
-    setCandidates([]);
-    setCandidateCitations({});
-    setEnrichProgress({ current: 0, total: 0 });
+    setHarvestedWorks([]);
+    setHarvestCounts(null);
     setRefinements([]);
 
     try {
-      // Pass 1: Generate candidate list
-      setPhase('candidates');
-      cycleMessages(CANDIDATE_MESSAGES);
-      let candidateText = '';
-      for await (const token of streamCompletion(CANDIDATE_SYSTEM_PROMPT, inputTopic, signal, 2000)) {
-        candidateText += token;
-      }
+      // ── Pass 1: Harvest from OpenAlex + Semantic Scholar + Open Library ──
+      setPhase('harvesting');
+      cycleMessages(HARVEST_MESSAGES);
+
+      const { merged, counts } = await harvestAll(inputTopic, (msg) => setLoadingMessage(msg));
+      if (signal.aborted) return null;
+      setHarvestCounts(counts);
+
+      // ── Pass 2: Score and rank ────────────────────────────────────────────
+      setPhase('scoring');
+      cycleMessages(SCORE_MESSAGES);
+
+      const ranked = rankWorks(merged);
+      setHarvestedWorks(ranked);
       if (signal.aborted) return null;
 
-      const parsedCandidates = parseCandidates(candidateText);
-      setCandidates(parsedCandidates);
+      // Limit to top 60 works for the compose prompt to keep tokens manageable
+      const top = ranked.slice(0, 60);
 
-      // Pass 2: Enrich all candidates in parallel
-      setPhase('enriching');
-      cycleMessages(ENRICH_MESSAGES);
-      setEnrichProgress({ current: 0, total: parsedCandidates.length });
-
-      const citMap = {};
-      await Promise.all(parsedCandidates.map(async (c) => {
-        if (signal.aborted) return;
-        const gs = await scholarLookup(c.title, c.author);
-        const data = gs?.citationCount != null ? gs : await crossrefFallback(c.title, c.author);
-        if (data?.citationCount != null) {
-          const key = citKey(c.title);
-          citMap[key] = { citationCount: data.citationCount, scholarLink: gs?.link || null };
-          setCandidateCitations(prev => ({ ...prev, [key]: citMap[key] }));
-        }
-        setEnrichProgress(prev => ({ ...prev, current: prev.current + 1 }));
-      }));
-      if (signal.aborted) return null;
-
-      // Pass 3: Compose with citation context
+      // ── Pass 3: LLM organises verified works into canon ───────────────────
       setPhase('composing');
-      cycleMessages(COMPOSE_MESSAGES);
+      cycleMessages(DATA_COMPOSE_MESSAGES);
 
-      const candidateContext = parsedCandidates.map((c, i) => {
-        const cit = citMap[citKey(c.title)];
-        const citStr = cit?.citationCount != null
-          ? `${cit.citationCount.toLocaleString()} citations`
-          : 'not found in Scholar index';
-        return `${i + 1}. ${c.title} -- ${c.author} (${c.year}) | ${c.type} | ${citStr}\n   ${c.reason}`;
-      }).join('\n');
+      const harvestSummary =
+        `Sources: OpenAlex (${counts.openalex} works) · Semantic Scholar (${counts.semanticScholar} works) · Open Library (${counts.openLibrary} works)\n` +
+        `Total unique works after deduplication: ${merged.length}\n` +
+        `Showing top ${top.length} ranked by composite bibliometric score.\n\n`;
 
-      const composeMessage = `Topic: ${inputTopic}\n\nCandidate works with Google Scholar citation data:\n${candidateContext}\n\nCompose the authoritative canon selecting from these candidates.`;
+      const composeMessage =
+        `Topic: ${inputTopic}\n\n` +
+        harvestSummary +
+        `Ranked verified works:\n${formatForCompose(top)}\n\n` +
+        `Compose the authoritative canon selecting from these verified works. You may add up to 5 historical works you know to be foundational but which predate digital citation indexing (mark them [HISTORICAL]).`;
 
       let result = '';
-      for await (const token of streamCompletion(COMPOSE_SYSTEM_PROMPT, composeMessage, signal, 10000)) {
+      for await (const token of streamCompletion(DATA_FIRST_COMPOSE_PROMPT, composeMessage, signal, 10000)) {
         result += token;
         setContent(result);
       }
@@ -253,9 +185,15 @@ export function useCanonGenerator() {
     }
   }, [content]);
 
+  // Kept for backward compat — harvested works double as "candidates" for display
   const getCandidateCitation = useCallback((title) => {
-    return candidateCitations[citKey(title)] || null;
-  }, [candidateCitations]);
+    const key = title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 60);
+    const work = harvestedWorks.find(w =>
+      w.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 60) === key
+    );
+    if (!work) return null;
+    return { citationCount: work.citationCount || null, scholarLink: null };
+  }, [harvestedWorks]);
 
   const loadContent = useCallback((loadedTopic, loadedContent) => {
     abortRef.current?.abort();
@@ -264,8 +202,8 @@ export function useCanonGenerator() {
     setContent(loadedContent);
     setPhase('complete');
     setError(null);
-    setCandidates([]);
-    setCandidateCitations({});
+    setHarvestedWorks([]);
+    setHarvestCounts(null);
     setRefinements([]);
   }, []);
 
@@ -278,9 +216,8 @@ export function useCanonGenerator() {
     setContent('');
     setError(null);
     setTopic('');
-    setCandidates([]);
-    setCandidateCitations({});
-    setEnrichProgress({ current: 0, total: 0 });
+    setHarvestedWorks([]);
+    setHarvestCounts(null);
     setRefinements([]);
   }, []);
 
@@ -288,5 +225,19 @@ export function useCanonGenerator() {
     return () => { if (msgIntervalRef.current) clearInterval(msgIntervalRef.current); };
   }, []);
 
-  return { phase, content, topic, error, candidates, candidateCitations, enrichProgress, refinements, loadingMessage, getCandidateCitation, generateCanon, refineCanon, loadContent, cancel, reset };
+  return {
+    phase, content, topic, error,
+    harvestedWorks, harvestCounts,
+    // Legacy names kept so App.jsx/CandidatePreview don't need changes
+    candidates: harvestedWorks,
+    candidateCitations: Object.fromEntries(
+      harvestedWorks.map(w => [
+        w.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 60),
+        { citationCount: w.citationCount || null }
+      ])
+    ),
+    enrichProgress: { current: harvestedWorks.length, total: harvestedWorks.length },
+    refinements, loadingMessage,
+    getCandidateCitation, generateCanon, refineCanon, loadContent, cancel, reset,
+  };
 }

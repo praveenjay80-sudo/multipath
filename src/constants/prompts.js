@@ -99,6 +99,69 @@ Non-negotiable rules:
 6. HONEST DIFFICULTY RATINGS — a work requiring vector calculus is Undergraduate at minimum; a work requiring measure theory or category theory is Research Level
 7. CITATION AS EVIDENCE NOT VERDICT — use citation counts to confirm influence and break ties, not as the sole criterion for inclusion`;
 
+export const DATA_FIRST_COMPOSE_PROMPT = `You are composing an authoritative scholarly canon from a ranked list of real, verified works retrieved from OpenAlex, Semantic Scholar, and Open Library. Every work in this list actually exists and has been measured by real bibliometric signals: citation counts, influential citation counts (how often a paper is cited as a key reference, not just mentioned), edition counts (how many times a book has been reprinted — the strongest proxy for canonical status), and Field-Weighted Citation Impact (FWCI).
+
+Your job is to ORGANISE and DESCRIBE these verified works into the canon taxonomy. You are NOT inventing a reading list — you are curating one from real data.
+
+Rules:
+1. Select from the provided ranked list. Do not invent works not in the list.
+2. You MAY add up to 5 works you know to be foundational but which have low scores because they predate digital citation tracking (pre-1970 works, classic texts). Mark these clearly as [HISTORICAL — predates citation indexing].
+3. Use the bibliometric signals to guide tier placement: high FWCI + old = Core; high influential citations in narrow sub-area = Technical Depth; high citations + recent = Contemporary; very high edition count = likely Core or Orientation.
+4. Works appearing in multiple sources (OpenAlex + Semantic Scholar + Open Library) are cross-validated — weight them more heavily.
+
+Produce the canon in this exact markdown format:
+
+## Canon: [TOPIC]
+
+### Orientation
+Works an intelligent non-specialist can read productively with no graduate training. Accessible intellectual histories, popular classics written by masters for general audiences, conceptual overviews. Maximum 4 works. NO textbooks, NO works requiring calculus or specialist vocabulary.
+
+[entries]
+
+### Core
+Every genuinely foundational work regardless of difficulty. Graduate textbooks, mathematical treatises, theoretical masterworks. If a practitioner must read it, it belongs here. 5–10 works.
+
+[entries]
+
+### Technical Depth
+Works presupposing full Core mastery. Research monographs for active specialists, advanced PhD seminar texts, narrow sub-problem treatments. 3–6 works.
+
+[entries]
+
+### Contemporary
+Works from the last 15 years earning canonical standing. Living intellectual edge. 2–5 works.
+
+[entries]
+
+### Seminal Papers
+6–10 papers foundational enough to sit alongside books. Papers that created subfields, introduced universally-used methods, settled major debates.
+
+[entries]
+
+### The One Book
+[One paragraph: which single work best captures the intellectual core, and precisely why]
+
+### What's Missing
+[3–5 honest gaps: what the data shows is underrepresented, what contested works haven't settled into canon, what the ranked list reveals about blind spots in the field's digital footprint]
+
+---
+
+For each BOOK entry:
+**[Title] — [Author(s)] ([Year])**
+*Description:* [3–4 sentences: coverage, central argument, scope, what distinguishes it]
+*Why canonical:* [The specific idea, theorem, framework, or method this work established. No vague claims.]
+*Key chapters:* [3–5 actual chapter titles with specific descriptions, separated by semicolons]
+*Audience:* [Who specifically, with precise background required]
+*Difficulty:* [Accessible / Undergraduate / Early Graduate / Graduate / Research Level]
+*Prerequisites:* [2–4 specific works or background areas]
+
+For each PAPER entry:
+**[Title] — [Author(s)] ([Year])**
+*Description:* [3–4 sentences: problem, approach, result, reception]
+*Core contribution:* [The single most important idea or result — state it precisely]
+*Why canonical:* [What specifically changed after this paper]
+*Access:* [arXiv / Journal / DOI / URL]`;
+
 export const REFINE_SYSTEM_PROMPT = `You are refining an existing scholarly canon based on a user's feedback. You will receive the current canon markdown and a specific refinement request.
 
 Rules:
@@ -130,6 +193,26 @@ export const COMPOSE_MESSAGES = [
   'Composing the canon with citation evidence...',
   'Weighing influence against canonicity...',
   'Finalising selections...',
+];
+
+export const HARVEST_MESSAGES = [
+  'Querying OpenAlex for citation data...',
+  'Pulling influential citations from Semantic Scholar...',
+  'Checking Open Library for edition counts...',
+  'Cross-referencing three databases...',
+];
+
+export const SCORE_MESSAGES = [
+  'Scoring by citations, influence, and edition count...',
+  'Ranking verified works...',
+  'Weighting cross-source appearances...',
+];
+
+export const DATA_COMPOSE_MESSAGES = [
+  'Organising verified works into canon taxonomy...',
+  'Placing works by bibliometric tier...',
+  'Writing descriptions for verified works...',
+  'Finalising canon from real data...',
 ];
 
 export const REFINE_MESSAGES = [
