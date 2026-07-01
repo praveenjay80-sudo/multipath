@@ -3,6 +3,12 @@ import { useState, useCallback, useRef } from 'react';
 const OA_BASE = 'https://api.openalex.org';
 const OA_FIELDS = 'title,publication_year,cited_by_count,fwci,type,open_access,cited_by_percentile_year,primary_location,authorships';
 
+function fetchWithTimeout(url, ms = 8000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(timer));
+}
+
 function titleWords(t) {
   return t.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 3);
 }
@@ -19,7 +25,7 @@ function titlesMatch(a, b) {
 async function crossrefLookup(title, author) {
   const q = [title, author].filter(Boolean).join(' ');
   try {
-    const res = await fetch(`https://api.crossref.org/works?query=${encodeURIComponent(q)}&rows=5&mailto=canon-app@example.com`);
+    const res = await fetchWithTimeout(`https://api.crossref.org/works?query=${encodeURIComponent(q)}&rows=5&mailto=canon-app@example.com`);
     if (!res.ok) return null;
     const { message } = await res.json();
     const match = (message?.items || []).find(item => titlesMatch((item.title || [])[0] || '', title));
@@ -36,11 +42,11 @@ async function crossrefLookup(title, author) {
 async function oaLookup(title) {
   const encoded = encodeURIComponent(title);
   try {
-    let res = await fetch(`${OA_BASE}/works?filter=title.search:${encoded}&select=${OA_FIELDS}&per_page=5&mailto=canon-app`);
+    let res = await fetchWithTimeout(`${OA_BASE}/works?filter=title.search:${encoded}&select=${OA_FIELDS}&per_page=5&mailto=canon-app`);
     let results = [];
     if (res.ok) { const data = await res.json(); results = data.results || []; }
     if (!results.length) {
-      res = await fetch(`${OA_BASE}/works?search=${encoded}&select=${OA_FIELDS}&per_page=8&mailto=canon-app`);
+      res = await fetchWithTimeout(`${OA_BASE}/works?search=${encoded}&select=${OA_FIELDS}&per_page=8&mailto=canon-app`);
       if (res.ok) { const data = await res.json(); results = data.results || []; }
     }
     const match = results.find(r => titlesMatch(r.title || '', title));
@@ -62,7 +68,7 @@ async function oaLookup(title) {
 async function oaTopicSearch(topic, limit = 50) {
   const url = `${OA_BASE}/works?search=${encodeURIComponent(topic)}&select=title,authorships,publication_year,cited_by_count,fwci,type,open_access,primary_location&per_page=${limit}&sort=cited_by_count:desc&mailto=canon-app`;
   try {
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) return [];
     const { results = [] } = await res.json();
     return results.map(w => ({
@@ -121,39 +127,48 @@ export function useEnrichment() {
         const entry = entries[i];
         setProgress(`Verifying ${i + 1}/${entries.length} — ${entry.title.slice(0, 40)}`);
 
-        const [cr, oa] = await Promise.all([
-          crossrefLookup(entry.title, entry.author),
-          oaLookup(entry.title),
-        ]);
+        try {
+          const [cr, oa] = await Promise.all([
+            crossrefLookup(entry.title, entry.author),
+            oaLookup(entry.title),
+          ]);
 
-        const dbFound = !!(cr || oa);
-        const dbYear = cr?.year ?? oa?.year ?? null;
-        const llmYear = entry.year ? parseInt(entry.year) : null;
-        const yearDiff = dbYear && llmYear ? Math.abs(dbYear - llmYear) : 0;
+          const dbFound = !!(cr || oa);
+          const dbYear = cr?.year ?? oa?.year ?? null;
+          const llmYear = entry.year ? parseInt(entry.year) : null;
+          const yearDiff = dbYear && llmYear ? Math.abs(dbYear - llmYear) : 0;
 
-        const verification = {
-          found: dbFound,
-          source: cr ? 'crossref' : oa ? 'openalex' : null,
-          yearMismatch: yearDiff > 2 ? { llm: llmYear, db: dbYear } : null,
-          dbFirstAuthor: cr?.firstAuthor ?? oa?.firstAuthor ?? null,
-        };
-
-        setVerifications(prev => ({ ...prev, [citationKey(entry.title)]: verification }));
-
-        if (dbFound) {
-          foundCount++;
-          setFound(foundCount);
-          setCitations(prev => ({
+          setVerifications(prev => ({
             ...prev,
             [citationKey(entry.title)]: {
-              type: cr?.type ?? oa?.type ?? null,
-              fwci: oa?.fwci ?? null,
-              isOA: oa?.isOA ?? false,
-              oaUrl: oa?.oaUrl ?? null,
-              percentile: oa?.percentile ?? null,
-              venue: oa?.venue ?? null,
-              doi: cr?.doi ?? null,
+              found: dbFound,
+              source: cr ? 'crossref' : oa ? 'openalex' : null,
+              yearMismatch: yearDiff > 2 ? { llm: llmYear, db: dbYear } : null,
+              dbFirstAuthor: cr?.firstAuthor ?? oa?.firstAuthor ?? null,
             },
+          }));
+
+          if (dbFound) {
+            foundCount++;
+            setFound(foundCount);
+            setCitations(prev => ({
+              ...prev,
+              [citationKey(entry.title)]: {
+                type: cr?.type ?? oa?.type ?? null,
+                fwci: oa?.fwci ?? null,
+                isOA: oa?.isOA ?? false,
+                oaUrl: oa?.oaUrl ?? null,
+                percentile: oa?.percentile ?? null,
+                venue: oa?.venue ?? null,
+                doi: cr?.doi ?? null,
+              },
+            }));
+          }
+        } catch {
+          // Mark as unverified and continue — don't let one bad entry kill the loop
+          setVerifications(prev => ({
+            ...prev,
+            [citationKey(entry.title)]: { found: false, source: null, yearMismatch: null, dbFirstAuthor: null },
           }));
         }
 
