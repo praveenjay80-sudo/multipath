@@ -45,11 +45,11 @@ function BookIcon() {
   );
 }
 
-export default function CanonOutput({ parsed, isStreaming, getCitation, getVerification, onExplain, getExplanation }) {
+export default function CanonOutput({ parsed, isStreaming, getCitation, getVerification, onExplain, getExplanation, noTopMargin }) {
   if (!parsed) return null;
 
   return (
-    <div className={`mt-10 ${isStreaming ? 'opacity-90' : ''}`}>
+    <div className={`${noTopMargin ? '' : 'mt-10'} ${isStreaming ? 'opacity-90' : ''}`}>
       {parsed.topic && (
         <div className="mb-8">
           <h2 className="text-2xl font-semibold text-stone-900 tracking-tight">{parsed.topic}</h2>

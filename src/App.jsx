@@ -11,8 +11,10 @@ import { useCanonHistory } from './hooks/useCanonHistory';
 import { useEnrichment } from './hooks/useEnrichment';
 import { useWorkExplainer } from './hooks/useWorkExplainer';
 import { useFieldNavigation } from './hooks/useFieldNavigation';
+import { useReadingOrder } from './hooks/useReadingOrder';
 import { parseCanon } from './utils/parseCanon';
 import { copyMarkdown } from './utils/exportMarkdown';
+import ReadingOrderView from './components/ReadingOrderView';
 
 function WorkRow({ w }) {
   return (
@@ -119,9 +121,11 @@ export default function App() {
   const enrichment = useEnrichment();
   const explainer = useWorkExplainer(gen.topic);
   const fieldNav = useFieldNavigation();
+  const readingOrder = useReadingOrder();
   const [inputTopic, setInputTopic] = useState('');
   const [shake, setShake] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [view, setView] = useState('canon');
 
   const parsed = useMemo(() => parseCanon(gen.content), [gen.content]);
 
@@ -160,10 +164,19 @@ export default function App() {
     setTimeout(() => setShake(false), 600);
   }
 
+  function handleViewToggle(v) {
+    setView(v);
+    if (v === 'reading-order' && readingOrder.status === 'idle') {
+      readingOrder.generate(gen.content);
+    }
+  }
+
   function handleGenerate() {
     if (!inputTopic.trim()) { triggerShake(); return; }
     gen.reset();
     enrichment.clear();
+    readingOrder.clear();
+    setView('canon');
     gen.generateCanon(inputTopic.trim(), 'full');
   }
 
@@ -177,6 +190,8 @@ export default function App() {
 
   function handleClickSubSubfield(ssf) {
     enrichment.clear();
+    readingOrder.clear();
+    setView('canon');
     gen.generateCanon(ssf, 'subfield');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -188,6 +203,8 @@ export default function App() {
   function handleLoad(item) {
     setInputTopic(item.topic);
     enrichment.clear();
+    readingOrder.clear();
+    setView('canon');
     gen.loadContent(item.topic, item.content);
     setMobileSidebarOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -196,6 +213,8 @@ export default function App() {
   function handleNew() {
     gen.reset();
     enrichment.clear();
+    readingOrder.clear();
+    setView('canon');
     setInputTopic('');
   }
 
@@ -262,7 +281,7 @@ export default function App() {
               </div>
             )}
 
-            {hasOutput && parsed && (
+            {hasOutput && parsed && gen.phase !== 'complete' && (
               <CanonOutput
                 parsed={parsed}
                 isStreaming={gen.phase === 'composing' || isRefining}
@@ -271,6 +290,50 @@ export default function App() {
                 onExplain={explainer.explain}
                 getExplanation={explainer.getExplanation}
               />
+            )}
+
+            {hasOutput && parsed && gen.phase === 'complete' && (
+              <div className="mt-10">
+                <div className="flex border-b border-stone-200 mb-6">
+                  <button
+                    onClick={() => handleViewToggle('canon')}
+                    className={`px-4 py-2.5 text-xs font-mono uppercase tracking-widest -mb-px transition-colors ${
+                      view === 'canon'
+                        ? 'border-b-2 border-stone-900 text-stone-900'
+                        : 'border-b-2 border-transparent text-stone-400 hover:text-stone-700'
+                    }`}
+                  >
+                    Canon
+                  </button>
+                  <button
+                    onClick={() => handleViewToggle('reading-order')}
+                    className={`px-4 py-2.5 text-xs font-mono uppercase tracking-widest -mb-px transition-colors ${
+                      view === 'reading-order'
+                        ? 'border-b-2 border-stone-900 text-stone-900'
+                        : 'border-b-2 border-transparent text-stone-400 hover:text-stone-700'
+                    }`}
+                  >
+                    Reading Order
+                  </button>
+                </div>
+                {view === 'canon' && (
+                  <CanonOutput
+                    parsed={parsed}
+                    isStreaming={false}
+                    getCitation={getCitation}
+                    getVerification={enrichment.getVerification}
+                    onExplain={explainer.explain}
+                    getExplanation={explainer.getExplanation}
+                    noTopMargin
+                  />
+                )}
+                {view === 'reading-order' && (
+                  <ReadingOrderView
+                    content={readingOrder.content}
+                    isStreaming={readingOrder.status === 'loading'}
+                  />
+                )}
+              </div>
             )}
 
             {hasOutput && !isGenerating && !isRefining && enrichment.status !== 'idle' && (
@@ -289,7 +352,7 @@ export default function App() {
 
             {gen.phase === 'complete' && (
               <RefinementUI
-                onRefine={gen.refineCanon}
+                onRefine={v => { readingOrder.clear(); setView('canon'); gen.refineCanon(v); }}
                 refinements={gen.refinements}
                 disabled={false}
               />
