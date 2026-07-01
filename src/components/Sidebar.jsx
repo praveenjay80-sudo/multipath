@@ -16,9 +16,9 @@ function ChevronIcon({ open }) {
   );
 }
 
-function SpinnerDot() {
+function SpinnerDots() {
   return (
-    <span className="inline-flex gap-0.5 ml-1">
+    <span className="inline-flex gap-0.5">
       <span className="loading-dot" />
       <span className="loading-dot" />
       <span className="loading-dot" />
@@ -29,7 +29,8 @@ function SpinnerDot() {
 function FieldNav({
   activeCanonTopic,
   onClickTopLevel, onClickSubfield, onClickSubSubfield,
-  isExpanded, getChildren, isLoading,
+  isFieldExpanded, isSubfieldExpanded,
+  getSubfields, getSubSubfields, isLoading,
   disabled,
 }) {
   return (
@@ -37,36 +38,31 @@ function FieldNav({
       <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-2">Fields</p>
       <ul className="space-y-0">
         {TOP_LEVEL_FIELDS.map(field => {
-          const expanded = isExpanded(field);
-          const subfields = getChildren(field);
-          const loading = isLoading(field);
+          const expanded = isFieldExpanded(field);
+          const subfields = getSubfields(field);
           const isActive = activeCanonTopic === field;
 
           return (
             <li key={field}>
-              {/* Top-level field */}
               <button
                 onClick={() => onClickTopLevel(field)}
                 disabled={disabled}
                 className={`w-full text-left px-2 py-1.5 text-sm flex items-center justify-between gap-1 transition-colors disabled:opacity-40 ${
-                  isActive
-                    ? 'bg-stone-900 text-white'
-                    : 'text-stone-700 hover:bg-stone-100'
+                  isActive ? 'bg-stone-900 text-white' : 'text-stone-700 hover:bg-stone-100'
                 }`}
               >
                 <span className="truncate">{field}</span>
                 <span className={isActive ? 'text-stone-300' : 'text-stone-400'}>
-                  {loading ? <SpinnerDot /> : <ChevronIcon open={expanded} />}
+                  <ChevronIcon open={expanded} />
                 </span>
               </button>
 
-              {/* Subfields */}
-              {expanded && subfields && subfields.length > 0 && (
+              {expanded && subfields.length > 0 && (
                 <ul className="ml-2 border-l border-stone-200">
                   {subfields.map(sf => {
                     const sfKey = `${field}::${sf}`;
-                    const sfExpanded = isExpanded(sfKey);
-                    const sfChildren = getChildren(sfKey);
+                    const sfExpanded = isSubfieldExpanded(sfKey);
+                    const sfChildren = getSubSubfields(sfKey);
                     const sfLoading = isLoading(sfKey);
                     const sfActive = activeCanonTopic === sf;
 
@@ -83,11 +79,10 @@ function FieldNav({
                         >
                           <span className="truncate">{sf}</span>
                           <span className={sfActive ? 'text-stone-300' : 'text-stone-400'}>
-                            {sfLoading ? <SpinnerDot /> : <ChevronIcon open={sfExpanded} />}
+                            {sfLoading ? <SpinnerDots /> : <ChevronIcon open={sfExpanded} />}
                           </span>
                         </button>
 
-                        {/* Sub-subfields */}
                         {sfExpanded && sfChildren && sfChildren.length > 0 && (
                           <ul className="ml-2 border-l border-stone-100">
                             {sfChildren.map(ssf => {
@@ -97,7 +92,7 @@ function FieldNav({
                                   <button
                                     onClick={() => onClickSubSubfield(ssf)}
                                     disabled={disabled}
-                                    className={`w-full text-left px-2 py-1 text-xs flex items-center transition-colors disabled:opacity-40 ${
+                                    className={`w-full text-left px-2 py-1 text-xs transition-colors disabled:opacity-40 ${
                                       ssfActive
                                         ? 'bg-stone-900 text-white'
                                         : 'text-stone-500 hover:bg-stone-100 hover:text-stone-800'
@@ -127,7 +122,8 @@ export default function Sidebar({
   history, onLoad, onDelete, onClearAll,
   activeCanonTopic,
   onClickTopLevel, onClickSubfield, onClickSubSubfield,
-  isExpanded, getChildren, isLoading,
+  isFieldExpanded, isSubfieldExpanded,
+  getSubfields, getSubSubfields, isLoading,
   disabled,
 }) {
   return (
@@ -137,8 +133,10 @@ export default function Sidebar({
         onClickTopLevel={onClickTopLevel}
         onClickSubfield={onClickSubfield}
         onClickSubSubfield={onClickSubSubfield}
-        isExpanded={isExpanded}
-        getChildren={getChildren}
+        isFieldExpanded={isFieldExpanded}
+        isSubfieldExpanded={isSubfieldExpanded}
+        getSubfields={getSubfields}
+        getSubSubfields={getSubSubfields}
         isLoading={isLoading}
         disabled={disabled}
       />

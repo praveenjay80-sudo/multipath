@@ -208,6 +208,17 @@ export default function App() {
             <header className="mb-12">
               <h1 className="text-3xl font-semibold tracking-tight text-stone-900">Canon</h1>
               <p className="mt-1 text-stone-400 text-sm">Definitive reading lists for any academic field</p>
+              <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1">
+                <span className="text-xs text-stone-400">
+                  <span className="text-stone-500 font-medium">Browse</span> — click any field in the sidebar to explore its subfields
+                </span>
+                <span className="text-xs text-stone-400">
+                  <span className="text-stone-500 font-medium">Generate</span> — click a subfield to produce its reading canon
+                </span>
+                <span className="text-xs text-stone-400">
+                  <span className="text-stone-500 font-medium">Refine</span> — submit a note below any canon to adjust its focus
+                </span>
+              </div>
             </header>
 
             <ApiKeyInput />
@@ -297,8 +308,10 @@ export default function App() {
                 onClickTopLevel={handleClickTopLevel}
                 onClickSubfield={handleClickSubfield}
                 onClickSubSubfield={handleClickSubSubfield}
-                isExpanded={fieldNav.isExpanded}
-                getChildren={fieldNav.getChildren}
+                isFieldExpanded={fieldNav.isFieldExpanded}
+                isSubfieldExpanded={fieldNav.isSubfieldExpanded}
+                getSubfields={fieldNav.getSubfields}
+                getSubSubfields={fieldNav.getSubSubfields}
                 isLoading={fieldNav.isLoading}
                 disabled={isGenerating || isRefining}
               />
