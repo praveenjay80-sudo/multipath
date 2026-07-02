@@ -92,7 +92,7 @@ Use papers from this list for ENTRY fields where relevant. The papers show the c
         },
         body: JSON.stringify({
           model: 'claude-sonnet-5',
-          max_tokens: 7000,
+          max_tokens: 12000,
           stream: true,
           system: SYSTEM_PROMPT,
           messages: [{ role: 'user', content: userMessage }],
