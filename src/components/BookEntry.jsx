@@ -52,7 +52,7 @@ function renderExplanation(text) {
       const isList = body.startsWith('-') || body.startsWith('•');
       return (
         <div key={i} className="mb-4 last:mb-0">
-          <p className="text-xs font-bold text-stone-800 uppercase tracking-widest mb-2">{heading}</p>
+          <p className="text-xs font-bold text-stone-800 mb-2">{heading}</p>
           {isList ? (
             <ul className="space-y-1">
               {body.split('\n').filter(l => l.trim()).map((line, j) => (

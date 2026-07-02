@@ -33,7 +33,7 @@ export default function CurriculumView({ parsed, isStreaming, ospCount, seminalC
       {/* Header */}
       {parsed.topic && (
         <div className="mb-8">
-          <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-1">University Curriculum</p>
+          <p className="text-xs font-mono text-stone-400 mb-1">University Curriculum</p>
           <h2 className="text-xl font-semibold text-stone-900 tracking-tight leading-snug">{parsed.topic}</h2>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
@@ -135,7 +135,7 @@ export default function CurriculumView({ parsed, isStreaming, ospCount, seminalC
               {/* Textbooks */}
               {hasTextbooks && (
                 <div className="px-6 py-4">
-                  <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-3">Textbooks</p>
+                  <p className="text-xs font-mono text-stone-400 mb-3">Textbooks</p>
                   <div className="space-y-4">
                     {course.textbooks.map((work, j) => (
                       <div key={j} className="flex gap-3">
@@ -168,7 +168,7 @@ export default function CurriculumView({ parsed, isStreaming, ospCount, seminalC
               {/* Seminal Papers */}
               {hasPapers && (
                 <div className={`px-6 py-4 border-t border-current/10 ${c.paperBg}`}>
-                  <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-3">Seminal Papers</p>
+                  <p className="text-xs font-mono text-stone-400 mb-3">Seminal Papers</p>
                   <div className="space-y-3">
                     {course.papers.map((paper, j) => (
                       <div key={j} className="flex gap-2 items-start">
@@ -193,7 +193,7 @@ export default function CurriculumView({ parsed, isStreaming, ospCount, seminalC
       {/* Total curriculum footer */}
       {parsed.totalCurriculum && (
         <div className="mt-6 flex items-baseline gap-3 px-5 py-4 bg-stone-900">
-          <span className="text-xs font-mono uppercase tracking-widest text-stone-400 shrink-0">Total Curriculum</span>
+          <span className="text-xs font-mono text-stone-400 shrink-0">Total Curriculum</span>
           <span className="text-sm text-stone-200">{parsed.totalCurriculum}</span>
         </div>
       )}

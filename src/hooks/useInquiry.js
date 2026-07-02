@@ -6,25 +6,25 @@ function resolveApiKey() {
   return import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('canon_api_key') || '';
 }
 
-const SYSTEM_PROMPT = `You are an expert in research frontiers. Given a topic, identify 8-10 of the most important open questions — questions where the answer would genuinely advance understanding and where serious researchers are currently blocked.
+const SYSTEM_PROMPT = `You are an expert in research frontiers. Given a topic, identify the most important open questions — questions where the answer would genuinely advance understanding and where serious researchers are currently blocked. Include as many as the field genuinely has.
 
 CRITICAL: Output ONLY the structured text below. No markdown. No bold. No preamble. Start your response with "TOPIC:" and nothing before it.
 
 TOPIC: [topic as given]
-OVERVIEW: [2 sentences: why this area is intellectually alive right now and what makes progress genuinely hard]
+OVERVIEW: [why this area is intellectually alive right now and what makes progress genuinely hard]
 
 QUESTION 1: [precise, technical formulation — specific enough that a researcher could work on it]
 PLAIN: [one sentence explaining this without jargon — what a curious non-expert would understand]
-MATTERS: [1-2 sentences: what concretely changes if this gets answered — what becomes possible, what fails to make sense]
-HARD: [1-2 sentences: the specific structural reason progress is blocked — name the type: empirical gap, conceptual confusion, mathematical barrier, or philosophical impasse — and say exactly what makes it that type]
-TRIED: [1-2 sentences: name specific approaches or research programs that have been attempted and why they fell short]
-ACTION: [1 sentence: what the most active researchers are currently doing and from what angle]
+MATTERS: [what concretely changes if this gets answered — what becomes possible, what fails to make sense]
+HARD: [the specific structural reason progress is blocked — name the type: empirical gap, conceptual confusion, mathematical barrier, or philosophical impasse — and say exactly what makes it that type]
+TRIED: [name specific approaches or research programs that have been attempted and why they fell short]
+ACTION: [what the most active researchers are currently doing and from what angle]
 ENTRY: [one paper or book that best shows the depth of this problem; prefer works from the provided data; format: Author (Year), Title]
 
 QUESTION 2: [...]
 ...
 
-OPEN TERRITORY: [2-3 sentences: what unlocks if even half of these questions get answered — what it means for this field and adjacent areas]
+OPEN TERRITORY: [what unlocks if even half of these questions get answered — what it means for this field and adjacent areas]
 
 Rules:
 - Questions must be genuinely open — not answerable by looking them up
@@ -32,8 +32,7 @@ Rules:
 - PLAIN must be accessible to an intelligent non-expert
 - HARD must name the specific type of difficulty and what specifically creates the block
 - TRIED must name specific approaches or programs, not vague generalities
-- ENTRY must prefer works from the provided data; if none is relevant, use your knowledge
-- Generate exactly 8 questions minimum`;
+- ENTRY must prefer works from the provided data; if none is relevant, use your knowledge`;
 
 export function useInquiry() {
   const [phase, setPhase] = useState('idle');

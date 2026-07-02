@@ -17,7 +17,7 @@ function ProseSection({ title, content, className = '' }) {
   const isList = content.trim().match(/^[\-\*•]/m);
   return (
     <div className={`bg-stone-50 border border-stone-200 p-6 ${className}`}>
-      <h3 className="text-xs font-mono uppercase tracking-widest text-stone-500 mb-3">{title}</h3>
+      <h3 className="text-xs font-mono text-stone-500 mb-3">{title}</h3>
       {isList ? (
         <ul className="space-y-2">
           {bullets.map((b, i) => (
@@ -82,7 +82,7 @@ export default function CanonOutput({ parsed, isStreaming, getCitation, getVerif
             <div className="bg-amber-50 border border-amber-200 p-6">
               <div className="flex items-center gap-2 mb-3">
                 <BookIcon />
-                <h3 className="text-xs font-mono uppercase tracking-widest text-amber-700">The One Book</h3>
+                <h3 className="text-xs font-mono text-amber-700">The One Book</h3>
               </div>
               <div className="text-sm text-stone-700 leading-relaxed">{renderInline(parsed.oneBook)}</div>
             </div>
@@ -90,7 +90,7 @@ export default function CanonOutput({ parsed, isStreaming, getCitation, getVerif
 
           {parsed.criticsNotes && (
             <div className="border-l-4 border-stone-300 bg-stone-50 p-6">
-              <h3 className="text-xs font-mono uppercase tracking-widest text-stone-500 mb-3">Critic's Notes</h3>
+              <h3 className="text-xs font-mono text-stone-500 mb-3">Critic's Notes</h3>
               <ul className="space-y-2">
                 {parseBullets(parsed.criticsNotes).map((note, i) => (
                   <li key={i} className="flex gap-3 text-sm text-stone-600 leading-relaxed">
@@ -104,7 +104,7 @@ export default function CanonOutput({ parsed, isStreaming, getCitation, getVerif
 
           {parsed.revisionNotes && (
             <div className="border-l-4 border-blue-300 bg-blue-50 p-6">
-              <h3 className="text-xs font-mono uppercase tracking-widest text-blue-600 mb-2">Revision Notes</h3>
+              <h3 className="text-xs font-mono text-blue-600 mb-2">Revision Notes</h3>
               <p className="text-sm text-stone-600 leading-relaxed">{renderInline(parsed.revisionNotes)}</p>
             </div>
           )}

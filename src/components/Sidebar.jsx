@@ -25,7 +25,7 @@ function FieldNav({
 }) {
   return (
     <div className="mb-5">
-      <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-2">Fields</p>
+      <p className="text-xs font-mono text-stone-400 mb-2">Fields</p>
       <ul>
         {TOP_LEVEL_FIELDS.map(field => {
           const expanded = isFieldExpanded(field);
@@ -133,7 +133,7 @@ export default function Sidebar({
       {history.length > 0 && <div className="border-t border-stone-200 mb-4" />}
 
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-xs font-mono uppercase tracking-widest text-stone-500">
+        <h2 className="text-xs font-mono text-stone-500">
           Saved
           {history.length > 0 && <span className="ml-1.5 text-stone-400">({history.length})</span>}
         </h2>

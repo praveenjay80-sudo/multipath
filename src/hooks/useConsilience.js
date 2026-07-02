@@ -25,28 +25,28 @@ const SYSTEM_PROMPT = `You are an expert in cross-disciplinary synthesis. Given 
 CRITICAL: Output ONLY the structured text below. No markdown. No bold. No preamble. Start your response with "QUESTION:" and nothing before it.
 
 QUESTION: [restate the question precisely]
-FIELDS: [comma-separated list of 4-8 disciplines that have relevant research on this question]
+FIELDS: [comma-separated list of every discipline that genuinely bears on this question]
 
 ---
 
 FIELD: [discipline name]
 LENS: [one sentence: what unique angle this field brings to this specific question]
-ANSWER: [2-3 sentences: what this field's research actually says in answer to the question — cite specific findings, frameworks, or mechanisms]
-KEY WORKS: [1-3 seminal works for this discipline's answer; prefer works from the provided data, but name real works from your knowledge if the data lacks discipline-specific coverage; format: Author (Year); separate by semicolons]
+ANSWER: [what this field's research actually says in answer to the question — cite specific findings, frameworks, or mechanisms; as long as needed to be accurate]
+KEY WORKS: [seminal works for this discipline's answer; include as many as genuinely matter; prefer works from the provided data, but name real works from your knowledge if the data lacks discipline-specific coverage; format: Title by Author (Year); separate by semicolons]
 
 ---
 
-[repeat FIELD block for each relevant discipline]
+[repeat FIELD block for every relevant discipline]
 
 ---
 
-CONVERGENCE: [2-3 sentences: where multiple fields independently reach the same conclusion — name specific findings, not just "fields agree"]
-TENSIONS: [2-3 sentences: where fields most importantly contradict each other — name specifically what disagrees and why]
-SYNTHESIS: [3-4 sentences: what emerges when all perspectives are held together — the most complete answer available, which no single field can say alone]
-CROSS-DISCIPLINARY READING: [2-4 works that are cited or relevant across multiple disciplines; prefer works from the provided data, supplement from your knowledge if needed; separated by semicolons]
+CONVERGENCE: [where multiple fields independently reach the same conclusion — name specific findings, not just "fields agree"; as long as needed]
+TENSIONS: [where fields most importantly contradict each other — name specifically what disagrees and why; as long as needed]
+SYNTHESIS: [what emerges when all perspectives are held together — the most complete answer available, which no single field can say alone; as long as needed]
+CROSS-DISCIPLINARY READING: [works cited or relevant across multiple disciplines; include as many as are genuinely useful; prefer data works, supplement from knowledge if needed; format: Title by Author (Year); separated by semicolons]
 
 Rules:
-- Identify 4-8 disciplines; each must add genuinely distinct insight to this question
+- Include every discipline that has genuinely distinct insight — do not cap the number
 - KEY WORKS must always be filled — every discipline has canonical works; never write "none"
 - CONVERGENCE and TENSIONS must name specific findings, not general statements about academic disagreement
 - SYNTHESIS must say something no single field can say alone
@@ -113,7 +113,7 @@ ${ospData}
 === RESEARCH PAPERS (Semantic Scholar, by influential citations) ===
 ${paperData}
 
-Identify 4-8 disciplines that have distinct things to say about this question. For KEY WORKS, pick 1-3 works from the lists above that best represent what that discipline says — even if the title seems broad, assign it to the discipline it most belongs to.`;
+Identify every discipline that has genuinely distinct things to say about this question. For KEY WORKS, include all works from the lists above that represent what that discipline says — even if a title seems broad, assign it to the discipline it most belongs to.`;
 
     try {
       const response = await fetch('https://api.anthropic.com/v1/messages', {

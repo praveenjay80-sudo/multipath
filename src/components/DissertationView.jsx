@@ -27,7 +27,7 @@ export default function DissertationView({ parsed, isStreaming }) {
       {/* Header */}
       {parsed.question && (
         <div className="mb-8">
-          <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-1">Qualifying Exam Reading List</p>
+          <p className="text-xs font-mono text-stone-400 mb-1">Qualifying Exam Reading List</p>
           <h2 className="text-xl font-semibold text-stone-900 tracking-tight leading-snug max-w-2xl">{parsed.question}</h2>
           <div className="flex flex-wrap gap-2 mt-2">
             {parsed.field && (
@@ -39,7 +39,7 @@ export default function DissertationView({ parsed, isStreaming }) {
           </div>
           {parsed.committeeNote && (
             <div className="mt-4 px-5 py-4 bg-stone-900 max-w-2xl">
-              <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-1.5">Committee Expects</p>
+              <p className="text-xs font-mono text-stone-400 mb-1.5">Committee Expects</p>
               <p className="text-sm text-stone-200 leading-relaxed">{parsed.committeeNote}</p>
             </div>
           )}
@@ -91,20 +91,20 @@ export default function DissertationView({ parsed, isStreaming }) {
         <div className="mt-6 space-y-0 border border-stone-200">
           {parsed.examPrep && (
             <div className="px-5 py-4 border-b border-stone-200">
-              <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-1.5">Exam Preparation</p>
+              <p className="text-xs font-mono text-stone-400 mb-1.5">Exam Preparation</p>
               <p className="text-sm text-stone-600 leading-relaxed">{parsed.examPrep}</p>
             </div>
           )}
           <div className="px-5 py-4 flex flex-wrap gap-6">
             {parsed.timeline && (
               <div>
-                <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-1">Timeline</p>
+                <p className="text-xs font-mono text-stone-400 mb-1">Timeline</p>
                 <p className="text-sm text-stone-700">{parsed.timeline}</p>
               </div>
             )}
             {parsed.advisorNote && (
               <div className="flex-1">
-                <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-1">Advisor Note</p>
+                <p className="text-xs font-mono text-stone-400 mb-1">Advisor Note</p>
                 <p className="text-sm text-stone-700 italic">{parsed.advisorNote}</p>
               </div>
             )}

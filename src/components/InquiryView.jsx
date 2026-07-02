@@ -13,7 +13,7 @@ function MetaRow({ label, value }) {
   if (!value) return null;
   return (
     <div className="flex gap-3">
-      <span className="text-xs font-mono uppercase tracking-widest text-stone-400 shrink-0 w-14 pt-0.5">{label}</span>
+      <span className="text-xs font-mono text-stone-400 shrink-0 w-14 pt-0.5">{label}</span>
       <p className="text-sm text-stone-600 leading-relaxed flex-1">{value}</p>
     </div>
   );
@@ -40,7 +40,7 @@ export default function InquiryView({ parsed, isStreaming }) {
       {/* Header */}
       {parsed.topic && (
         <div className="mb-8">
-          <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-1">The Inquiry</p>
+          <p className="text-xs font-mono text-stone-400 mb-1">The Inquiry</p>
           <h2 className="text-xl font-semibold text-stone-900 tracking-tight leading-snug">{parsed.topic}</h2>
           {parsed.overview && (
             <p className="mt-3 text-sm text-stone-600 leading-relaxed max-w-2xl">{parsed.overview}</p>
@@ -73,7 +73,7 @@ export default function InquiryView({ parsed, isStreaming }) {
                 <MetaRow label="Action" value={q.action} />
                 {q.entry && (
                   <div className="flex gap-3">
-                    <span className="text-xs font-mono uppercase tracking-widest text-stone-400 shrink-0 w-14 pt-0.5">Entry</span>
+                    <span className="text-xs font-mono text-stone-400 shrink-0 w-14 pt-0.5">Entry</span>
                     <p className="text-xs font-mono text-stone-500 leading-relaxed flex-1 italic">{q.entry}</p>
                   </div>
                 )}
@@ -86,7 +86,7 @@ export default function InquiryView({ parsed, isStreaming }) {
       {/* Open Territory footer */}
       {parsed.openTerritory && (
         <div className="mt-8 px-5 py-4 bg-stone-900">
-          <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-1.5">Open Territory</p>
+          <p className="text-xs font-mono text-stone-400 mb-1.5">Open Territory</p>
           <p className="text-sm text-stone-200 leading-relaxed">{parsed.openTerritory}</p>
         </div>
       )}

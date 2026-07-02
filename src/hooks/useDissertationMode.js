@@ -13,7 +13,7 @@ CRITICAL: Output ONLY the structured text below. No markdown. No bold. No preamb
 QUESTION: [the research question as given]
 FIELD: [primary academic field]
 SUBFIELD: [specific subfield or domain]
-COMMITTEE NOTE: [2-3 sentences: what a qualifying committee in this area actually tests — what distinguishes a prepared from an underprepared candidate, what they probe first]
+COMMITTEE NOTE: [what a qualifying committee in this area actually tests — what distinguishes a prepared from an underprepared candidate, what they probe first]
 
 ---
 
@@ -33,7 +33,7 @@ TIER 3: Your Question
   -> Must master: [specific claims or findings examiners will expect]
 
 TIER 4: Methods
-[1-2 sentences: the methodological toolkit needed for this kind of research]
+[the methodological toolkit needed for this kind of research]
 - Title by Author (Year) -- what method or approach it teaches
   -> Must master: [techniques or frameworks to be able to discuss]
 
@@ -44,13 +44,13 @@ TIER 5: The Contested Ground
 
 ---
 
-EXAM PREP: [2-3 sentences: what qualifying exam questions look like in this area — typical question formats and what a strong answer demonstrates]
+EXAM PREP: [what qualifying exam questions look like in this area — typical question formats and what a strong answer demonstrates]
 TIMELINE: [Estimated months to read and master everything at 3-4 hours daily]
 ADVISOR NOTE: [One sentence a good PhD advisor would say before this exam — the single most important thing]
 
 Rules:
 - Use ONLY works from the provided data lists
-- 3-5 works per tier; omit a tier entirely if no appropriate works exist for it
+- Include as many works per tier as genuinely belong; omit a tier entirely if no appropriate works exist for it
 - Works in Tier 3 must directly engage the specific research question, not just the general field
 - MUST MASTER lines must be specific: cite chapters, theorems, arguments, or methodological steps — not vague "themes"
 - ADVISOR NOTE must be concrete and memorable, not generic

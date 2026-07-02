@@ -43,7 +43,7 @@ export default function CanonDriftView({ parsed, isStreaming }) {
       {/* Header */}
       {parsed.field && (
         <div className="mb-8">
-          <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-1">Canon Drift</p>
+          <p className="text-xs font-mono text-stone-400 mb-1">Canon Drift</p>
           <h2 className="text-xl font-semibold text-stone-900 tracking-tight leading-snug">{parsed.field}</h2>
           {parsed.driftSummary && (
             <p className="mt-3 text-sm text-stone-600 leading-relaxed max-w-2xl">{parsed.driftSummary}</p>
@@ -99,7 +99,7 @@ export default function CanonDriftView({ parsed, isStreaming }) {
       {/* Drift Reveals footer */}
       {parsed.driftReveals && (
         <div className="mt-8 px-5 py-4 bg-stone-900">
-          <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-1.5">Drift Reveals</p>
+          <p className="text-xs font-mono text-stone-400 mb-1.5">Drift Reveals</p>
           <p className="text-sm text-stone-200 leading-relaxed">{parsed.driftReveals}</p>
         </div>
       )}

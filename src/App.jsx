@@ -70,7 +70,7 @@ function MissingWorksPanel({ missing }) {
               <path d="M6 4.5v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
               <circle cx="6" cy="8" r="0.6" fill="currentColor"/>
             </svg>
-            <h3 className="text-xs font-mono uppercase tracking-widest text-red-700">
+            <h3 className="text-xs font-mono text-red-700">
               Likely Missing — {definitive.length} high-impact {definitive.length === 1 ? 'work' : 'works'} with 5k+ citations not in canon
             </h3>
           </div>
@@ -79,7 +79,7 @@ function MissingWorksPanel({ missing }) {
       )}
       {possible.length > 0 && (
         <div className="border border-amber-200 bg-amber-50 p-5">
-          <h3 className="text-xs font-mono uppercase tracking-widest text-amber-700 mb-3">
+          <h3 className="text-xs font-mono text-amber-700 mb-3">
             Possibly Missing — {possible.length} cited {possible.length === 1 ? 'work' : 'works'} (500–5k citations) not in canon
           </h3>
           <div className="space-y-3">{possible.map((w, i) => <WorkRow key={i} w={w} />)}</div>
@@ -101,7 +101,7 @@ function RefinementUI({ onRefine, refinements, disabled }) {
 
   return (
     <div className="mt-8 pt-6 border-t border-stone-200">
-      <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-3">Refine this canon</p>
+      <p className="text-xs font-mono text-stone-400 mb-3">Refine this canon</p>
       {refinements.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3">
           {refinements.map((r, i) => (
@@ -273,7 +273,7 @@ export default function App() {
               <div className="mt-6 flex border-b border-stone-200">
                 <button
                   onClick={() => setAppMode('canon')}
-                  className={`px-4 py-2.5 text-xs font-mono uppercase tracking-widest -mb-px transition-colors ${
+                  className={`px-4 py-2.5 text-xs font-mono -mb-px transition-colors ${
                     appMode === 'canon'
                       ? 'border-b-2 border-stone-900 text-stone-900'
                       : 'border-b-2 border-transparent text-stone-400 hover:text-stone-700'
@@ -283,7 +283,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setAppMode('reverse')}
-                  className={`px-4 py-2.5 text-xs font-mono uppercase tracking-widest -mb-px transition-colors ${
+                  className={`px-4 py-2.5 text-xs font-mono -mb-px transition-colors ${
                     appMode === 'reverse'
                       ? 'border-b-2 border-stone-900 text-stone-900'
                       : 'border-b-2 border-transparent text-stone-400 hover:text-stone-700'
@@ -293,7 +293,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setAppMode('curriculum')}
-                  className={`px-4 py-2.5 text-xs font-mono uppercase tracking-widest -mb-px transition-colors ${
+                  className={`px-4 py-2.5 text-xs font-mono -mb-px transition-colors ${
                     appMode === 'curriculum'
                       ? 'border-b-2 border-stone-900 text-stone-900'
                       : 'border-b-2 border-transparent text-stone-400 hover:text-stone-700'
@@ -303,7 +303,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setAppMode('dissertation')}
-                  className={`px-4 py-2.5 text-xs font-mono uppercase tracking-widest -mb-px transition-colors ${
+                  className={`px-4 py-2.5 text-xs font-mono -mb-px transition-colors ${
                     appMode === 'dissertation'
                       ? 'border-b-2 border-stone-900 text-stone-900'
                       : 'border-b-2 border-transparent text-stone-400 hover:text-stone-700'
@@ -313,7 +313,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setAppMode('drift')}
-                  className={`px-4 py-2.5 text-xs font-mono uppercase tracking-widest -mb-px transition-colors ${
+                  className={`px-4 py-2.5 text-xs font-mono -mb-px transition-colors ${
                     appMode === 'drift'
                       ? 'border-b-2 border-stone-900 text-stone-900'
                       : 'border-b-2 border-transparent text-stone-400 hover:text-stone-700'
@@ -323,7 +323,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setAppMode('consilience')}
-                  className={`px-4 py-2.5 text-xs font-mono uppercase tracking-widest -mb-px transition-colors ${
+                  className={`px-4 py-2.5 text-xs font-mono -mb-px transition-colors ${
                     appMode === 'consilience'
                       ? 'border-b-2 border-stone-900 text-stone-900'
                       : 'border-b-2 border-transparent text-stone-400 hover:text-stone-700'
@@ -333,7 +333,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setAppMode('inquiry')}
-                  className={`px-4 py-2.5 text-xs font-mono uppercase tracking-widest -mb-px transition-colors ${
+                  className={`px-4 py-2.5 text-xs font-mono -mb-px transition-colors ${
                     appMode === 'inquiry'
                       ? 'border-b-2 border-stone-900 text-stone-900'
                       : 'border-b-2 border-transparent text-stone-400 hover:text-stone-700'
@@ -446,7 +446,7 @@ export default function App() {
                 <div className="flex border-b border-stone-200 mb-6">
                   <button
                     onClick={() => handleViewToggle('canon')}
-                    className={`px-4 py-2.5 text-xs font-mono uppercase tracking-widest -mb-px transition-colors ${
+                    className={`px-4 py-2.5 text-xs font-mono -mb-px transition-colors ${
                       view === 'canon'
                         ? 'border-b-2 border-stone-900 text-stone-900'
                         : 'border-b-2 border-transparent text-stone-400 hover:text-stone-700'
@@ -456,7 +456,7 @@ export default function App() {
                   </button>
                   <button
                     onClick={() => handleViewToggle('reading-order')}
-                    className={`px-4 py-2.5 text-xs font-mono uppercase tracking-widest -mb-px transition-colors ${
+                    className={`px-4 py-2.5 text-xs font-mono -mb-px transition-colors ${
                       view === 'reading-order'
                         ? 'border-b-2 border-stone-900 text-stone-900'
                         : 'border-b-2 border-transparent text-stone-400 hover:text-stone-700'
@@ -579,7 +579,7 @@ export default function App() {
               && !curriculum.parsed.topic && curriculum.parsed.courses.length === 0
               && curriculum.content && (
               <div className="mt-8">
-                <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-3">Raw Output (parse failed — check format)</p>
+                <p className="text-xs font-mono text-stone-400 mb-3">Raw Output (parse failed — check format)</p>
                 <pre className="text-xs text-stone-600 whitespace-pre-wrap leading-relaxed border border-stone-200 p-4 bg-stone-50 max-h-96 overflow-y-auto">{curriculum.content}</pre>
               </div>
             )}
@@ -846,7 +846,7 @@ export default function App() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileSidebarOpen(false)} />
           <div className="relative bg-white max-h-[70vh] overflow-y-auto p-6 shadow-xl">
             <div className="flex items-center justify-between mb-6">
-              <span className="text-xs font-mono uppercase tracking-widest text-stone-500">
+              <span className="text-xs font-mono text-stone-500">
                 Fields & Saved
               </span>
               <button onClick={() => setMobileSidebarOpen(false)} className="text-stone-400 hover:text-stone-700">

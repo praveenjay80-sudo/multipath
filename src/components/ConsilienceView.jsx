@@ -30,7 +30,7 @@ export default function ConsilienceView({ parsed, isStreaming }) {
       {/* Header */}
       {parsed.question && (
         <div className="mb-8">
-          <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-1">Consilience</p>
+          <p className="text-xs font-mono text-stone-400 mb-1">Consilience</p>
           <h2 className="text-xl font-semibold text-stone-900 tracking-tight leading-snug max-w-2xl">{parsed.question}</h2>
           {parsed.fields.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">
@@ -61,12 +61,12 @@ export default function ConsilienceView({ parsed, isStreaming }) {
               )}
               {lens.keyWorks && lens.keyWorks.length > 0 && (
                 <div className="mt-4 pt-3 border-t border-stone-200/70">
-                  <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-2">Key Works</p>
-                  <div className="flex flex-wrap gap-2">
+                  <p className="text-xs font-mono text-stone-400 mb-2">Key Works</p>
+                  <ul className="space-y-1">
                     {lens.keyWorks.map((w, j) => (
-                      <span key={j} className="text-xs text-stone-600 bg-white border border-stone-200 px-2 py-0.5">{w}</span>
+                      <li key={j} className="text-xs text-stone-700 leading-relaxed">— {w}</li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
               )}
             </div>
@@ -79,26 +79,30 @@ export default function ConsilienceView({ parsed, isStreaming }) {
         <div className="mt-6 border border-stone-200 divide-y divide-stone-200">
           {parsed.convergence && (
             <div className="px-6 py-5">
-              <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-2">Convergence</p>
+              <p className="text-xs font-mono text-stone-400 mb-2">Convergence</p>
               <p className="text-sm text-stone-700 leading-relaxed">{parsed.convergence}</p>
             </div>
           )}
           {parsed.tensions && (
             <div className="px-6 py-5">
-              <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-2">Tensions</p>
+              <p className="text-xs font-mono text-stone-400 mb-2">Tensions</p>
               <p className="text-sm text-stone-700 leading-relaxed">{parsed.tensions}</p>
             </div>
           )}
           {parsed.synthesis && (
             <div className="px-6 py-5 bg-stone-900">
-              <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-2">Synthesis</p>
+              <p className="text-xs font-mono text-stone-400 mb-2">Synthesis</p>
               <p className="text-sm text-stone-200 leading-relaxed">{parsed.synthesis}</p>
             </div>
           )}
           {parsed.crossReading && (
             <div className="px-6 py-5">
-              <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-2">Cross-Disciplinary Reading</p>
-              <p className="text-sm text-stone-700 leading-relaxed">{parsed.crossReading}</p>
+              <p className="text-xs font-mono text-stone-400 mb-2">Cross-Disciplinary Reading</p>
+              <ul className="space-y-1">
+                {parsed.crossReading.split(/[;]/).map(s => s.trim()).filter(Boolean).map((w, i) => (
+                  <li key={i} className="text-sm text-stone-700 leading-relaxed">— {w}</li>
+                ))}
+              </ul>
             </div>
           )}
         </div>

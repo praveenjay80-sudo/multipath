@@ -27,7 +27,7 @@ export default function CandidatePreview({ candidates, harvestCounts }) {
     <div className="mt-6 border border-stone-200 bg-white">
       <div className="px-5 py-3.5 border-b border-stone-100">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-mono uppercase tracking-widest text-stone-500">
+          <span className="text-xs font-mono text-stone-500">
             Harvested from Real Databases
           </span>
           <span className="text-xs font-mono text-stone-400">

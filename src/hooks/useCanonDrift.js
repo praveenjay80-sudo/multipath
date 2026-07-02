@@ -11,7 +11,7 @@ const SYSTEM_PROMPT = `You are an intellectual historian of academic fields. You
 CRITICAL: Output ONLY the structured text below. No markdown. No bold. No preamble. Start your response with "FIELD:" and nothing before it.
 
 FIELD: [field name]
-DRIFT SUMMARY: [3-4 sentences: the overall intellectual arc of this field — the major paradigm shifts, what drove them, and the current trajectory]
+DRIFT SUMMARY: [the overall intellectual arc of this field — the major paradigm shifts, what drove them, and the current trajectory]
 
 ---
 
@@ -40,11 +40,11 @@ SHIFT: [2 sentences: what defines the current moment]
 
 ---
 
-DRIFT REVEALS: [2-3 sentences: what this historical drift tells us about where the field is heading — what kind of work will likely dominate the next era]
+DRIFT REVEALS: [what this historical drift tells us about where the field is heading — what kind of work will likely dominate the next era]
 
 Rules:
 - Use ONLY works from the provided data
-- 3-6 works per era; omit an era entirely if the data has no relevant works from that period
+- Include as many works per era as genuinely belong; omit an era entirely if the data has no relevant works from that period
 - Every work line must have exactly this structure: Title by Author (Year) -- N citations -- TRAJECTORY -- reason
 - TRAJECTORY must be one of: DEFINING, RISING, FADING, WATCH
 - SHIFT must explain the intellectual reason for the change, not just name it

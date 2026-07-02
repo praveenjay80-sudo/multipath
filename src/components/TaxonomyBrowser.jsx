@@ -11,7 +11,7 @@ export default function TaxonomyBrowser({ topic, taxonomy, onSelectSubfield, onG
       </div>
 
       {/* Subfields */}
-      <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-3">
+      <p className="text-xs font-mono text-stone-400 mb-3">
         Choose a subfield — or generate the full canon below
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-6">

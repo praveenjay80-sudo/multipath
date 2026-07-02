@@ -11,7 +11,7 @@ const SYSTEM_PROMPT = `You are a senior university curriculum designer. You have
 CRITICAL: Output ONLY the structured text below. No markdown. No bold. No headers with #. No preamble. No explanation. Start your response with "TOPIC:" and nothing before it.
 
 TOPIC: [topic name]
-OVERVIEW: [3-4 sentences on the intellectual structure of the field, major subfields, and what mastery looks like]
+OVERVIEW: [the intellectual structure of the field, major subfields, and what mastery looks like]
 LEVEL RANGE: [e.g., First-year undergraduate to active researcher]
 TRACKS: [comma-separated tracks if meaningful, e.g. Theoretical, Applied, Computational — omit line entirely if not applicable]
 
@@ -40,8 +40,8 @@ TOTAL CURRICULUM: [N courses * X-Y years from beginner to research frontier]
 
 Rules:
 - Use ONLY titles from the supplied data lists
-- 5-9 courses, strictly introductory to advanced
-- 3-6 TEXTBOOKS per course; 1-4 PAPERS per course; omit PAPERS section entirely if none fit
+- As many courses as the subject genuinely requires, strictly introductory to advanced
+- Include as many TEXTBOOKS and PAPERS per course as genuinely belong there; omit PAPERS section entirely if none fit
 - PREREQS must reference course numbers (e.g. "Course 1") not descriptions
 - SKILLS must be specific and measurable abilities, not vague understanding
 - Honor syllabusCount: 1000+ = Year 1-2, 100-999 = Year 3-4/early grad, 10-99 = graduate, <10 = seminar
