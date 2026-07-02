@@ -108,7 +108,7 @@ export function useReverseMode() {
           'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: 'claude-sonnet-5',
           max_tokens: 6000,
           stream: true,
           system: SYSTEM_PROMPT,

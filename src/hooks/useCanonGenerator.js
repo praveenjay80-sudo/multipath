@@ -28,7 +28,7 @@ async function* streamCompletion(systemPrompt, userMessage, signal, maxTokens = 
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-5',
       max_tokens: maxTokens,
       stream: true,
       system: systemPrompt,

@@ -14,6 +14,8 @@ import { useFieldNavigation } from './hooks/useFieldNavigation';
 import { useReadingOrder } from './hooks/useReadingOrder';
 import { useReverseMode } from './hooks/useReverseMode';
 import { useCurriculumMode } from './hooks/useCurriculumMode';
+import { useDissertationMode } from './hooks/useDissertationMode';
+import { useCanonDrift } from './hooks/useCanonDrift';
 import { parseCanon } from './utils/parseCanon';
 import { copyMarkdown } from './utils/exportMarkdown';
 import ReadingOrderView from './components/ReadingOrderView';
@@ -21,6 +23,10 @@ import ReverseInput from './components/ReverseInput';
 import PrerequisiteView from './components/PrerequisiteView';
 import CurriculumInput from './components/CurriculumInput';
 import CurriculumView from './components/CurriculumView';
+import DissertationInput from './components/DissertationInput';
+import DissertationView from './components/DissertationView';
+import CanonDriftInput from './components/CanonDriftInput';
+import CanonDriftView from './components/CanonDriftView';
 
 function WorkRow({ w }) {
   return (
@@ -130,11 +136,13 @@ export default function App() {
   const readingOrder = useReadingOrder();
   const reverse = useReverseMode();
   const curriculum = useCurriculumMode();
+  const dissertation = useDissertationMode();
+  const drift = useCanonDrift();
   const [inputTopic, setInputTopic] = useState('');
   const [shake, setShake] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [view, setView] = useState('canon');
-  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum'
+  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'dissertation' | 'drift'
 
   const parsed = useMemo(() => parseCanon(gen.content), [gen.content]);
 
@@ -277,6 +285,26 @@ export default function App() {
                 >
                   Curriculum
                 </button>
+                <button
+                  onClick={() => setAppMode('dissertation')}
+                  className={`px-4 py-2.5 text-xs font-mono uppercase tracking-widest -mb-px transition-colors ${
+                    appMode === 'dissertation'
+                      ? 'border-b-2 border-stone-900 text-stone-900'
+                      : 'border-b-2 border-transparent text-stone-400 hover:text-stone-700'
+                  }`}
+                >
+                  Dissertation
+                </button>
+                <button
+                  onClick={() => setAppMode('drift')}
+                  className={`px-4 py-2.5 text-xs font-mono uppercase tracking-widest -mb-px transition-colors ${
+                    appMode === 'drift'
+                      ? 'border-b-2 border-stone-900 text-stone-900'
+                      : 'border-b-2 border-transparent text-stone-400 hover:text-stone-700'
+                  }`}
+                >
+                  Canon Drift
+                </button>
               </div>
             </header>
 
@@ -305,6 +333,20 @@ export default function App() {
               <CurriculumInput
                 onGenerate={curriculum.generate}
                 disabled={curriculum.phase === 'harvesting' || curriculum.phase === 'generating'}
+              />
+            )}
+
+            {appMode === 'dissertation' && (
+              <DissertationInput
+                onGenerate={dissertation.generate}
+                disabled={dissertation.phase === 'harvesting' || dissertation.phase === 'generating'}
+              />
+            )}
+
+            {appMode === 'drift' && (
+              <CanonDriftInput
+                onGenerate={drift.generate}
+                disabled={drift.phase === 'harvesting' || drift.phase === 'generating'}
               />
             )}
 
@@ -506,6 +548,100 @@ export default function App() {
                   className="px-4 py-2 text-sm bg-stone-900 text-white hover:bg-stone-700 transition-colors"
                 >
                   New Curriculum
+                </button>
+              </div>
+            )}
+
+            {/* Dissertation mode */}
+            {appMode === 'dissertation' && dissertation.phase === 'harvesting' && (
+              <div className="mt-8 border border-stone-200 bg-white px-6 py-5">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex gap-0.5">
+                    <span className="loading-dot" /><span className="loading-dot" /><span className="loading-dot" />
+                  </span>
+                  <span className="text-sm text-stone-500">Gathering qualifying exam literature...</span>
+                </div>
+              </div>
+            )}
+            {appMode === 'dissertation' && dissertation.phase === 'generating' && (
+              <div className="mt-8 border border-stone-200 bg-white px-6 py-5">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex gap-0.5">
+                    <span className="loading-dot" /><span className="loading-dot" /><span className="loading-dot" />
+                  </span>
+                  <span className="text-sm text-stone-500">Building reading list from {dissertation.dataCount} works...</span>
+                </div>
+              </div>
+            )}
+            {appMode === 'dissertation' && dissertation.phase === 'error' && (
+              <div className="mt-8 p-5 bg-red-50 border border-red-200">
+                <p className="font-medium text-red-900 text-sm">Failed</p>
+                <p className="text-sm text-red-700 mt-1">{dissertation.error}</p>
+              </div>
+            )}
+            {appMode === 'dissertation' && (dissertation.phase === 'generating' || dissertation.phase === 'complete') && dissertation.parsed && (
+              <DissertationView parsed={dissertation.parsed} isStreaming={dissertation.phase === 'generating'} />
+            )}
+            {appMode === 'dissertation' && dissertation.phase === 'complete' && (
+              <div className="mt-8 pt-6 border-t border-stone-200 flex gap-2">
+                <button
+                  onClick={() => navigator.clipboard.writeText(dissertation.content)}
+                  className="px-4 py-2 text-sm border border-stone-300 text-stone-700 hover:bg-stone-50 transition-colors"
+                >
+                  Copy Text
+                </button>
+                <button
+                  onClick={dissertation.reset}
+                  className="px-4 py-2 text-sm bg-stone-900 text-white hover:bg-stone-700 transition-colors"
+                >
+                  New Reading List
+                </button>
+              </div>
+            )}
+
+            {/* Canon Drift mode */}
+            {appMode === 'drift' && drift.phase === 'harvesting' && (
+              <div className="mt-8 border border-stone-200 bg-white px-6 py-5">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex gap-0.5">
+                    <span className="loading-dot" /><span className="loading-dot" /><span className="loading-dot" />
+                  </span>
+                  <span className="text-sm text-stone-500">Harvesting historical and current citation data...</span>
+                </div>
+              </div>
+            )}
+            {appMode === 'drift' && drift.phase === 'generating' && (
+              <div className="mt-8 border border-stone-200 bg-white px-6 py-5">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex gap-0.5">
+                    <span className="loading-dot" /><span className="loading-dot" /><span className="loading-dot" />
+                  </span>
+                  <span className="text-sm text-stone-500">Tracing canon drift from {drift.totalWorks} works across eras...</span>
+                </div>
+              </div>
+            )}
+            {appMode === 'drift' && drift.phase === 'error' && (
+              <div className="mt-8 p-5 bg-red-50 border border-red-200">
+                <p className="font-medium text-red-900 text-sm">Failed</p>
+                <p className="text-sm text-red-700 mt-1">{drift.error}</p>
+              </div>
+            )}
+            {appMode === 'drift' && (drift.phase === 'generating' || drift.phase === 'complete') && drift.parsed && (
+              <CanonDriftView parsed={drift.parsed} isStreaming={drift.phase === 'generating'} />
+            )}
+            {appMode === 'drift' && drift.phase === 'complete' && (
+              <div className="mt-8 pt-6 border-t border-stone-200 flex gap-2">
+                <button
+                  onClick={() => navigator.clipboard.writeText(drift.content)}
+                  className="px-4 py-2 text-sm border border-stone-300 text-stone-700 hover:bg-stone-50 transition-colors"
+                >
+                  Copy Text
+                </button>
+                <button
+                  onClick={drift.reset}
+                  className="px-4 py-2 text-sm bg-stone-900 text-white hover:bg-stone-700 transition-colors"
+                >
+                  New Drift
                 </button>
               </div>
             )}
