@@ -6,6 +6,20 @@ function resolveApiKey() {
   return import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('canon_api_key') || '';
 }
 
+function extractSearchTerm(question) {
+  const stop = new Set([
+    'what', 'why', 'how', 'when', 'where', 'who', 'which',
+    'is', 'are', 'does', 'do', 'did', 'was', 'were', 'has', 'have', 'had',
+    'can', 'could', 'will', 'would', 'should', 'might', 'must',
+    'the', 'a', 'an', 'it', 'its', 'this', 'that', 'there',
+  ]);
+  const words = question
+    .replace(/[?!.,;:]/g, '')
+    .split(/\s+/)
+    .filter(w => w && !stop.has(w.toLowerCase()));
+  return words.slice(0, 4).join(' ') || question.replace(/[?]/g, '').trim();
+}
+
 const SYSTEM_PROMPT = `You are an expert in cross-disciplinary synthesis. Given a question that spans multiple academic fields, identify every discipline that genuinely bears on it, explain what each field actually says, and synthesize across all of them.
 
 CRITICAL: Output ONLY the structured text below. No markdown. No bold. No preamble. Start your response with "QUESTION:" and nothing before it.
@@ -62,11 +76,13 @@ export function useConsilience() {
       return;
     }
 
+    const searchTerm = extractSearchTerm(question);
+
     let textbooks = [], papers = [];
     try {
       [textbooks, papers] = await Promise.all([
-        syllabusHarvest(question),
-        seminalPapersHarvest(question),
+        syllabusHarvest(searchTerm),
+        seminalPapersHarvest(searchTerm),
       ]);
       if (signal.aborted) return;
       setDataCount(textbooks.length + papers.length);
@@ -76,18 +92,20 @@ export function useConsilience() {
     setPhase('generating');
 
     const ospData = textbooks.length > 0
-      ? textbooks.slice(0, 50).map(w =>
+      ? textbooks.slice(0, 70).map(w =>
           `- ${w.title}${w.authors ? ` by ${w.authors}` : ''}${w.year ? ` (${w.year})` : ''}`
         ).join('\n')
       : '(No syllabus data)';
 
     const paperData = papers.length > 0
-      ? papers.slice(0, 40).map(p =>
-          `- "${p.title}"${p.authors ? ` by ${p.authors}` : ''}${p.year ? ` (${p.year})` : ''}`
+      ? papers.slice(0, 50).map(p =>
+          `- "${p.title}"${p.authors ? ` by ${p.authors}` : ''}${p.year ? ` (${p.year})` : ''} -- ${p.influentialCitationCount?.toLocaleString() || 0} influential citations`
         ).join('\n')
       : '(No Semantic Scholar data)';
 
     const userMessage = `Synthesize across all relevant disciplines for this question: ${question}
+
+The data below was harvested using the search term "${searchTerm}". Use works from these lists for KEY WORKS and CROSS-DISCIPLINARY READING — these are real works, pick the ones most relevant to each discipline's answer.
 
 === TEXTBOOKS AND COURSE MATERIALS (Open Syllabus Project) ===
 ${ospData}
@@ -95,7 +113,7 @@ ${ospData}
 === RESEARCH PAPERS (Semantic Scholar, by influential citations) ===
 ${paperData}
 
-Use works from these lists for KEY WORKS and CROSS-DISCIPLINARY READING. Identify 4-8 disciplines that have distinct things to say about this question.`;
+Identify 4-8 disciplines that have distinct things to say about this question. For KEY WORKS, pick 1-3 works from the lists above that best represent what that discipline says — even if the title seems broad, assign it to the discipline it most belongs to.`;
 
     try {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
