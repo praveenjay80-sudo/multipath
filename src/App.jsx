@@ -140,8 +140,11 @@ export default function App() {
 
   const prevPhase = useRef(null);
   useMemo(() => {
-    if (gen.phase === 'complete' && prevPhase.current === 'composing' && parsed) {
+    if (gen.phase === 'complete' &&
+        (prevPhase.current === 'composing' || prevPhase.current === 'refining') &&
+        parsed) {
       enrichment.enrich(parsed);
+      if (readingOrder.status === 'idle') readingOrder.generate(gen.content);
     }
     prevPhase.current = gen.phase;
   }, [gen.phase]);
@@ -229,11 +232,11 @@ export default function App() {
         <div className="flex gap-12">
           <div className="flex-1 min-w-0 py-12">
             <header className="mb-10">
-              <h1 className="text-3xl font-semibold tracking-tight text-stone-900">Canon</h1>
-              <p className="mt-1 text-stone-400 text-sm">
+              <h1 className="text-6xl font-bold tracking-tight text-stone-900">Canon</h1>
+              <p className="mt-2 text-stone-500 text-base">
                 {appMode === 'canon'
                   ? 'Definitive reading lists for any academic field'
-                  : 'Paste any paper or book — get everything you need to read it'}
+                  : 'Find pre and post requisites for any book and paper'}
               </p>
 
               {/* App mode toggle */}
@@ -256,7 +259,7 @@ export default function App() {
                       : 'border-b-2 border-transparent text-stone-400 hover:text-stone-700'
                   }`}
                 >
-                  Prerequisites
+                  Pre &amp; Post Requisites
                 </button>
               </div>
             </header>
