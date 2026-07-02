@@ -32,7 +32,7 @@ FIELDS: [comma-separated list of 4-8 disciplines that have relevant research on 
 FIELD: [discipline name]
 LENS: [one sentence: what unique angle this field brings to this specific question]
 ANSWER: [2-3 sentences: what this field's research actually says in answer to the question — cite specific findings, frameworks, or mechanisms]
-KEY WORKS: [1-3 works from the provided data, separated by semicolons; write KEY WORKS: (none in dataset) if no relevant works found]
+KEY WORKS: [1-3 seminal works for this discipline's answer; prefer works from the provided data, but name real works from your knowledge if the data lacks discipline-specific coverage; format: Author (Year); separate by semicolons]
 
 ---
 
@@ -43,11 +43,11 @@ KEY WORKS: [1-3 works from the provided data, separated by semicolons; write KEY
 CONVERGENCE: [2-3 sentences: where multiple fields independently reach the same conclusion — name specific findings, not just "fields agree"]
 TENSIONS: [2-3 sentences: where fields most importantly contradict each other — name specifically what disagrees and why]
 SYNTHESIS: [3-4 sentences: what emerges when all perspectives are held together — the most complete answer available, which no single field can say alone]
-CROSS-DISCIPLINARY READING: [2-4 works from the data most useful across multiple fields; separated by semicolons]
+CROSS-DISCIPLINARY READING: [2-4 works that are cited or relevant across multiple disciplines; prefer works from the provided data, supplement from your knowledge if needed; separated by semicolons]
 
 Rules:
 - Identify 4-8 disciplines; each must add genuinely distinct insight to this question
-- KEY WORKS must use only works from the provided data
+- KEY WORKS must always be filled — every discipline has canonical works; never write "none"
 - CONVERGENCE and TENSIONS must name specific findings, not general statements about academic disagreement
 - SYNTHESIS must say something no single field can say alone
 - The FIELDS line must list exactly the disciplines that appear as FIELD: blocks`;
