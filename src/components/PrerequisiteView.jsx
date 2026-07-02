@@ -91,6 +91,56 @@ export default function PrerequisiteView({ parsed, isStreaming }) {
           <span className="text-sm text-stone-200">{parsed.totalPath}</span>
         </div>
       )}
+
+      {/* Beyond — advanced reading after the target work */}
+      {parsed.beyond && (parsed.beyond.summary || parsed.beyond.streams.length > 0) && (
+        <div className="mt-10">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-px flex-1 bg-stone-200" />
+            <span className="text-xs font-mono uppercase tracking-widest text-stone-400">Advanced Knowledge</span>
+            <div className="h-px flex-1 bg-stone-200" />
+          </div>
+
+          {parsed.beyond.summary && (
+            <p className="text-sm text-stone-600 leading-relaxed mb-6 max-w-2xl">{parsed.beyond.summary}</p>
+          )}
+
+          <div className="space-y-4">
+            {parsed.beyond.streams.map((stream, i) => (
+              <div key={i} className="border border-stone-900 bg-stone-900 p-6">
+                <div className="flex items-baseline gap-3 mb-1">
+                  <span className="text-xs font-mono px-1.5 py-0.5 bg-stone-700 text-stone-300">
+                    Stream {stream.number}
+                  </span>
+                  <h3 className="text-sm font-semibold text-white">{stream.name}</h3>
+                </div>
+                {stream.focus && (
+                  <p className="text-xs text-stone-400 mt-1 mb-4 leading-relaxed">{stream.focus}</p>
+                )}
+                <div className="space-y-4">
+                  {stream.works.map((work, j) => (
+                    <div key={j} className="flex gap-3">
+                      <span className="text-xs font-mono mt-0.5 shrink-0 w-4 text-stone-500">{j + 1}.</span>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-stone-100">{work.ref}</div>
+                        {work.rationale && (
+                          <div className="text-xs text-stone-400 mt-0.5 leading-relaxed">{work.rationale}</div>
+                        )}
+                        {work.focus && (
+                          <div className="mt-1.5 flex gap-1.5 items-start">
+                            <span className="text-xs font-mono text-stone-500 shrink-0 mt-px">→</span>
+                            <span className="text-xs text-stone-300 leading-relaxed">{work.focus}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

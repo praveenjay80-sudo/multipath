@@ -42,6 +42,23 @@ PHASE 3: [Name] (Weeks [range])
 
 TOTAL PATH: [X–Y months from zero background to reading the target work productively]
 
+---
+
+BEYOND: [2–3 sentences: what intellectual territory opens up after mastering this work — what problems it enables you to attack, what fields it connects to, what debates it positions you to enter]
+
+STREAM 1: [Name — e.g. Theoretical Deepening / Mathematical Foundations / Empirical Extensions]
+[One sentence: what this stream develops]
+- [Title] by [Author] ([Year]) — [why this is the natural next step after the target work]
+  → Focus: [specific chapters/sections]
+
+STREAM 2: [Name]
+[One sentence: what this stream develops]
+- [Title] by [Author] ([Year]) — [how it extends or challenges the target work]
+  → Focus: [specific chapters/sections]
+
+STREAM 3: [Name — optional, only if genuinely distinct]
+...
+
 Rules for a precise, gap-free path:
 - Start truly from scratch: if the target work requires calculus, Phase 0 includes calculus. If it requires measure theory, include real analysis first.
 - 3–5 phases; 3–6 works per phase
@@ -54,7 +71,8 @@ Rules for a precise, gap-free path:
 - For textbooks: distinguish which chapters are essential prerequisites vs which are background reading vs which can be skipped entirely
 - The final phase (Direct Prerequisites) must include the papers or books the target work directly and explicitly builds on
 - If the target work is itself introductory (undergraduate level), compress to 2–3 phases only
-- Never list the target work itself`;
+- Never list the target work itself
+- BEYOND is mandatory: 2–3 streams, 2–4 works each, with focus lines. Streams must be genuinely distinct directions (not just "more of the same"). Each stream should represent a different intellectual trajectory the target work enables.`;
 
 export function useReverseMode() {
   const [phase, setPhase] = useState('idle'); // idle | working | complete | error
