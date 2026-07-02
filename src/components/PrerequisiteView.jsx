@@ -29,7 +29,7 @@ export default function PrerequisiteView({ parsed, isStreaming }) {
       {/* Target work header */}
       {parsed.work && (
         <div className="mb-8">
-          <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-1">Prerequisite Path For</p>
+          <p className="text-xs font-mono uppercase tracking-widest text-stone-400 mb-1">Prerequisites</p>
           <h2 className="text-xl font-semibold text-stone-900 tracking-tight leading-snug">{parsed.work}</h2>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
             {parsed.field && <span className="text-xs text-stone-500">{parsed.field}</span>}
@@ -97,7 +97,7 @@ export default function PrerequisiteView({ parsed, isStreaming }) {
         <div className="mt-10">
           <div className="flex items-center gap-3 mb-4">
             <div className="h-px flex-1 bg-stone-200" />
-            <span className="text-xs font-mono uppercase tracking-widest text-stone-400">Advanced Knowledge</span>
+            <span className="text-xs font-mono uppercase tracking-widest text-stone-400">Postrequisites</span>
             <div className="h-px flex-1 bg-stone-200" />
           </div>
 
