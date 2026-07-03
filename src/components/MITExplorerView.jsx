@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { syllabusSearch } from '../utils/syllabusHarvest';
+import { syllabusSearch, syllabusHarvest, seminalPapersHarvest } from '../utils/syllabusHarvest';
 
 // ── Field colour schemes (complete static strings for Tailwind JIT) ───────────
 const FIELD_STYLES = {
@@ -37,10 +37,10 @@ function parseClaudeDetail(text) {
   return out;
 }
 
-async function fetchPapersForCourse(query, signal) {
-  const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=15&fields=title,authors,year,citationCount,influentialCitationCount`;
+async function fetchPapersForCourse(query) {
+  const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=20&fields=title,authors,year,citationCount,influentialCitationCount`;
   try {
-    const res = await fetch(url, { signal });
+    const res = await fetch(url);
     if (!res.ok) return [];
     const data = await res.json();
     return (data.data || [])
@@ -48,11 +48,12 @@ async function fetchPapersForCourse(query, signal) {
         title: p.title || '',
         authors: (p.authors || []).map(a => a.name || '').filter(Boolean).slice(0, 3).join(', '),
         year: p.year || null,
+        citationCount: p.citationCount || 0,
         influentialCitationCount: p.influentialCitationCount || 0,
       }))
-      .filter(p => p.influentialCitationCount > 0)
-      .sort((a, b) => b.influentialCitationCount - a.influentialCitationCount)
-      .slice(0, 10);
+      .filter(p => (p.citationCount || 0) > 10)
+      .sort((a, b) => (b.influentialCitationCount || b.citationCount) - (a.influentialCitationCount || a.citationCount))
+      .slice(0, 12);
   } catch { return []; }
 }
 
@@ -74,23 +75,23 @@ function CourseDetailPanel({ course }) {
     const { signal } = abort.current;
 
     (async () => {
-      // Fetch OCW detail + OpenSyllabus books + Semantic Scholar papers in parallel
-      const booksQuery = course.spec && course.spec !== 'General' ? course.spec : course.title;
+      // Use course title for books (OpenSyllabus matches on titles well)
+      // Use spec topic for papers (Semantic Scholar matches on subject area)
       const papersQuery = course.spec && course.spec !== 'General' ? course.spec : course.title;
 
       const [ocwRes, bookRes, paperRes] = await Promise.allSettled([
         course.url
           ? fetch(`/api/mit-course-detail?url=${encodeURIComponent(course.url)}`, { signal }).then(r => r.ok ? r.json() : null).catch(() => null)
           : Promise.resolve(null),
-        syllabusSearch(booksQuery, 20),
-        fetchPapersForCourse(papersQuery, signal),
+        syllabusHarvest(course.title),
+        fetchPapersForCourse(papersQuery),
       ]);
 
       if (signal.aborted) return;
 
       if (ocwRes.status === 'fulfilled' && ocwRes.value) setOcw(ocwRes.value);
       if (bookRes.status === 'fulfilled') {
-        setBooks(bookRes.value.sort((a, b) => b.syllabusCount - a.syllabusCount).slice(0, 15));
+        setBooks(bookRes.value.slice(0, 15));
       }
       if (paperRes.status === 'fulfilled') setPapers(paperRes.value);
       setOcwPhase('done');
@@ -591,8 +592,8 @@ export default function MITExplorerView({
                 </section>
               )}
 
-              {/* Field-level books + papers */}
-              {(resourcesPhase === 'loading' || books.length > 0 || papers.length > 0) && (
+              {/* Field-level books + papers — always show when field selected */}
+              {selectedField && (
                 <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
                   <section>
                     <div className="flex items-baseline gap-3 mb-3">
