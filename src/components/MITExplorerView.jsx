@@ -1,19 +1,20 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { syllabusSearch, syllabusHarvest, seminalPapersHarvest } from '../utils/syllabusHarvest';
+import { syllabusHarvest, seminalPapersHarvest } from '../utils/syllabusHarvest';
 
-// ── Field colour schemes (complete static strings for Tailwind JIT) ───────────
-const FIELD_STYLES = {
-  'Engineering':    { sel: 'bg-blue-700 text-white border-blue-700',        unsel: 'border-blue-300 text-blue-700 hover:bg-blue-50',          sfBg: 'bg-blue-50',    sfHov: 'hover:bg-blue-100',    sfTx: 'text-blue-900',    badge: 'bg-blue-100 text-blue-700',     numTx: 'text-blue-600'   },
-  'Science':        { sel: 'bg-emerald-700 text-white border-emerald-700',   unsel: 'border-emerald-300 text-emerald-700 hover:bg-emerald-50', sfBg: 'bg-emerald-50', sfHov: 'hover:bg-emerald-100', sfTx: 'text-emerald-900', badge: 'bg-emerald-100 text-emerald-700', numTx: 'text-emerald-600' },
-  'Mathematics':    { sel: 'bg-violet-700 text-white border-violet-700',     unsel: 'border-violet-300 text-violet-700 hover:bg-violet-50',    sfBg: 'bg-violet-50',  sfHov: 'hover:bg-violet-100',  sfTx: 'text-violet-900',  badge: 'bg-violet-100 text-violet-700',  numTx: 'text-violet-600'  },
-  'Humanities':     { sel: 'bg-amber-700 text-white border-amber-700',       unsel: 'border-amber-300 text-amber-700 hover:bg-amber-50',       sfBg: 'bg-amber-50',   sfHov: 'hover:bg-amber-100',   sfTx: 'text-amber-900',   badge: 'bg-amber-100 text-amber-700',    numTx: 'text-amber-600'   },
-  'Social Science': { sel: 'bg-teal-700 text-white border-teal-700',         unsel: 'border-teal-300 text-teal-700 hover:bg-teal-50',          sfBg: 'bg-teal-50',    sfHov: 'hover:bg-teal-100',    sfTx: 'text-teal-900',    badge: 'bg-teal-100 text-teal-700',     numTx: 'text-teal-600'   },
-  'Management':     { sel: 'bg-rose-700 text-white border-rose-700',         unsel: 'border-rose-300 text-rose-700 hover:bg-rose-50',          sfBg: 'bg-rose-50',    sfHov: 'hover:bg-rose-100',    sfTx: 'text-rose-900',    badge: 'bg-rose-100 text-rose-700',     numTx: 'text-rose-600'   },
-  'Architecture':   { sel: 'bg-indigo-700 text-white border-indigo-700',     unsel: 'border-indigo-300 text-indigo-700 hover:bg-indigo-50',    sfBg: 'bg-indigo-50',  sfHov: 'hover:bg-indigo-100',  sfTx: 'text-indigo-900',  badge: 'bg-indigo-100 text-indigo-700',  numTx: 'text-indigo-600'  },
-  'Other':          { sel: 'bg-stone-700 text-white border-stone-700',       unsel: 'border-stone-300 text-stone-600 hover:bg-stone-50',       sfBg: 'bg-stone-100',  sfHov: 'hover:bg-stone-200',   sfTx: 'text-stone-800',   badge: 'bg-stone-200 text-stone-700',   numTx: 'text-stone-500'  },
+// ── Dark academic colour tokens (inline styles for exact shades) ──────────────
+const DA = {
+  bg:        '#0E0E0E',
+  surface:   '#181818',
+  elevated:  '#222222',
+  border:    '#2E2E2E',
+  borderMid: '#3A3A3A',
+  text:      '#EDE8D8',
+  muted:     '#7A7060',
+  faint:     '#4A4438',
+  gold:      '#C9A84C',
+  goldDim:   '#8A6F2A',
+  goldHov:   '#E8C870',
 };
-const DEFAULT_STYLE = FIELD_STYLES['Other'];
-function getStyle(field) { return FIELD_STYLES[field] || DEFAULT_STYLE; }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ function parseClaudeDetail(text) {
   return out;
 }
 
-async function fetchPapersForCourse(query) {
+async function fetchPapersForTopic(query) {
   const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=20&fields=title,authors,year,citationCount,influentialCitationCount`;
   try {
     const res = await fetch(url);
@@ -51,10 +52,23 @@ async function fetchPapersForCourse(query) {
         citationCount: p.citationCount || 0,
         influentialCitationCount: p.influentialCitationCount || 0,
       }))
-      .filter(p => (p.citationCount || 0) > 10)
+      .filter(p => (p.citationCount || 0) > 5)
       .sort((a, b) => (b.influentialCitationCount || b.citationCount) - (a.influentialCitationCount || a.citationCount))
       .slice(0, 12);
   } catch { return []; }
+}
+
+// ── Dark section wrapper ───────────────────────────────────────────────────────
+
+function DSection({ label, icon, color, children }) {
+  return (
+    <div style={{ borderLeft: `3px solid ${color}`, background: DA.elevated, padding: '12px 16px', marginBottom: 10 }}>
+      <div style={{ color, fontSize: 10, fontFamily: 'monospace', marginBottom: 8, letterSpacing: '0.08em' }}>
+        {icon} {label}
+      </div>
+      {children}
+    </div>
+  );
 }
 
 // ── Per-course detail panel ───────────────────────────────────────────────────
@@ -66,7 +80,7 @@ function CourseDetailPanel({ course }) {
   const [prereqs, setPrereqs]    = useState([]);
   const [skills, setSkills]      = useState([]);
   const [curriculum, setCurriculum] = useState([]);
-  const [ocwPhase, setOcwPhase]  = useState('loading');
+  const [phase, setPhase]        = useState('loading');
   const [claudePhase, setClaudePhase] = useState('idle');
   const abort = useRef(null);
 
@@ -75,31 +89,27 @@ function CourseDetailPanel({ course }) {
     const { signal } = abort.current;
 
     (async () => {
-      // Use course title for books (OpenSyllabus matches on titles well)
-      // Use spec topic for papers (Semantic Scholar matches on subject area)
       const papersQuery = course.spec && course.spec !== 'General' ? course.spec : course.title;
 
       const [ocwRes, bookRes, paperRes] = await Promise.allSettled([
         course.url
-          ? fetch(`/api/mit-course-detail?url=${encodeURIComponent(course.url)}`, { signal }).then(r => r.ok ? r.json() : null).catch(() => null)
+          ? fetch(`/api/mit-course-detail?url=${encodeURIComponent(course.url)}`, { signal })
+              .then(r => r.ok ? r.json() : null).catch(() => null)
           : Promise.resolve(null),
         syllabusHarvest(course.title),
-        fetchPapersForCourse(papersQuery),
+        fetchPapersForTopic(papersQuery),
       ]);
 
       if (signal.aborted) return;
 
-      if (ocwRes.status === 'fulfilled' && ocwRes.value) setOcw(ocwRes.value);
-      if (bookRes.status === 'fulfilled') {
-        setBooks(bookRes.value.slice(0, 15));
-      }
+      if (ocwRes.status === 'fulfilled') setOcw(ocwRes.value);
+      if (bookRes.status === 'fulfilled') setBooks(bookRes.value.slice(0, 15));
       if (paperRes.status === 'fulfilled') setPapers(paperRes.value);
-      setOcwPhase('done');
+      setPhase('done');
 
-      // Claude for prerequisites, skills, curriculum
+      // Claude: prerequisites, skills, curriculum
       const key = resolveApiKey();
       if (!key || signal.aborted) return;
-
       setClaudePhase('streaming');
       try {
         const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -114,26 +124,23 @@ function CourseDetailPanel({ course }) {
             model: 'claude-sonnet-5',
             max_tokens: 2000,
             stream: true,
-            system: `You are an expert on MIT OpenCourseWare. Output ONLY the structured text below. No markdown. No bold. Start immediately with "PREREQUISITES:" — nothing before it.
+            system: `You are an expert on MIT OpenCourseWare. Output ONLY the structured text below — no markdown, no bold, no preamble.
 
 PREREQUISITES:
-[every prerequisite course or knowledge area, one per line, with MIT course numbers where applicable]
+[every prerequisite, one per line, with MIT course numbers where applicable]
 
 SKILLS:
-[concrete competencies students gain — things they can build or demonstrate, one per line]
+[concrete competencies students gain — specific, actionable, one per line]
 
 CURRICULUM:
-[week-by-week or module-by-module breakdown, one per line]
-
-Rules: prerequisites must name actual MIT courses with numbers where possible. Skills must be specific and actionable. Curriculum must reflect MIT's actual published structure.`,
+[week-by-week or module-by-module breakdown, one per line]`,
             messages: [{
               role: 'user',
-              content: `MIT OCW: ${course.courseNums[0] || ''} — ${course.title}\nDepartment: ${course.subfield}\nLevel: ${course.level}`,
+              content: `MIT OCW: ${course.courseNums[0] || ''} — ${course.title}\nDept: ${course.subfield}, Level: ${course.level}`,
             }],
           }),
           signal,
         });
-
         if (!resp.ok || signal.aborted) { setClaudePhase('done'); return; }
 
         const reader = resp.body.getReader();
@@ -144,8 +151,7 @@ Rules: prerequisites must name actual MIT courses with numbers where possible. S
             const { done, value } = await reader.read();
             if (done || signal.aborted) break;
             buf += dec.decode(value, { stream: true });
-            const lines = buf.split('\n');
-            buf = lines.pop() ?? '';
+            const lines = buf.split('\n'); buf = lines.pop() ?? '';
             for (const ln of lines) {
               if (!ln.startsWith('data: ')) continue;
               const d = ln.slice(6).trim();
@@ -154,16 +160,15 @@ Rules: prerequisites must name actual MIT courses with numbers where possible. S
                 const ev = JSON.parse(d);
                 if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
                   result += ev.delta.text;
-                  const parsed = parseClaudeDetail(result);
-                  setPrereqs(parsed.prerequisites);
-                  setSkills(parsed.skills);
-                  setCurriculum(parsed.curriculum);
+                  const p = parseClaudeDetail(result);
+                  setPrereqs(p.prerequisites);
+                  setSkills(p.skills);
+                  setCurriculum(p.curriculum);
                 }
               } catch {}
             }
           }
         } finally { reader.releaseLock(); }
-
         if (!signal.aborted) setClaudePhase('done');
       } catch (e) {
         if (e.name !== 'AbortError') setClaudePhase('done');
@@ -173,142 +178,127 @@ Rules: prerequisites must name actual MIT courses with numbers where possible. S
     return () => abort.current?.abort();
   }, [course.url, course.title, course.spec]);
 
-  const loading = ocwPhase === 'loading';
+  const txt = { color: DA.text, fontSize: 13, lineHeight: '1.7' };
+  const mutedTxt = { color: DA.muted, fontSize: 11 };
 
   return (
-    <div className="mt-1 mb-4 space-y-2.5 pl-7 pr-4 pb-2">
-      {loading && (
-        <div className="flex items-center gap-2 py-3">
+    <div style={{ background: DA.surface, borderTop: `1px solid ${DA.border}`, padding: '16px 20px 20px', marginLeft: 24 }}>
+      {phase === 'loading' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0' }}>
           <span className="flex gap-0.5"><span className="loading-dot" /><span className="loading-dot" /><span className="loading-dot" /></span>
-          <span className="text-xs text-stone-400">Loading course data...</span>
+          <span style={mutedTxt}>Loading course data...</span>
         </div>
       )}
 
-      {/* Real OCW description */}
+      {/* OCW description */}
       {ocw?.description && (
-        <div className="border-l-4 border-stone-300 bg-stone-50 px-4 py-3">
-          <p className="text-xs font-mono text-stone-400 mb-1.5">About this course</p>
-          <p className="text-sm text-stone-700 leading-relaxed">{ocw.description}</p>
-        </div>
+        <DSection label="COURSE DESCRIPTION" icon="◈" color={DA.gold}>
+          <p style={txt}>{ocw.description}</p>
+        </DSection>
       )}
 
-      {/* OCW course features */}
+      {/* OCW material types */}
       {ocw?.features?.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 pt-0.5">
-          <span className="text-xs text-stone-400 mr-1">Materials:</span>
+        <div style={{ marginBottom: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {ocw.features.map((f, i) => (
-            <span key={i} className="text-xs bg-stone-100 text-stone-600 px-2 py-0.5">{f}</span>
+            <span key={i} style={{ fontSize: 10, fontFamily: 'monospace', color: DA.goldDim, border: `1px solid ${DA.goldDim}`, padding: '2px 8px', letterSpacing: '0.05em' }}>
+              {f}
+            </span>
           ))}
         </div>
       )}
 
-      {/* OCW topic keywords */}
-      {ocw?.keywords?.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {ocw.keywords.slice(0, 12).map((k, i) => (
-            <span key={i} className="text-xs bg-sky-50 text-sky-600 border border-sky-100 px-2 py-0.5">{k}</span>
-          ))}
-        </div>
-      )}
-
-      {/* Prerequisites (Claude) */}
+      {/* Prerequisites */}
       {prereqs.length > 0 && (
-        <div className="border-l-4 border-blue-400 bg-blue-50 px-4 py-3">
-          <p className="text-xs font-mono text-blue-600 mb-1.5">← Prerequisites</p>
-          <ul className="space-y-0.5">
-            {prereqs.map((p, i) => <li key={i} className="text-xs text-stone-700">{p}</li>)}
+        <DSection label="PREREQUISITES" icon="←" color="#6B8FBF">
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {prereqs.map((p, i) => <li key={i} style={{ ...txt, fontSize: 12 }}>— {p}</li>)}
           </ul>
-        </div>
+        </DSection>
       )}
 
-      {/* Skills (Claude) */}
+      {/* Skills */}
       {skills.length > 0 && (
-        <div className="border-l-4 border-emerald-400 bg-emerald-50 px-4 py-3">
-          <p className="text-xs font-mono text-emerald-600 mb-1.5">✓ Skills Gained</p>
-          <ul className="space-y-0.5">
-            {skills.map((s, i) => <li key={i} className="text-xs text-stone-700">{s}</li>)}
+        <DSection label="SKILLS GAINED" icon="✓" color="#5A9E6F">
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {skills.map((s, i) => <li key={i} style={{ ...txt, fontSize: 12 }}>✓ {s}</li>)}
           </ul>
-        </div>
+        </DSection>
       )}
 
-      {/* Curriculum (Claude) */}
+      {/* Curriculum */}
       {curriculum.length > 0 && (
-        <div className="border-l-4 border-amber-400 bg-amber-50 px-4 py-3">
-          <p className="text-xs font-mono text-amber-600 mb-1.5">◎ Curriculum</p>
-          <ul className="space-y-0.5">
-            {curriculum.map((l, i) => <li key={i} className="text-xs text-stone-700">{l}</li>)}
+        <DSection label="CURRICULUM" icon="◎" color="#C47A3A">
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {curriculum.map((l, i) => <li key={i} style={{ ...txt, fontSize: 12 }}>{l}</li>)}
           </ul>
-        </div>
+        </DSection>
       )}
 
       {claudePhase === 'streaming' && prereqs.length === 0 && (
-        <div className="flex items-center gap-2">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
           <span className="flex gap-0.5"><span className="loading-dot" /><span className="loading-dot" /><span className="loading-dot" /></span>
-          <span className="text-xs text-stone-400">Generating prerequisites &amp; curriculum...</span>
+          <span style={mutedTxt}>Generating prerequisites &amp; curriculum...</span>
         </div>
       )}
 
       {/* Books — OpenSyllabus */}
-      {books.length > 0 && (
-        <div className="border-l-4 border-rose-400 bg-rose-50 px-4 py-3">
-          <div className="flex items-baseline gap-2 mb-2">
-            <p className="text-xs font-mono text-rose-600">▬ Books &amp; Textbooks</p>
-            <span className="text-xs text-rose-300 font-mono">Open Syllabus</span>
-          </div>
-          <ul className="space-y-2">
+      {phase === 'loading' ? null : books.length > 0 ? (
+        <DSection label="KEY BOOKS & TEXTBOOKS — Open Syllabus" icon="▬" color="#A06090">
+          <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
             {books.map((b, i) => (
-              <li key={i} className="text-xs flex items-baseline gap-2">
-                <span className="text-rose-300 font-mono shrink-0 w-4">{i + 1}</span>
+              <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
+                <span style={{ color: DA.faint, fontFamily: 'monospace', fontSize: 10, minWidth: 16 }}>{i + 1}</span>
                 <span>
-                  <span className="text-stone-800 font-medium">{b.title}</span>
-                  {b.authors && <span className="text-stone-500 ml-1">— {b.authors}</span>}
-                  {b.year && <span className="text-stone-400 ml-1">({b.year})</span>}
+                  <span style={{ color: DA.text, fontSize: 12, fontWeight: 500 }}>{b.title}</span>
+                  {b.authors && <span style={{ color: DA.muted, fontSize: 11 }}> — {b.authors}</span>}
+                  {b.year && <span style={{ color: DA.faint, fontSize: 11 }}> ({b.year})</span>}
                   {b.syllabusCount > 0 && (
-                    <span className="ml-2 text-rose-400">{b.syllabusCount.toLocaleString()} syllabi</span>
+                    <span style={{ color: '#7A5090', fontSize: 10, fontFamily: 'monospace', marginLeft: 8 }}>
+                      {b.syllabusCount.toLocaleString()} syllabi
+                    </span>
                   )}
                 </span>
               </li>
             ))}
-          </ul>
-        </div>
+          </ol>
+        </DSection>
+      ) : (
+        <div style={{ ...mutedTxt, marginBottom: 10 }}>No book data from Open Syllabus for this course.</div>
       )}
 
       {/* Papers — Semantic Scholar */}
-      {papers.length > 0 && (
-        <div className="border-l-4 border-teal-400 bg-teal-50 px-4 py-3">
-          <div className="flex items-baseline gap-2 mb-2">
-            <p className="text-xs font-mono text-teal-600">◉ Seminal Papers</p>
-            <span className="text-xs text-teal-300 font-mono">Semantic Scholar</span>
-          </div>
-          <ul className="space-y-2">
+      {phase === 'loading' ? null : papers.length > 0 ? (
+        <DSection label="SEMINAL PAPERS — Semantic Scholar" icon="◉" color="#3A8A7A">
+          <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
             {papers.map((p, i) => (
-              <li key={i} className="text-xs flex items-baseline gap-2">
-                <span className="text-teal-300 font-mono shrink-0 w-4">{i + 1}</span>
+              <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
+                <span style={{ color: DA.faint, fontFamily: 'monospace', fontSize: 10, minWidth: 16 }}>{i + 1}</span>
                 <span>
-                  <span className="text-stone-800 font-medium">{p.title}</span>
-                  {p.authors && <span className="text-stone-500 ml-1">— {p.authors}</span>}
-                  {p.year && <span className="text-stone-400 ml-1">({p.year})</span>}
-                  {p.influentialCitationCount > 0 && (
-                    <span className="ml-2 text-teal-500">{p.influentialCitationCount.toLocaleString()} citations</span>
+                  <span style={{ color: DA.text, fontSize: 12, fontWeight: 500 }}>{p.title}</span>
+                  {p.authors && <span style={{ color: DA.muted, fontSize: 11 }}> — {p.authors}</span>}
+                  {p.year && <span style={{ color: DA.faint, fontSize: 11 }}> ({p.year})</span>}
+                  {(p.influentialCitationCount || p.citationCount) > 0 && (
+                    <span style={{ color: '#3A8A7A', fontSize: 10, fontFamily: 'monospace', marginLeft: 8 }}>
+                      {(p.influentialCitationCount || p.citationCount).toLocaleString()} cites
+                    </span>
                   )}
                 </span>
               </li>
             ))}
-          </ul>
-        </div>
-      )}
-
-      {ocwPhase === 'done' && books.length === 0 && papers.length === 0 && claudePhase === 'done' && (
-        <p className="text-xs text-stone-400 pl-1">No additional resources found for this course.</p>
+          </ol>
+        </DSection>
+      ) : (
+        <div style={{ ...mutedTxt, marginBottom: 10 }}>No papers found for this topic.</div>
       )}
 
       {course.url && (
-        <div className="pt-1">
-          <a href={course.url} target="_blank" rel="noreferrer"
-            className="text-xs font-mono text-stone-400 hover:text-stone-700 transition-colors">
-            View on MIT OCW ↗
-          </a>
-        </div>
+        <a href={course.url} target="_blank" rel="noreferrer"
+          style={{ color: DA.goldDim, fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.05em', textDecoration: 'none' }}
+          onMouseEnter={e => e.target.style.color = DA.gold}
+          onMouseLeave={e => e.target.style.color = DA.goldDim}>
+          VIEW ON MIT OCW ↗
+        </a>
       )}
     </div>
   );
@@ -316,36 +306,35 @@ Rules: prerequisites must name actual MIT courses with numbers where possible. S
 
 // ── Course row ────────────────────────────────────────────────────────────────
 
-function CourseRow({ course, cs }) {
+function CourseRow({ course }) {
   const [open, setOpen] = useState(false);
   const num = course.courseNums[0] || '';
   const termStr = course.semester && course.year ? `${course.semester} ${course.year}` : course.year;
-  const meta = [course.level, termStr].filter(Boolean).join(' · ');
 
   return (
-    <div>
-      <div className="flex items-start gap-3 py-2.5 border-b border-stone-100 last:border-0">
-        <button onClick={() => setOpen(o => !o)}
-          className="text-xs font-mono text-stone-300 hover:text-stone-600 transition-colors mt-0.5 shrink-0 w-3">
+    <div style={{ borderBottom: `1px solid ${DA.border}` }}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', cursor: 'pointer' }}
+        onClick={() => setOpen(o => !o)}
+      >
+        <span style={{ color: DA.faint, fontSize: 10, fontFamily: 'monospace', minWidth: 10 }}>
           {open ? '▾' : '▸'}
-        </button>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2 flex-wrap">
-            {num && (
-              <span className={`text-xs font-mono shrink-0 ${cs.numTx}`}>{num}</span>
-            )}
-            <button onClick={() => setOpen(o => !o)}
-              className="text-sm text-stone-900 text-left hover:text-stone-600 transition-colors">
-              {course.title}
-            </button>
-          </div>
-          {meta && (
-            <p className="text-xs text-stone-400 mt-0.5">{meta}</p>
-          )}
-        </div>
+        </span>
+        {num && (
+          <span style={{ color: DA.gold, fontSize: 11, fontFamily: 'monospace', minWidth: 52, flexShrink: 0 }}>
+            {num}
+          </span>
+        )}
+        <span style={{ color: DA.text, fontSize: 13, flex: 1 }}>{course.title}</span>
+        {termStr && (
+          <span style={{ color: DA.faint, fontSize: 10, fontFamily: 'monospace', flexShrink: 0 }}>{termStr}</span>
+        )}
         {course.url && (
           <a href={course.url} target="_blank" rel="noreferrer"
-            className="text-xs font-mono text-stone-300 hover:text-stone-700 transition-colors shrink-0 mt-0.5">↗</a>
+            style={{ color: DA.faint, fontSize: 11, flexShrink: 0, textDecoration: 'none' }}
+            onClick={e => e.stopPropagation()}
+            onMouseEnter={e => e.target.style.color = DA.muted}
+            onMouseLeave={e => e.target.style.color = DA.faint}>↗</a>
         )}
       </div>
       {open && <CourseDetailPanel course={course} />}
@@ -355,42 +344,54 @@ function CourseRow({ course, cs }) {
 
 // ── Specialization block (level 3) ────────────────────────────────────────────
 
-function SpecBlock({ name, courses, cs }) {
+function SpecBlock({ name, courses }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-b border-stone-100 last:border-0">
-      <button onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between py-2 px-4 text-left hover:bg-stone-50 transition-colors">
-        <span className={`text-xs px-2 py-0.5 ${cs.badge}`}>{name}</span>
-        <span className="text-xs font-mono text-stone-400">{courses.length} {open ? '▾' : '▸'}</span>
-      </button>
+    <div style={{ borderBottom: `1px solid ${DA.border}` }}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', cursor: 'pointer' }}
+        onClick={() => setOpen(o => !o)}
+        onMouseEnter={e => e.currentTarget.style.background = DA.elevated}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      >
+        <span style={{ fontSize: 11, fontFamily: 'monospace', color: DA.goldDim, letterSpacing: '0.04em' }}>{name}</span>
+        <span style={{ fontSize: 10, fontFamily: 'monospace', color: DA.faint }}>
+          {courses.length} {open ? '▾' : '▸'}
+        </span>
+      </div>
       {open && (
-        <div className="pl-6 pr-4 pb-1">
-          {courses.map((c, i) => <CourseRow key={c.id || i} course={c} cs={cs} />)}
+        <div style={{ paddingLeft: 32, paddingRight: 16, paddingBottom: 4, background: DA.surface }}>
+          {courses.map((c, i) => <CourseRow key={c.id || i} course={c} />)}
         </div>
       )}
     </div>
   );
 }
 
-// ── Department / subfield block (level 2) ─────────────────────────────────────
+// ── Subfield / department block (level 2) ─────────────────────────────────────
 
-function SubfieldBlock({ name, specs, cs }) {
+function SubfieldBlock({ name, specs }) {
   const [open, setOpen] = useState(false);
   const total = Object.values(specs).reduce((s, a) => s + a.length, 0);
   return (
-    <div className="border-b border-stone-200 last:border-0">
-      <button onClick={() => setOpen(o => !o)}
-        className={`w-full flex items-center justify-between py-3 px-4 text-left transition-colors ${cs.sfBg} ${cs.sfHov}`}>
-        <span className={`text-sm font-medium ${cs.sfTx}`}>{name}</span>
-        <span className="text-xs font-mono text-stone-400">{total} courses {open ? '▾' : '▸'}</span>
-      </button>
+    <div style={{ borderBottom: `1px solid ${DA.border}` }}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', cursor: 'pointer', background: DA.elevated }}
+        onClick={() => setOpen(o => !o)}
+        onMouseEnter={e => e.currentTarget.style.background = '#292929'}
+        onMouseLeave={e => e.currentTarget.style.background = DA.elevated}
+      >
+        <span style={{ color: DA.text, fontSize: 14, fontWeight: 500 }}>{name}</span>
+        <span style={{ color: DA.muted, fontSize: 11, fontFamily: 'monospace' }}>
+          {total} courses {open ? '▾' : '▸'}
+        </span>
+      </div>
       {open && (
-        <div className="bg-white">
+        <div style={{ background: DA.surface }}>
           {Object.entries(specs)
             .sort(([, a], [, b]) => b.length - a.length)
             .map(([spec, courses]) => (
-              <SpecBlock key={spec} name={spec} courses={courses} cs={cs} />
+              <SpecBlock key={spec} name={spec} courses={courses} />
             ))}
         </div>
       )}
@@ -398,22 +399,26 @@ function SubfieldBlock({ name, specs, cs }) {
   );
 }
 
-// ── Field-level resource row (books / papers) ─────────────────────────────────
+// ── Field-level resource row ───────────────────────────────────────────────────
 
 function ResourceRow({ item, rank, type }) {
   return (
-    <div className="flex items-baseline gap-3 py-2.5 border-b border-stone-100 last:border-0">
-      <span className="text-xs font-mono text-stone-300 w-5 shrink-0">{rank}</span>
-      <div className="flex-1 min-w-0">
-        <span className="text-sm text-stone-800">{item.title}</span>
-        {item.authors && <span className="text-xs text-stone-400 ml-2">— {item.authors}</span>}
-        {item.year && <span className="text-xs text-stone-400 ml-1">({item.year})</span>}
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, padding: '10px 0', borderBottom: `1px solid ${DA.border}` }}>
+      <span style={{ color: DA.faint, fontFamily: 'monospace', fontSize: 10, minWidth: 20 }}>{rank}</span>
+      <div style={{ flex: 1 }}>
+        <span style={{ color: DA.text, fontSize: 13 }}>{item.title}</span>
+        {item.authors && <span style={{ color: DA.muted, fontSize: 11, marginLeft: 8 }}>— {item.authors}</span>}
+        {item.year && <span style={{ color: DA.faint, fontSize: 11, marginLeft: 6 }}>({item.year})</span>}
       </div>
       {type === 'book' && item.syllabusCount > 0 && (
-        <span className="text-xs font-mono text-rose-400 shrink-0">{item.syllabusCount.toLocaleString()} syllabi</span>
+        <span style={{ color: '#7A5090', fontFamily: 'monospace', fontSize: 10, flexShrink: 0 }}>
+          {item.syllabusCount.toLocaleString()} syllabi
+        </span>
       )}
-      {type === 'paper' && item.influentialCitationCount > 0 && (
-        <span className="text-xs font-mono text-teal-500 shrink-0">{item.influentialCitationCount.toLocaleString()} cites</span>
+      {type === 'paper' && (item.influentialCitationCount || item.citationCount) > 0 && (
+        <span style={{ color: '#3A8A7A', fontFamily: 'monospace', fontSize: 10, flexShrink: 0 }}>
+          {(item.influentialCitationCount || item.citationCount).toLocaleString()} cites
+        </span>
       )}
     </div>
   );
@@ -433,11 +438,9 @@ export default function MITExplorerView({
     if (loadPhase === 'idle') onInitLoad();
   }, [loadPhase, onInitLoad]);
 
-  // Reset filters when field changes
   useEffect(() => { setSearch(''); setLevelFilter('all'); }, [selectedField]);
 
   const pct = loadProgress.total > 0 ? Math.round((loadProgress.loaded / loadProgress.total) * 100) : 0;
-
   const rawSubfields = selectedField && tree[selectedField] ? tree[selectedField] : null;
 
   const filteredSubfields = useMemo(() => {
@@ -463,30 +466,25 @@ export default function MITExplorerView({
     ? Object.values(rawSubfields).flatMap(sf => Object.values(sf)).reduce((s, a) => s + a.length, 0)
     : 0;
 
-  const totalFiltered = filteredSubfields
-    ? Object.values(filteredSubfields).flatMap(sf => Object.values(sf)).reduce((s, a) => s + a.length, 0)
-    : 0;
-
-  const cs = getStyle(selectedField);
+  const root = { background: DA.bg, minHeight: '100%', padding: '8px 0', color: DA.text };
+  const label = { color: DA.muted, fontSize: 10, fontFamily: 'monospace', letterSpacing: '0.08em' };
 
   return (
-    <div>
+    <div style={root}>
       {/* Loading */}
       {loadPhase === 'loading' && (
-        <div className="mt-8 border border-stone-200 bg-white px-6 py-5">
-          <div className="flex items-center gap-2.5 mb-3">
-            <span className="flex gap-0.5">
-              <span className="loading-dot" /><span className="loading-dot" /><span className="loading-dot" />
-            </span>
-            <span className="text-sm text-stone-500">
+        <div style={{ background: DA.surface, border: `1px solid ${DA.border}`, padding: '20px 24px', marginTop: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <span className="flex gap-0.5"><span className="loading-dot" /><span className="loading-dot" /><span className="loading-dot" /></span>
+            <span style={{ color: DA.muted, fontSize: 13 }}>
               {loadProgress.total > 0
                 ? `Loading MIT OCW — ${loadProgress.loaded.toLocaleString()} / ${loadProgress.total.toLocaleString()} courses`
                 : 'Connecting to MIT OCW...'}
             </span>
           </div>
           {loadProgress.total > 0 && (
-            <div className="w-full bg-stone-100 h-1">
-              <div className="bg-stone-700 h-1 transition-all duration-300" style={{ width: `${pct}%` }} />
+            <div style={{ background: DA.elevated, height: 2 }}>
+              <div style={{ background: DA.gold, height: 2, width: `${pct}%`, transition: 'width 0.3s' }} />
             </div>
           )}
         </div>
@@ -494,18 +492,9 @@ export default function MITExplorerView({
 
       {/* Error */}
       {loadPhase === 'error' && (
-        <div className="mt-6 border border-red-200 bg-red-50 px-5 py-4 flex items-center justify-between">
-          <p className="text-sm text-red-700">{loadError}</p>
-          <button onClick={onScrapeLatest} className="text-xs font-mono text-red-600 hover:text-red-900">Retry</button>
-        </div>
-      )}
-
-      {/* Empty */}
-      {loadPhase === 'empty' && (
-        <div className="mt-6 border border-stone-200 bg-stone-50 px-5 py-4 flex items-center justify-between">
-          <p className="text-sm text-stone-500">MIT OCW returned no courses.</p>
-          <a href="/api/mit-test" target="_blank" rel="noreferrer"
-            className="text-xs font-mono text-stone-500 underline">Debug API</a>
+        <div style={{ border: '1px solid #4A2A2A', background: '#1A0A0A', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: '#C06060', fontSize: 13 }}>{loadError}</span>
+          <button onClick={onScrapeLatest} style={{ color: '#C06060', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'monospace', fontSize: 11 }}>Retry</button>
         </div>
       )}
 
@@ -513,122 +502,141 @@ export default function MITExplorerView({
       {loadPhase === 'ready' && (
         <>
           {/* Field tabs */}
-          <div className="flex items-center gap-2 flex-wrap mb-4">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginBottom: 24, borderBottom: `1px solid ${DA.border}`, paddingBottom: 0 }}>
             {fields.map(f => {
-              const s = getStyle(f.field);
-              const isActive = selectedField === f.field;
+              const active = selectedField === f.field;
               return (
                 <button key={f.field}
                   onClick={() => onSelectField(f.field)}
-                  className={`px-3 py-1.5 text-xs font-mono border transition-colors ${isActive ? s.sel : s.unsel}`}>
-                  {f.field} <span className="opacity-60">({f.count})</span>
+                  style={{
+                    padding: '8px 16px',
+                    background: 'none',
+                    border: 'none',
+                    borderBottom: active ? `2px solid ${DA.gold}` : '2px solid transparent',
+                    color: active ? DA.gold : DA.muted,
+                    fontFamily: 'monospace',
+                    fontSize: 11,
+                    letterSpacing: '0.06em',
+                    cursor: 'pointer',
+                    marginBottom: -1,
+                    transition: 'color 0.15s',
+                  }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.color = DA.text; }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.color = DA.muted; }}>
+                  {f.field.toUpperCase()} <span style={{ opacity: 0.5 }}>({f.count})</span>
                 </button>
               );
             })}
             <button onClick={onScrapeLatest}
-              className="ml-auto text-xs font-mono text-stone-400 hover:text-stone-900 border border-stone-200 px-3 py-1.5 transition-colors">
-              Scrape Latest
+              style={{ marginLeft: 'auto', background: 'none', border: `1px solid ${DA.border}`, color: DA.faint, fontFamily: 'monospace', fontSize: 10, padding: '4px 12px', cursor: 'pointer', letterSpacing: '0.05em' }}
+              onMouseEnter={e => e.currentTarget.style.color = DA.muted}
+              onMouseLeave={e => e.currentTarget.style.color = DA.faint}>
+              SCRAPE LATEST
             </button>
           </div>
 
-          {/* Stats line */}
-          <p className="text-xs font-mono text-stone-400 mb-5">
-            {fields.reduce((s, f) => s + f.count, 0).toLocaleString()} courses across {fields.length} fields
-            {selectedField && ` · ${totalInField.toLocaleString()} in ${selectedField}`}
-            {search && ` · ${totalFiltered.toLocaleString()} matching`}
-          </p>
+          {/* Stats */}
+          <div style={{ ...label, marginBottom: 20 }}>
+            {fields.reduce((s, f) => s + f.count, 0).toLocaleString()} courses · {fields.length} fields
+            {selectedField && ` · ${totalInField.toLocaleString()} in ${selectedField.toUpperCase()}`}
+          </div>
 
           {!selectedField && (
-            <p className="text-sm text-stone-400">
-              Select a field above to explore courses by department and specialization.
-              Each course shows its description from MIT OCW, prerequisites, curriculum, and books from Open Syllabus.
+            <p style={{ color: DA.muted, fontSize: 13, lineHeight: 1.7 }}>
+              Select a field above to browse courses by department and specialization.
+              Each course expands to show its description from MIT OCW, prerequisites, curriculum, key textbooks from Open Syllabus, and seminal papers from Semantic Scholar.
             </p>
           )}
 
           {/* Search + level filter */}
           {selectedField && (
-            <div className="flex items-center gap-3 mb-4">
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
               <input
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder={`Search ${totalInField} courses in ${selectedField}...`}
-                className="flex-1 text-sm border border-stone-200 px-3 py-1.5 text-stone-800 placeholder-stone-300 focus:outline-none focus:border-stone-400"
+                placeholder={`Search ${totalInField} courses...`}
+                style={{
+                  flex: 1, background: DA.surface, border: `1px solid ${DA.border}`, color: DA.text,
+                  padding: '8px 14px', fontSize: 13, outline: 'none', fontFamily: 'inherit',
+                }}
+                onFocus={e => e.target.style.borderColor = DA.goldDim}
+                onBlur={e => e.target.style.borderColor = DA.border}
               />
-              <div className="flex text-xs font-mono">
+              <div style={{ display: 'flex' }}>
                 {['all', 'Undergraduate', 'Graduate'].map(lv => (
                   <button key={lv}
                     onClick={() => setLevelFilter(lv)}
-                    className={`px-2.5 py-1.5 border-y border-r first:border-l transition-colors ${
-                      levelFilter === lv
-                        ? `${cs.sel} border-transparent`
-                        : 'border-stone-200 text-stone-500 hover:text-stone-800'
-                    }`}>
-                    {lv === 'all' ? 'All' : lv}
+                    style={{
+                      background: levelFilter === lv ? DA.goldDim : 'none',
+                      border: `1px solid ${DA.border}`,
+                      borderRight: lv === 'Graduate' ? `1px solid ${DA.border}` : 'none',
+                      color: levelFilter === lv ? DA.bg : DA.muted,
+                      fontFamily: 'monospace', fontSize: 10, padding: '6px 12px',
+                      cursor: 'pointer', letterSpacing: '0.05em',
+                    }}>
+                    {lv === 'all' ? 'ALL' : lv.toUpperCase()}
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Three-level course tree */}
+          {/* Three-level tree */}
           {filteredSubfields && (
-            <div className="space-y-8">
+            <div>
               {Object.keys(filteredSubfields).length === 0 ? (
-                <p className="text-sm text-stone-400">No courses match your filter.</p>
+                <p style={{ color: DA.muted, fontSize: 13 }}>No courses match your filter.</p>
               ) : (
-                <section>
-                  <div className="border border-stone-200">
-                    {Object.entries(filteredSubfields)
-                      .map(([sf, specs]) => ({
-                        sf, specs,
-                        count: Object.values(specs).reduce((s, a) => s + a.length, 0),
-                      }))
-                      .sort((a, b) => b.count - a.count)
-                      .map(({ sf, specs }) => (
-                        <SubfieldBlock key={sf} name={sf} specs={specs} cs={cs} />
-                      ))}
-                  </div>
-                </section>
+                <div style={{ border: `1px solid ${DA.border}`, marginBottom: 40 }}>
+                  {Object.entries(filteredSubfields)
+                    .map(([sf, specs]) => ({ sf, specs, count: Object.values(specs).reduce((s, a) => s + a.length, 0) }))
+                    .sort((a, b) => b.count - a.count)
+                    .map(({ sf, specs }) => (
+                      <SubfieldBlock key={sf} name={sf} specs={specs} />
+                    ))}
+                </div>
               )}
 
-              {/* Field-level books + papers — always show when field selected */}
+              {/* Field-level books + papers — always shown when field selected */}
               {selectedField && (
-                <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 32 }}>
                   <section>
-                    <div className="flex items-baseline gap-3 mb-3">
-                      <h2 className="text-xs font-mono text-stone-500">
-                        Top books assigned in <span className={cs.numTx}>{selectedField}</span> courses
-                      </h2>
-                      <span className="text-xs font-mono text-rose-300">Open Syllabus</span>
+                    <div style={{ ...label, marginBottom: 12 }}>
+                      TOP BOOKS IN {selectedField.toUpperCase()} — <span style={{ color: '#7A5090' }}>OPEN SYLLABUS</span>
                     </div>
                     {resourcesPhase === 'loading' ? (
-                      <div className="border border-stone-200 bg-white px-5 py-4">
+                      <div style={{ background: DA.surface, border: `1px solid ${DA.border}`, padding: '16px 20px' }}>
                         <span className="flex gap-0.5"><span className="loading-dot" /><span className="loading-dot" /><span className="loading-dot" /></span>
                       </div>
                     ) : books.length > 0 ? (
-                      <div className="border border-stone-200 bg-white px-5 py-1">
+                      <div style={{ background: DA.surface, border: `1px solid ${DA.border}`, padding: '4px 20px' }}>
                         {books.map((b, i) => <ResourceRow key={i} item={b} rank={i + 1} type="book" />)}
                       </div>
-                    ) : <p className="text-xs text-stone-400">No book data available.</p>}
+                    ) : (
+                      <div style={{ background: DA.surface, border: `1px solid ${DA.border}`, padding: '16px 20px' }}>
+                        <span style={{ color: DA.faint, fontSize: 12 }}>No book data from Open Syllabus for this field.</span>
+                      </div>
+                    )}
                   </section>
 
                   <section>
-                    <div className="flex items-baseline gap-3 mb-3">
-                      <h2 className="text-xs font-mono text-stone-500">
-                        Seminal papers in <span className={cs.numTx}>{selectedField}</span>
-                      </h2>
-                      <span className="text-xs font-mono text-teal-400">Semantic Scholar</span>
+                    <div style={{ ...label, marginBottom: 12 }}>
+                      SEMINAL PAPERS IN {selectedField.toUpperCase()} — <span style={{ color: '#3A8A7A' }}>SEMANTIC SCHOLAR</span>
                     </div>
                     {resourcesPhase === 'loading' ? (
-                      <div className="border border-stone-200 bg-white px-5 py-4">
+                      <div style={{ background: DA.surface, border: `1px solid ${DA.border}`, padding: '16px 20px' }}>
                         <span className="flex gap-0.5"><span className="loading-dot" /><span className="loading-dot" /><span className="loading-dot" /></span>
                       </div>
                     ) : papers.length > 0 ? (
-                      <div className="border border-stone-200 bg-white px-5 py-1">
+                      <div style={{ background: DA.surface, border: `1px solid ${DA.border}`, padding: '4px 20px' }}>
                         {papers.map((p, i) => <ResourceRow key={i} item={p} rank={i + 1} type="paper" />)}
                       </div>
-                    ) : <p className="text-xs text-stone-400">No paper data available.</p>}
+                    ) : (
+                      <div style={{ background: DA.surface, border: `1px solid ${DA.border}`, padding: '16px 20px' }}>
+                        <span style={{ color: DA.faint, fontSize: 12 }}>No paper data from Semantic Scholar for this field.</span>
+                      </div>
+                    )}
                   </section>
                 </div>
               )}
