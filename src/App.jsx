@@ -33,6 +33,8 @@ import ConsilienceInput from './components/ConsilienceInput';
 import ConsilienceView from './components/ConsilienceView';
 import InquiryInput from './components/InquiryInput';
 import InquiryView from './components/InquiryView';
+import MITExplorerView from './components/MITExplorerView';
+import { useMITExplorer } from './hooks/useMITExplorer';
 
 function WorkRow({ w }) {
   return (
@@ -146,11 +148,12 @@ export default function App() {
   const drift = useCanonDrift();
   const consilience = useConsilience();
   const inquiry = useInquiry();
+  const mitExplorer = useMITExplorer();
   const [inputTopic, setInputTopic] = useState('');
   const [shake, setShake] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [view, setView] = useState('canon');
-  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'dissertation' | 'drift' | 'consilience' | 'inquiry'
+  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'mit'
 
   const parsed = useMemo(() => parseCanon(gen.content), [gen.content]);
 
@@ -253,21 +256,6 @@ export default function App() {
           <div className="flex-1 min-w-0 py-12">
             <header className="mb-10">
               <h1 className="text-6xl font-bold tracking-tight text-stone-900">Canon</h1>
-              <p className="mt-2 text-stone-500 text-base">
-                {appMode === 'canon'
-                  ? 'Definitive reading lists for any academic field'
-                  : appMode === 'reverse'
-                  ? 'Find pre and post requisites for any book and paper'
-                  : appMode === 'curriculum'
-                  ? 'How universities teach any subject — grounded in real syllabus data'
-                  : appMode === 'dissertation'
-                  ? 'Qualifying exam reading lists for PhD research questions'
-                  : appMode === 'drift'
-                  ? 'How a field\'s canon has shifted across eras — what rose and what faded'
-                  : appMode === 'consilience'
-                  ? 'What every discipline says — and where they all converge'
-                  : 'The open questions that define a frontier and why they resist answers'}
-              </p>
 
               {/* App mode toggle */}
               <div className="mt-6 flex border-b border-stone-200">
@@ -341,7 +329,36 @@ export default function App() {
                 >
                   The Inquiry
                 </button>
+                <button
+                  onClick={() => setAppMode('mit')}
+                  className={`px-4 py-2.5 text-xs font-mono -mb-px transition-colors ${
+                    appMode === 'mit'
+                      ? 'border-b-2 border-stone-900 text-stone-900'
+                      : 'border-b-2 border-transparent text-stone-400 hover:text-stone-700'
+                  }`}
+                >
+                  MIT OCW
+                </button>
               </div>
+
+              {/* Tab description */}
+              <p className="mt-4 text-sm text-stone-500 leading-relaxed">
+                {appMode === 'canon'
+                  ? 'Definitive reading lists built from 8 live sources — OpenAlex, Semantic Scholar, Google Books, Open Library, and Open Syllabus. Organized into sections with auto-generated reading order.'
+                  : appMode === 'reverse'
+                  ? 'Paste any paper or book and get its complete intellectual map — a phase-by-phase prerequisite path with exact chapter focus, plus postrequisite streams showing what opens up after mastering it.'
+                  : appMode === 'curriculum'
+                  ? 'How universities worldwide actually teach any subject — organized into courses from first-year undergraduate to research seminar, with prerequisites, skills, milestones, textbooks, and seminal papers per course.'
+                  : appMode === 'dissertation'
+                  ? 'Enter a PhD research question and get the exact qualifying-exam reading list — tiers from field foundations to contested ground, each with Must Master annotations, plus Committee Note, Exam Prep, and Advisor Note.'
+                  : appMode === 'drift'
+                  ? "Trace how any field's canon has shifted across four eras — what rose, what faded, where it is heading. Each work tagged Defining, Rising, Fading, or Watch, grounded in real citation data."
+                  : appMode === 'consilience'
+                  ? "Enter any cross-disciplinary question and see what every field says — each discipline's lens, answer, and key works. Surfaces convergences, tensions, and a synthesis no single field can reach alone."
+                  : appMode === 'inquiry'
+                  ? 'Enter any field or topic and get the open questions at its frontier — precisely formulated, with what makes each hard, what has been tried, who is working on it, and the best entry point.'
+                  : 'Browse MIT OpenCourseWare by topic — see every MIT course in that area with course numbers, level, and direct links, alongside the books most assigned in university courses on the same subject.'}
+              </p>
             </header>
 
             <ApiKeyInput />
@@ -787,6 +804,24 @@ export default function App() {
                   New Inquiry
                 </button>
               </div>
+            )}
+
+            {/* MIT OCW Explorer */}
+            {appMode === 'mit' && (
+              <MITExplorerView
+                loadPhase={mitExplorer.loadPhase}
+                loadProgress={mitExplorer.loadProgress}
+                loadError={mitExplorer.loadError}
+                fields={mitExplorer.fields}
+                tree={mitExplorer.tree}
+                selectedField={mitExplorer.selectedField}
+                books={mitExplorer.books}
+                papers={mitExplorer.papers}
+                resourcesPhase={mitExplorer.resourcesPhase}
+                onInitLoad={mitExplorer.initLoad}
+                onSelectField={mitExplorer.selectField}
+                onScrapeLatest={mitExplorer.scrapeLatest}
+              />
             )}
 
             {hasOutput && !isGenerating && !isRefining && enrichment.status !== 'idle' && (

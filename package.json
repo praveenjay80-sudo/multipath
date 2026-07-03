@@ -8,9 +8,10 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "start": "npx serve dist -s -l ${PORT:-3000}"
+    "start": "node server.js"
   },
   "dependencies": {
+    "express": "^4.22.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
