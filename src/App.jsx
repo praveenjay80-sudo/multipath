@@ -33,8 +33,6 @@ import ConsilienceInput from './components/ConsilienceInput';
 import ConsilienceView from './components/ConsilienceView';
 import InquiryInput from './components/InquiryInput';
 import InquiryView from './components/InquiryView';
-import MITExplorerView from './components/MITExplorerView';
-import { useMITExplorer } from './hooks/useMITExplorer';
 
 function WorkRow({ w }) {
   return (
@@ -148,12 +146,11 @@ export default function App() {
   const drift = useCanonDrift();
   const consilience = useConsilience();
   const inquiry = useInquiry();
-  const mitExplorer = useMITExplorer();
   const [inputTopic, setInputTopic] = useState('');
   const [shake, setShake] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [view, setView] = useState('canon');
-  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'mit'
+  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'dissertation' | 'drift' | 'consilience' | 'inquiry'
 
   const parsed = useMemo(() => parseCanon(gen.content), [gen.content]);
 
@@ -329,16 +326,6 @@ export default function App() {
                 >
                   The Inquiry
                 </button>
-                <button
-                  onClick={() => setAppMode('mit')}
-                  className={`px-4 py-2.5 text-xs font-mono -mb-px transition-colors ${
-                    appMode === 'mit'
-                      ? 'border-b-2 border-stone-900 text-stone-900'
-                      : 'border-b-2 border-transparent text-stone-400 hover:text-stone-700'
-                  }`}
-                >
-                  MIT OCW
-                </button>
               </div>
 
               {/* Tab description */}
@@ -357,7 +344,7 @@ export default function App() {
                   ? "Enter any cross-disciplinary question and see what every field says — each discipline's lens, answer, and key works. Surfaces convergences, tensions, and a synthesis no single field can reach alone."
                   : appMode === 'inquiry'
                   ? 'Enter any field or topic and get the open questions at its frontier — precisely formulated, with what makes each hard, what has been tried, who is working on it, and the best entry point.'
-                  : 'Browse MIT OpenCourseWare by topic — see every MIT course in that area with course numbers, level, and direct links, alongside the books most assigned in university courses on the same subject.'}
+                  : ''}
               </p>
             </header>
 
@@ -804,24 +791,6 @@ export default function App() {
                   New Inquiry
                 </button>
               </div>
-            )}
-
-            {/* MIT OCW Explorer */}
-            {appMode === 'mit' && (
-              <MITExplorerView
-                loadPhase={mitExplorer.loadPhase}
-                loadProgress={mitExplorer.loadProgress}
-                loadError={mitExplorer.loadError}
-                fields={mitExplorer.fields}
-                tree={mitExplorer.tree}
-                selectedField={mitExplorer.selectedField}
-                books={mitExplorer.books}
-                papers={mitExplorer.papers}
-                resourcesPhase={mitExplorer.resourcesPhase}
-                onInitLoad={mitExplorer.initLoad}
-                onSelectField={mitExplorer.selectField}
-                onScrapeLatest={mitExplorer.scrapeLatest}
-              />
             )}
 
             {hasOutput && !isGenerating && !isRefining && enrichment.status !== 'idle' && (
