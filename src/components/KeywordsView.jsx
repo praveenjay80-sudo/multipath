@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useCallback } from 'react';
 
 const MODES = [
   { key: 'canon',        label: 'Canon' },
@@ -10,114 +10,107 @@ const MODES = [
   { key: 'reverse',      label: 'Prerequisites' },
 ];
 
-// ── GND via lobid.org ─────────────────────────────────────────────────────────
+// Top-level academic domains — English label maps to GND German preferred name
+const DOMAINS = [
+  { en: 'Philosophy',         de: 'Philosophie' },
+  { en: 'Mathematics',        de: 'Mathematik' },
+  { en: 'Physics',            de: 'Physik' },
+  { en: 'Chemistry',          de: 'Chemie' },
+  { en: 'Biology',            de: 'Biologie' },
+  { en: 'Computer Science',   de: 'Informatik' },
+  { en: 'Linguistics',        de: 'Linguistik' },
+  { en: 'Economics',          de: 'Wirtschaftswissenschaft' },
+  { en: 'Law',                de: 'Rechtswissenschaft' },
+  { en: 'History',            de: 'Geschichte' },
+  { en: 'Geography',          de: 'Geografie' },
+  { en: 'Psychology',         de: 'Psychologie' },
+  { en: 'Sociology',          de: 'Soziologie' },
+  { en: 'Medicine',           de: 'Medizin' },
+  { en: 'Arts',               de: 'Kunst' },
+  { en: 'Music',              de: 'Musik' },
+  { en: 'Literature',         de: 'Literatur' },
+  { en: 'Religion & Theology',de: 'Theologie' },
+  { en: 'Political Science',  de: 'Politikwissenschaft' },
+  { en: 'Engineering',        de: 'Ingenieurwissenschaft' },
+  { en: 'Architecture',       de: 'Architektur' },
+  { en: 'Education',          de: 'Erziehungswissenschaft' },
+  { en: 'Anthropology',       de: 'Anthropologie' },
+  { en: 'Astronomy',          de: 'Astronomie' },
+  { en: 'Environmental Science', de: 'Umweltwissenschaft' },
+];
 
-async function searchGND(query) {
+// ── GND API ───────────────────────────────────────────────────────────────────
+
+function gndSuffix(uri) {
+  return (uri || '').replace('https://d-nb.info/gnd/', '');
+}
+
+async function fetchGNDByName(deName) {
   const res = await fetch(
-    `https://lobid.org/gnd/search?q=${encodeURIComponent(query)}&filter=type:SubjectHeading&format=json&size=12`
+    `https://lobid.org/gnd/search?q=preferredName:${encodeURIComponent('"' + deName + '"')}&filter=type:SubjectHeading&format=json&size=5`
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const json = await res.json();
-  return json.member || [];
+  return (
+    json.member?.find(m => m.preferredName === deName) ||
+    json.member?.[0] ||
+    null
+  );
 }
 
-async function fetchWikidataEnglish(items) {
-  // Collect Wikidata QIDs from GND sameAs
+async function fetchGNDRecord(id) {
+  const res = await fetch(`https://lobid.org/gnd/${id}?format=json`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// ── Wikidata English labels ───────────────────────────────────────────────────
+
+async function wikidataEnglish(gndItems) {
   const gndToQid = {};
   const qids = [];
-  for (const item of items) {
+  for (const item of gndItems) {
+    if (!item?.id) continue;
     const wd = (item.sameAs || []).find(s => /wikidata\.org\/entity\/Q\d+/.test(s.id || ''));
     if (wd) {
       const qid = wd.id.match(/Q\d+/)?.[0];
       if (qid) { gndToQid[item.id] = qid; qids.push(qid); }
     }
   }
-  if (qids.length === 0) return {};
+  if (!qids.length) return {};
   const res = await fetch(
-    `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${qids.join('|')}&props=labels&languages=en&format=json&origin=*`
+    `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${qids.slice(0, 50).join('|')}&props=labels&languages=en&format=json&origin=*`
   );
   const json = await res.json();
-  const result = {};
+  const out = {};
   for (const [gndId, qid] of Object.entries(gndToQid)) {
     const en = json.entities?.[qid]?.labels?.en?.value;
-    if (en) result[gndId] = en;
+    if (en) out[gndId] = en;
   }
-  return result;
+  return out;
 }
 
-// ── IDREF via idref.fr ────────────────────────────────────────────────────────
-
-async function searchIDREF(query) {
-  const res = await fetch(
-    `https://www.idref.fr/Sru/Solr?q=${encodeURIComponent(query)}&fq=type_z:Rameau&wt=json&rows=12&fl=ppn_z,affcourt_r,afflong_z,type_z`
+// Fetch full records for narrower terms (parallel, max 20), then batch Wikidata
+async function enrichNarrower(narrowerList) {
+  const ids = narrowerList.slice(0, 20).map(t => gndSuffix(t.id));
+  const records = await Promise.all(
+    ids.map(id => fetchGNDRecord(id).catch(() => null))
   );
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
-  return json.response?.docs || [];
-}
-
-async function loadIDREFRecord(ppn) {
-  const res = await fetch(`https://www.idref.fr/${ppn}.jsonld`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return parseSkos(await res.json(), ppn);
-}
-
-function parseSkos(jsonld, targetPpn) {
-  const graph = [].concat(jsonld['@graph'] || jsonld);
-
-  // id → { fr label, en label }
-  const labelMap = {};
-  for (const node of graph) {
-    const id = node['@id'];
-    if (!id) continue;
-    const pref = [].concat(node['skos:prefLabel'] || []);
-    const alt  = [].concat(node['skos:altLabel']  || []);
-    const all  = [...pref, ...alt];
-    const fr = all.find(l => l?.['@language'] === 'fr');
-    const en = all.find(l => l?.['@language'] === 'en');
-    labelMap[id] = {
-      fr: fr?.['@value'] || '',
-      en: en?.['@value'] || '',
-    };
+  const valid = records.filter(Boolean);
+  const labels = await wikidataEnglish(valid).catch(() => ({}));
+  // Map: narrower GND URI → english label
+  const out = {};
+  for (const r of valid) {
+    if (r.id && labels[r.id]) out[r.id] = labels[r.id];
   }
-
-  const targetId = `https://www.idref.fr/${targetPpn}`;
-  const main = graph.find(n => n['@id'] === targetId)
-    || graph.find(n => [].concat(n['@type'] || []).some(t => String(t).includes('Concept')));
-  if (!main) return null;
-
-  function resolve(field) {
-    return [].concat(main[field] || [])
-      .map(t => ({ id: String(t?.['@id'] || ''), ...labelMap[String(t?.['@id'] || '')] }))
-      .filter(t => t.fr || t.en);
-  }
-
-  const prefArr = [].concat(main['skos:prefLabel'] || []);
-  const altArr  = [].concat(main['skos:altLabel']  || []);
-  const frPref  = prefArr.find(l => l?.['@language'] === 'fr') || prefArr[0];
-  const enPref  = altArr.find(l => l?.['@language'] === 'en')
-               || prefArr.find(l => l?.['@language'] === 'en');
-
-  // Wikidata sameAs from IDREF record
-  const sameAs   = [].concat(main['owl:sameAs'] || main['skos:exactMatch'] || []);
-  const wikidata = sameAs.find(s => /wikidata/.test(s?.['@id'] || s || ''));
-  const wdId     = wikidata?.['@id'] || (typeof wikidata === 'string' ? wikidata : null);
-
-  return {
-    frLabel:  frPref?.['@value'] || String(frPref || ''),
-    enLabel:  enPref?.['@value'] || '',
-    wdId,
-    broader:  resolve('skos:broader'),
-    narrower: resolve('skos:narrower'),
-    related:  resolve('skos:related'),
-  };
+  return out;
 }
 
-// ── Loading dots ──────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function Dots({ color = 'bg-stone-300' }) {
   return (
-    <div className="flex gap-1.5 py-2">
+    <div className="flex gap-1.5 py-3 justify-center">
       {[0, 1, 2].map(i => (
         <div key={i} className={`w-1.5 h-1.5 rounded-full animate-bounce ${color}`}
           style={{ animationDelay: `${i * 120}ms` }} />
@@ -126,240 +119,157 @@ function Dots({ color = 'bg-stone-300' }) {
   );
 }
 
-// ── Term chip ─────────────────────────────────────────────────────────────────
-
-function Chip({ label, onClick }) {
-  return (
-    <button
-      onClick={() => onClick(label)}
-      className="text-[10px] font-mono px-2 py-0.5 bg-stone-50 border border-stone-200 text-stone-600 hover:bg-stone-100 hover:border-stone-500 hover:text-stone-900 transition-colors"
-    >
-      {label}
-    </button>
-  );
+function modeLabel(key) {
+  return MODES.find(m => m.key === key)?.label || 'Canon';
 }
 
-// ── Hierarchy block ───────────────────────────────────────────────────────────
-// items: array of { fr, en } or strings; onSelect(label)
+// ── TermRow — one narrower/related/broader item ───────────────────────────────
 
-function HierarchyRow({ title, items, onSelect, max = 12 }) {
-  if (!items || items.length === 0) return null;
-  const shown  = items.slice(0, max);
-  const hidden = items.length - max;
-  return (
-    <div className="flex items-start gap-2">
-      <span className="shrink-0 text-[9px] font-mono text-stone-400 uppercase tracking-wider w-16 pt-0.5">{title}</span>
-      <div className="flex flex-wrap gap-1">
-        {shown.map((t, i) => {
-          const display = typeof t === 'string' ? t : (t.en || t.fr || t.label || '');
-          const sub     = typeof t === 'string' ? '' : (t.en ? t.fr : '');
-          return display ? (
-            <span key={i} className="flex flex-col">
-              <Chip label={display} onClick={onSelect} />
-              {sub && <span className="text-[8px] font-mono text-stone-300 px-2">{sub}</span>}
-            </span>
-          ) : null;
-        })}
-        {hidden > 0 && <span className="text-[10px] font-mono text-stone-300 self-center">+{hidden}</span>}
-      </div>
-    </div>
-  );
-}
-
-// ── GND Card ──────────────────────────────────────────────────────────────────
-
-function GNDCard({ item, enLabel, mode, onGenerate }) {
-  const gndSuffix = (item.id || '').replace('https://d-nb.info/gnd/', '');
-  const lobidUrl  = `https://lobid.org/gnd/${gndSuffix}`;
-  const lcsh      = (item.sameAs || []).find(s => String(s.id || '').includes('id.loc.gov'));
-  const wikidata  = (item.sameAs || []).find(s => /wikidata\.org\/entity\/Q/.test(s.id || ''));
-
-  const broader  = [...(item.broaderTermInstantial || []), ...(item.broaderTermGeneral || [])];
-  const narrower = [...(item.narrowerTermInstantial || []), ...(item.narrowerTermGeneral || [])];
-  const related  = item.relatedTerm || [];
-  const cats     = item.gndSubjectCategory || [];
-  const displayEn = enLabel || item.preferredName;
-
-  function termLabel(t) { return t.label || ''; }
+function TermRow({ term, enLabel, onDrill, onGenerate, mode }) {
+  const display = enLabel || term.label;
+  const hasEn   = !!enLabel && enLabel !== term.label;
 
   return (
-    <div className="border border-blue-100 bg-white">
-      {/* Top strip */}
-      <div className="bg-blue-50 px-4 py-2.5 border-b border-blue-100 flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="shrink-0 text-[8px] font-mono font-bold px-1.5 py-0.5 bg-blue-600 text-white tracking-wider">GND</span>
-            <span className="text-sm font-bold text-stone-900 leading-tight">{displayEn}</span>
-          </div>
-          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <span className="text-[10px] font-mono text-stone-500">de: {item.preferredName}</span>
-            {cats.map((c, i) => (
-              <span key={i} className="text-[8px] font-mono px-1.5 py-0.5 bg-blue-100 text-blue-700">{c.label}</span>
-            ))}
-          </div>
-        </div>
-        <div className="shrink-0 flex gap-2 text-[9px] font-mono">
-          <a href={lobidUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">GND↗</a>
-          {lcsh && <a href={lcsh.id} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline">LC↗</a>}
-          {wikidata && <a href={wikidata.id} target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">WD↗</a>}
-        </div>
-      </div>
-
-      {/* Hierarchy body */}
-      <div className="px-4 py-3 space-y-2">
-        <HierarchyRow
-          title="broader"
-          items={broader.map(t => ({ en: enLabel && t.label === item.preferredName ? displayEn : t.label, fr: '', label: t.label }))}
-          onSelect={l => onGenerate(l, mode)}
-        />
-        <HierarchyRow
-          title="related"
-          items={related.map(t => ({ label: termLabel(t) }))}
-          onSelect={l => onGenerate(l, mode)}
-        />
-        <HierarchyRow
-          title="narrower"
-          items={narrower.map(t => ({ label: termLabel(t) }))}
-          onSelect={l => onGenerate(l, mode)}
-          max={14}
-        />
-      </div>
-
-      {/* Generate button */}
-      <div className="px-4 pb-3">
+    <div className="flex items-center gap-2 py-1 border-b border-stone-50 last:border-0 group">
+      <button
+        onClick={() => onDrill(term)}
+        className="flex-1 text-left text-sm text-stone-800 hover:text-blue-700 font-medium transition-colors truncate"
+      >
+        {display}
+      </button>
+      {hasEn && (
+        <span className="shrink-0 text-[9px] font-mono text-stone-400 truncate max-w-[120px]">{term.label}</span>
+      )}
+      <div className="shrink-0 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
-          onClick={() => onGenerate(displayEn, mode)}
-          className="text-[9px] font-mono font-bold px-3 py-1.5 bg-stone-900 text-white hover:bg-stone-700 transition-colors"
+          onClick={() => onDrill(term)}
+          className="text-[8px] font-mono px-1.5 py-0.5 border border-stone-200 text-stone-400 hover:border-blue-300 hover:text-blue-600 transition-colors"
         >
-          → {MODES.find(m => m.key === mode)?.label || 'Canon'}
+          expand ▸
+        </button>
+        <button
+          onClick={() => onGenerate(display, mode)}
+          className="text-[8px] font-mono px-1.5 py-0.5 bg-stone-900 text-white hover:bg-stone-700 transition-colors"
+        >
+          → {modeLabel(mode)}
         </button>
       </div>
     </div>
   );
 }
 
-// ── IDREF Card ────────────────────────────────────────────────────────────────
+// ── Concept panel — shows the loaded GND concept ──────────────────────────────
 
-function IDREFCard({ item, mode, onGenerate }) {
-  const ppn   = item.ppn_z;
-  const label = item.affcourt_r || item.afflong_z || ppn;
-  const url   = `https://www.idref.fr/${ppn}`;
-
-  const [hier, setHier]       = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr]         = useState(null);
-  const expanded              = useRef(false);
-
-  async function toggle() {
-    if (expanded.current) { setHier(null); expanded.current = false; return; }
-    setLoading(true); setErr(null);
-    try {
-      const h = await loadIDREFRecord(ppn);
-      setHier(h);
-      expanded.current = true;
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const enLabel = hier?.enLabel || '';
-  const frLabel = hier?.frLabel || label;
-  const displayEn = enLabel || frLabel;
+function ConceptPanel({ concept, enLabel, narrowerEnLabels, onDrill, onGenerate, mode }) {
+  const broader  = [...(concept.broaderTermInstantial || []), ...(concept.broaderTermGeneral || [])];
+  const narrower = [...(concept.narrowerTermInstantial || []), ...(concept.narrowerTermGeneral || [])];
+  const related  = concept.relatedTerm || [];
+  const cats     = concept.gndSubjectCategory || [];
+  const lcsh     = (concept.sameAs || []).find(s => String(s.id || '').includes('id.loc.gov'));
+  const wd       = (concept.sameAs || []).find(s => /wikidata\.org\/entity\/Q/.test(s.id || ''));
+  const lobidUrl = `https://lobid.org/gnd/${gndSuffix(concept.id)}`;
 
   return (
-    <div className="border border-purple-100 bg-white">
-      {/* Top strip */}
-      <div className="bg-purple-50 px-4 py-2.5 border-b border-purple-100 flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="shrink-0 text-[8px] font-mono font-bold px-1.5 py-0.5 bg-purple-600 text-white tracking-wider">IDREF</span>
-            <span className="text-sm font-bold text-stone-900 leading-tight">{displayEn}</span>
+    <div className="space-y-5">
+      {/* Concept header */}
+      <div className="border border-blue-100 bg-blue-50 px-5 py-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-blue-600 text-white">GND</span>
+              <h3 className="text-xl font-bold text-stone-900">{enLabel || concept.preferredName}</h3>
+            </div>
+            {enLabel && (
+              <p className="text-xs font-mono text-stone-500">de: {concept.preferredName}</p>
+            )}
+            {cats.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {cats.map((c, i) => (
+                  <span key={i} className="text-[8px] font-mono px-1.5 py-0.5 bg-blue-100 border border-blue-200 text-blue-700">
+                    {c.label}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[10px] font-mono text-stone-500">fr: {frLabel}</span>
-            {enLabel && frLabel !== enLabel && (
-              <span className="text-[8px] font-mono text-purple-400">RAMEAU</span>
+          <div className="shrink-0 flex gap-2 text-[9px] font-mono">
+            <a href={lobidUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">GND↗</a>
+            {lcsh && <a href={lcsh.id} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline">LC↗</a>}
+            {wd   && <a href={wd.id}   target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">WD↗</a>}
+          </div>
+        </div>
+
+        {/* Broader context */}
+        {broader.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-blue-200">
+            <span className="text-[8px] font-mono text-blue-500 uppercase tracking-wider mr-2">Broader context:</span>
+            {broader.map((t, i) => (
+              <span key={i}>
+                <button onClick={() => onDrill(t)}
+                  className="text-xs font-mono text-blue-700 hover:underline">{t.label}</button>
+                {i < broader.length - 1 && <span className="text-blue-300 mx-1">·</span>}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Generate button */}
+        <div className="mt-3">
+          <button
+            onClick={() => onGenerate(enLabel || concept.preferredName, mode)}
+            className="text-[9px] font-mono font-bold px-3 py-1.5 bg-stone-900 text-white hover:bg-stone-700 transition-colors"
+          >
+            → {modeLabel(mode)}
+          </button>
+        </div>
+      </div>
+
+      {/* Related terms */}
+      {related.length > 0 && (
+        <div>
+          <p className="text-[9px] font-mono text-stone-400 uppercase tracking-widest mb-2">
+            Related terms <span className="text-stone-300 normal-case">({related.length})</span>
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {related.slice(0, 15).map((t, i) => (
+              <button key={i} onClick={() => onDrill(t)}
+                className="text-[10px] font-mono px-2 py-0.5 bg-white border border-stone-200 text-stone-600 hover:border-blue-400 hover:text-blue-700 transition-colors">
+                {narrowerEnLabels[t.id] || t.label}
+              </button>
+            ))}
+            {related.length > 15 && (
+              <span className="text-[10px] font-mono text-stone-300 self-center">+{related.length - 15}</span>
             )}
           </div>
         </div>
-        <a href={url} target="_blank" rel="noopener noreferrer"
-          className="shrink-0 text-[9px] font-mono text-purple-500 hover:underline">IDREF↗</a>
-      </div>
-
-      {/* Hierarchy body (lazy) */}
-      <div className="px-4 py-3 space-y-2">
-        {loading && <Dots color="bg-purple-200" />}
-        {err && <p className="text-[10px] font-mono text-red-500">{err}</p>}
-
-        {hier && (
-          <>
-            <HierarchyRow
-              title="broader"
-              items={hier.broader}
-              onSelect={l => onGenerate(l, mode)}
-            />
-            <HierarchyRow
-              title="related"
-              items={hier.related}
-              onSelect={l => onGenerate(l, mode)}
-            />
-            <HierarchyRow
-              title="narrower"
-              items={hier.narrower}
-              onSelect={l => onGenerate(l, mode)}
-              max={14}
-            />
-          </>
-        )}
-
-        {!hier && !loading && (
-          <p className="text-[10px] font-mono text-stone-300">Click "Load hierarchy" to see broader · narrower · related</p>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="px-4 pb-3 flex gap-2">
-        <button onClick={() => onGenerate(displayEn, mode)}
-          className="text-[9px] font-mono font-bold px-3 py-1.5 bg-stone-900 text-white hover:bg-stone-700 transition-colors">
-          → {MODES.find(m => m.key === mode)?.label || 'Canon'}
-        </button>
-        <button onClick={toggle} disabled={loading}
-          className="text-[9px] font-mono px-3 py-1.5 border border-stone-200 text-stone-500 hover:border-stone-400 hover:text-stone-700 transition-colors disabled:opacity-40">
-          {loading ? 'Loading…' : expanded.current ? 'Hide ▲' : 'Load hierarchy ▸'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ── Status bar ────────────────────────────────────────────────────────────────
-
-function StatusBar({ label, color, status, count, error, fallbackUrl, query }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 ${color} text-white`}>{label}</span>
-      {status === 'loading' && <span className="text-[10px] font-mono text-stone-400 animate-pulse">fetching…</span>}
-      {status === 'done'    && <span className="text-[10px] font-mono text-stone-400">{count} results</span>}
-      {status === 'error'   && (
-        <span className="text-[10px] font-mono text-red-500">
-          {error} ·{' '}
-          <a href={fallbackUrl} target="_blank" rel="noopener noreferrer"
-            className="underline hover:text-red-700">open directly ↗</a>
-        </span>
       )}
-    </div>
-  );
-}
 
-// ── Empty state ───────────────────────────────────────────────────────────────
+      {/* Narrower terms — full list */}
+      {narrower.length > 0 && (
+        <div>
+          <p className="text-[9px] font-mono text-stone-400 uppercase tracking-widest mb-2">
+            Narrower terms <span className="text-stone-300 normal-case">({narrower.length})</span>
+          </p>
+          <div className="border border-stone-100 bg-white divide-y divide-stone-50">
+            {narrower.map((t, i) => (
+              <TermRow
+                key={i}
+                term={t}
+                enLabel={narrowerEnLabels[t.id] || ''}
+                onDrill={onDrill}
+                onGenerate={onGenerate}
+                mode={mode}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
-function EmptyState({ label, hint }) {
-  return (
-    <div className="border border-stone-100 bg-stone-50 px-4 py-6 text-center space-y-1">
-      <p className="text-xs font-mono text-stone-400">No {label} results</p>
-      <p className="text-[10px] font-mono text-stone-300">{hint}</p>
+      {narrower.length === 0 && related.length === 0 && (
+        <p className="text-xs font-mono text-stone-400 px-1">
+          No narrower or related terms — this is a leaf concept in the GND hierarchy.
+        </p>
+      )}
     </div>
   );
 }
@@ -367,62 +277,103 @@ function EmptyState({ label, hint }) {
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export default function KeywordsView({ onGenerate }) {
-  const [input, setInput]   = useState('');
-  const [query, setQuery]   = useState('');
-  const [mode, setMode]     = useState('canon');
+  const [mode, setMode]           = useState('canon');
+  const [activeDomain, setActiveDomain] = useState(null);
 
-  const [gndItems,  setGndItems]  = useState([]);
-  const [idrefItems,setIdrefItems]= useState([]);
-  const [enLabels,  setEnLabels]  = useState({});   // gndId → english label
+  // Drill-down state
+  const [path, setPath]           = useState([]);  // [{ id, label, concept }]
+  const [concept, setConcept]     = useState(null);
+  const [enLabel, setEnLabel]     = useState('');
+  const [narrowerEn, setNarrowerEn] = useState({});
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState(null);
 
-  const [gndStatus,  setGndStatus]  = useState('idle');
-  const [idrefStatus,setIdrefStatus]= useState('idle');
-  const [gndErr,  setGndErr]  = useState('');
-  const [idrefErr,setIdrefErr]= useState('');
+  async function loadConcept(gndItem, label) {
+    setLoading(true);
+    setError(null);
+    setConcept(gndItem);
+    setNarrowerEn({});
 
-  async function handleSearch() {
-    const q = input.trim();
-    if (!q) return;
-    setQuery(q);
-    setGndItems([]); setIdrefItems([]); setEnLabels({});
+    // Get English for the concept itself
+    const mainEn = await wikidataEnglish([gndItem]).catch(() => ({}));
+    setEnLabel(mainEn[gndItem.id] || label || gndItem.preferredName);
 
-    // GND + Wikidata English labels
-    setGndStatus('loading'); setGndErr('');
-    searchGND(q)
-      .then(async items => {
-        setGndItems(items);
-        setGndStatus('done');
-        // Batch-fetch English labels from Wikidata
-        const labels = await fetchWikidataEnglish(items).catch(() => ({}));
-        setEnLabels(labels);
-      })
-      .catch(e => { setGndErr(e.message); setGndStatus('error'); });
-
-    // IDREF
-    setIdrefStatus('loading'); setIdrefErr('');
-    searchIDREF(q)
-      .then(items => { setIdrefItems(items); setIdrefStatus('done'); })
-      .catch(e    => { setIdrefErr(e.message); setIdrefStatus('error'); });
+    // Fetch English for narrower + related terms
+    const allTerms = [
+      ...(gndItem.narrowerTermInstantial || []),
+      ...(gndItem.narrowerTermGeneral || []),
+      ...(gndItem.relatedTerm || []),
+    ];
+    if (allTerms.length > 0) {
+      const narrowEn = await enrichNarrower(allTerms).catch(() => ({}));
+      setNarrowerEn(narrowEn);
+    }
+    setLoading(false);
   }
 
-  const hasResults = gndStatus === 'done' || idrefStatus === 'done'
-                  || gndStatus === 'error' || idrefStatus === 'error';
+  const selectDomain = useCallback(async (domain) => {
+    setActiveDomain(domain.en);
+    setPath([]);
+    setConcept(null);
+    setEnLabel('');
+    setNarrowerEn({});
+    setLoading(true);
+    setError(null);
+    try {
+      const item = await fetchGNDByName(domain.de);
+      if (!item) throw new Error(`"${domain.de}" not found in GND`);
+      await loadConcept(item, domain.en);
+      setPath([{ id: item.id, enLabel: domain.en, deLabel: item.preferredName }]);
+    } catch (e) {
+      setError(e.message);
+      setLoading(false);
+    }
+  }, []);
+
+  const drillInto = useCallback(async (term) => {
+    const id = gndSuffix(term.id);
+    setLoading(true);
+    setError(null);
+    try {
+      const item = await fetchGNDRecord(id);
+      const prevEnLabel = narrowerEn[term.id] || term.label;
+      await loadConcept(item, prevEnLabel);
+      setPath(p => [...p, { id: item.id, enLabel: prevEnLabel, deLabel: item.preferredName }]);
+    } catch (e) {
+      setError(e.message);
+      setLoading(false);
+    }
+  }, [narrowerEn]);
+
+  const navigateTo = useCallback(async (idx) => {
+    const crumb = path[idx];
+    if (!crumb) return;
+    const newPath = path.slice(0, idx + 1);
+    setPath(newPath);
+    const id = gndSuffix(crumb.id);
+    setLoading(true);
+    setError(null);
+    try {
+      const item = await fetchGNDRecord(id);
+      await loadConcept(item, crumb.enLabel);
+    } catch (e) {
+      setError(e.message);
+      setLoading(false);
+    }
+  }, [path]);
 
   return (
     <div className="mt-8 space-y-6">
       {/* Header */}
-      <div className="border-b border-stone-200 pb-5">
+      <div className="border-b border-stone-200 pb-4">
         <div className="flex items-baseline gap-3 mb-1">
-          <h2 className="text-2xl font-bold tracking-tight text-stone-900">Authority Keywords</h2>
-          <div className="flex gap-1.5">
-            <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-blue-600 text-white">GND</span>
-            <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-purple-600 text-white">IDREF</span>
-          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-stone-900">GND Concept Hierarchy</h2>
+          <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-blue-600 text-white">GND</span>
         </div>
-        <p className="text-sm text-stone-500 leading-relaxed max-w-2xl">
-          Look up any concept in the German National Authority File (GND) and the French IDREF/RAMEAU
-          vocabulary. Both show English translations with a structured broader → narrower → related
-          hierarchy. Click any term to generate scholarly content.
+        <p className="text-sm text-stone-500 max-w-2xl leading-relaxed">
+          German National Authority File (Deutsche Nationalbibliothek). Browse 25 academic domains →
+          drill into narrower concepts → click any term to generate scholarly content.
+          English labels via Wikidata throughout.
         </p>
       </div>
 
@@ -442,94 +393,85 @@ export default function KeywordsView({ onGenerate }) {
         </div>
       </div>
 
-      {/* Search bar */}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSearch()}
-          placeholder="e.g. Metaphysics, Quantum field theory, Postcolonialism, Thermodynamics…"
-          className="flex-1 px-3 py-2.5 text-sm border border-stone-200 bg-white text-stone-900 placeholder-stone-300 focus:outline-none focus:border-stone-700 transition-colors"
-        />
-        <button onClick={handleSearch} disabled={!input.trim()}
-          className="px-5 py-2 text-sm bg-stone-900 text-white hover:bg-stone-700 transition-colors disabled:opacity-40">
-          Search
-        </button>
+      {/* Domain grid */}
+      <div>
+        <p className="text-[9px] font-mono text-stone-400 uppercase tracking-widest mb-2">Select a domain to explore</p>
+        <div className="flex flex-wrap gap-1.5">
+          {DOMAINS.map(d => (
+            <button
+              key={d.en}
+              onClick={() => selectDomain(d)}
+              className={`px-3 py-1.5 text-xs font-mono border transition-all
+                ${activeDomain === d.en
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-stone-600 border-stone-200 hover:border-blue-400 hover:text-blue-700'}`}
+            >
+              {d.en}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Results */}
-      {query && (
-        <div className="space-y-8">
-          {/* ── GND ── */}
-          <section className="space-y-3">
-            <StatusBar
-              label="GND" color="bg-blue-600"
-              status={gndStatus} count={gndItems.length}
-              error={gndErr}
-              fallbackUrl={`https://lobid.org/gnd/search?q=${encodeURIComponent(query)}&filter=type:SubjectHeading`}
-              query={query}
-            />
-            <p className="text-[9px] font-mono text-stone-400">
-              Deutsche Nationalbibliothek · lobid.org · English labels via Wikidata
-            </p>
+      {/* Breadcrumb */}
+      {path.length > 0 && (
+        <div className="flex items-center flex-wrap gap-x-1 gap-y-1 text-sm font-mono">
+          {path.map((crumb, i) => (
+            <span key={i} className="flex items-center gap-1">
+              {i > 0 && <span className="text-stone-300">›</span>}
+              <button
+                onClick={() => navigateTo(i)}
+                className={`transition-colors ${
+                  i === path.length - 1
+                    ? 'text-blue-700 font-bold'
+                    : 'text-stone-400 hover:text-stone-700'
+                }`}
+              >
+                {crumb.enLabel}
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
 
-            {gndStatus === 'loading' && (
-              <div className="border border-blue-100 bg-blue-50 py-8 flex justify-center">
-                <Dots color="bg-blue-300" />
-              </div>
-            )}
-            {gndStatus === 'done' && gndItems.length === 0 && (
-              <EmptyState label="GND" hint="Try a broader term or German spelling" />
-            )}
-            <div className="space-y-3">
-              {gndItems.map((item, i) => (
-                <GNDCard
-                  key={item.id || i}
-                  item={item}
-                  enLabel={enLabels[item.id] || ''}
-                  mode={mode}
-                  onGenerate={onGenerate}
-                />
-              ))}
-            </div>
-          </section>
+      {/* Loading */}
+      {loading && (
+        <div className="border border-blue-100 bg-blue-50 py-12">
+          <Dots color="bg-blue-300" />
+          <p className="text-center text-xs font-mono text-blue-400 mt-1">
+            Loading GND hierarchy + English labels…
+          </p>
+        </div>
+      )}
 
-          {/* Divider */}
-          {hasResults && <div className="border-t border-stone-100" />}
+      {/* Error */}
+      {error && !loading && (
+        <div className="border border-red-200 bg-red-50 px-4 py-4">
+          <p className="text-xs font-mono text-red-600">{error}</p>
+          <p className="text-[10px] font-mono text-stone-400 mt-1">
+            GND may not have this exact term — try a neighbouring domain.
+          </p>
+        </div>
+      )}
 
-          {/* ── IDREF ── */}
-          <section className="space-y-3">
-            <StatusBar
-              label="IDREF" color="bg-purple-600"
-              status={idrefStatus} count={idrefItems.length}
-              error={idrefErr}
-              fallbackUrl={`https://www.idref.fr/Sru/Solr?q=${encodeURIComponent(query)}&fq=type_z:Rameau&wt=json`}
-              query={query}
-            />
-            <p className="text-[9px] font-mono text-stone-400">
-              Bibliothèque nationale de France · RAMEAU vocabulary · English labels via JSONLD record
-            </p>
+      {/* Concept panel */}
+      {!loading && concept && (
+        <ConceptPanel
+          concept={concept}
+          enLabel={enLabel}
+          narrowerEnLabels={narrowerEn}
+          onDrill={drillInto}
+          onGenerate={onGenerate}
+          mode={mode}
+        />
+      )}
 
-            {idrefStatus === 'loading' && (
-              <div className="border border-purple-100 bg-purple-50 py-8 flex justify-center">
-                <Dots color="bg-purple-300" />
-              </div>
-            )}
-            {idrefStatus === 'done' && idrefItems.length === 0 && (
-              <EmptyState label="IDREF/RAMEAU" hint="RAMEAU uses French — try searching in French (e.g. Métaphysique)" />
-            )}
-            <div className="space-y-3">
-              {idrefItems.map((item, i) => (
-                <IDREFCard
-                  key={item.ppn_z || i}
-                  item={item}
-                  mode={mode}
-                  onGenerate={onGenerate}
-                />
-              ))}
-            </div>
-          </section>
+      {/* Empty state */}
+      {!loading && !concept && !error && (
+        <div className="border border-stone-100 bg-stone-50 py-16 text-center">
+          <p className="text-sm font-mono text-stone-400">Select a domain above to explore its GND hierarchy</p>
+          <p className="text-[10px] font-mono text-stone-300 mt-1">
+            Each domain shows narrower terms — click any to drill deeper
+          </p>
         </div>
       )}
     </div>
