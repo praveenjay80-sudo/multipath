@@ -360,16 +360,7 @@ export default function App() {
                 >
                   The Inquiry
                 </button>
-                <button
-                  onClick={() => setAppMode('math')}
-                  className={`px-4 py-2.5 text-sm font-mono -mb-px transition-colors ${
-                    appMode === 'math'
-                      ? 'border-b-2 border-emerald-600 text-emerald-700 font-semibold'
-                      : 'border-b-2 border-transparent text-stone-400 hover:text-emerald-600'
-                  }`}
-                >
-                  Math Universe
-                </button>
+
                 <button
                   onClick={() => setAppMode('concepts')}
                   className={`px-4 py-2.5 text-sm font-mono -mb-px transition-colors ${
@@ -408,8 +399,6 @@ export default function App() {
                   ? "Enter any cross-disciplinary question and see what every field says — each discipline's lens, answer, and key works. Surfaces convergences, tensions, and a synthesis no single field can reach alone."
                   : appMode === 'inquiry'
                   ? 'Enter any field or topic and get the open questions at its frontier — precisely formulated, with what makes each hard, what has been tried, who is working on it, and the best entry point.'
-                  : appMode === 'math'
-                  ? 'UCM Mathematics Thesaurus (Tesamat) — 998 terms with full broader/narrower hierarchy. Expand any branch, search by keyword, and click → on any term to generate a reading list.'
                   : appMode === 'concepts'
                   ? 'The complete OpenAlex concept hierarchy — 65,025 concepts across 6 levels (Domain → Field → Sub → Topic → Concept → Micro). Select any generation mode, browse the tree, and click → on any concept to generate.'
                   : appMode === 'keywords'
@@ -862,9 +851,6 @@ export default function App() {
                 </button>
               </div>
             )}
-
-            {/* Math Universe — Tesamat */}
-            {appMode === 'math' && <KeywordsView onGenerate={handleConceptGenerate} />}
 
             {/* OpenAlex Concept Explorer */}
             {appMode === 'concepts' && (
