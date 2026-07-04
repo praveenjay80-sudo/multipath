@@ -10,67 +10,59 @@ const MODES = [
   { key: 'reverse',      label: 'Prerequisites' },
 ];
 
-// Predefined domains — English label + known Wikidata Q-ID (skips search step)
+// Root domains — English label + Wikidata Q-ID for GND resolution
 const DOMAINS = [
-  { en: 'Philosophy',          qid: 'Q5891'   },
-  { en: 'Mathematics',         qid: 'Q395'    },
-  { en: 'Physics',             qid: 'Q413'    },
-  { en: 'Chemistry',           qid: 'Q2329'   },
-  { en: 'Biology',             qid: 'Q420'    },
-  { en: 'Computer Science',    qid: 'Q21198'  },
-  { en: 'Linguistics',         qid: 'Q8162'   },
-  { en: 'Economics',           qid: 'Q8134'   },
-  { en: 'Law',                 qid: 'Q7748'   },
-  { en: 'History',             qid: 'Q309'    },
-  { en: 'Geography',           qid: 'Q1071'   },
-  { en: 'Psychology',          qid: 'Q9418'   },
-  { en: 'Sociology',           qid: 'Q21201'  },
-  { en: 'Medicine',            qid: 'Q11190'  },
-  { en: 'Arts',                qid: 'Q735'    },
-  { en: 'Music',               qid: 'Q638'    },
-  { en: 'Literature',          qid: 'Q8242'   },
-  { en: 'Theology',            qid: 'Q34178'  },
-  { en: 'Political Science',   qid: 'Q36442'  },
-  { en: 'Engineering',         qid: 'Q11023'  },
-  { en: 'Architecture',        qid: 'Q12271'  },
-  { en: 'Education',           qid: 'Q8434'   },
-  { en: 'Anthropology',        qid: 'Q23404'  },
-  { en: 'Astronomy',           qid: 'Q333'    },
-  { en: 'Environmental Science', qid: 'Q2027596' },
+  { en: 'Philosophy',           qid: 'Q5891'    },
+  { en: 'Mathematics',          qid: 'Q395'     },
+  { en: 'Physics',              qid: 'Q413'     },
+  { en: 'Chemistry',            qid: 'Q2329'    },
+  { en: 'Biology',              qid: 'Q420'     },
+  { en: 'Computer Science',     qid: 'Q21198'   },
+  { en: 'Linguistics',          qid: 'Q8162'    },
+  { en: 'Economics',            qid: 'Q8134'    },
+  { en: 'Law',                  qid: 'Q7748'    },
+  { en: 'History',              qid: 'Q309'     },
+  { en: 'Geography',            qid: 'Q1071'    },
+  { en: 'Psychology',           qid: 'Q9418'    },
+  { en: 'Sociology',            qid: 'Q21201'   },
+  { en: 'Medicine',             qid: 'Q11190'   },
+  { en: 'Arts',                 qid: 'Q735'     },
+  { en: 'Music',                qid: 'Q638'     },
+  { en: 'Literature',           qid: 'Q8242'    },
+  { en: 'Theology',             qid: 'Q34178'   },
+  { en: 'Political Science',    qid: 'Q36442'   },
+  { en: 'Engineering',          qid: 'Q11023'   },
+  { en: 'Architecture',         qid: 'Q12271'   },
+  { en: 'Education',            qid: 'Q8434'    },
+  { en: 'Anthropology',         qid: 'Q23404'   },
+  { en: 'Astronomy',            qid: 'Q333'     },
+  { en: 'Environmental Science',qid: 'Q2027596' },
 ];
 
-// ── Wikidata helpers ──────────────────────────────────────────────────────────
+// ── API pipeline ──────────────────────────────────────────────────────────────
 
-// English query → Wikidata Q-ID (top hit)
-async function wdSearch(query) {
+function gndSuffix(uri) {
+  return (uri || '').replace('https://d-nb.info/gnd/', '');
+}
+
+// Q-ID → GND identifier (P227)
+async function wdGetGndId(qid) {
   const res = await fetch(
-    `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(query)}&language=en&format=json&origin=*&limit=5&type=item`
+    `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${qid}&props=claims&format=json&origin=*`
   );
-  if (!res.ok) throw new Error(`Wikidata search: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`Wikidata: HTTP ${res.status}`);
   const json = await res.json();
-  const hit = json.search?.[0];
-  if (!hit) throw new Error(`"${query}" not found on Wikidata`);
-  return hit.id; // Q-ID
+  return json.entities?.[qid]?.claims?.P227?.[0]?.mainsnak?.datavalue?.value || null;
 }
 
-// Q-ID → { gndId, enLabel, deLabel }
-async function wdGetInfo(qid) {
-  const res = await fetch(
-    `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${qid}&props=claims|labels&languages=en|de&format=json&origin=*`
-  );
-  if (!res.ok) throw new Error(`Wikidata entity: HTTP ${res.status}`);
-  const json  = await res.json();
-  const entity = json.entities?.[qid];
-  const gndId  = entity?.claims?.P227?.[0]?.mainsnak?.datavalue?.value || null;
-  return {
-    gndId,
-    enLabel: entity?.labels?.en?.value || '',
-    deLabel: entity?.labels?.de?.value || '',
-  };
+// Fetch GND record by numeric suffix like "4038936-4"
+async function fetchGNDRecord(gndId) {
+  const res = await fetch(`https://lobid.org/gnd/${gndId}?format=json`);
+  if (!res.ok) throw new Error(`GND: HTTP ${res.status}`);
+  return res.json();
 }
 
-// GND IDs (suffixes like "4038936-4") → { "https://d-nb.info/gnd/4038936-4": "English label" }
-// Uses Wikidata SPARQL — one request regardless of how many IDs
+// Batch-translate GND suffixes → English via one Wikidata SPARQL call
 async function sparqlEnglish(gndIds) {
   if (!gndIds.length) return {};
   const vals = gndIds.slice(0, 40).map(id => `"${id}"`).join(' ');
@@ -84,335 +76,216 @@ async function sparqlEnglish(gndIds) {
     `https://query.wikidata.org/sparql?query=${encodeURIComponent(query)}&format=json`,
     { headers: { Accept: 'application/sparql-results+json' } }
   );
-  if (!res.ok) throw new Error(`SPARQL: HTTP ${res.status}`);
+  if (!res.ok) return {};
   const json = await res.json();
-  const out  = {};
+  const out = {};
   for (const b of json.results?.bindings || []) {
+    // key = full GND URI so it matches term.id in GND records
     out['https://d-nb.info/gnd/' + b.g.value] = b.label.value;
   }
-  return out; // full-URI key → english label
+  return out;
 }
 
-// ── GND record fetch ──────────────────────────────────────────────────────────
+// Load children for a node: fetch GND record → get narrower terms → get English labels
+async function loadChildren(node) {
+  let gndId = node.gndId;
 
-function gndSuffix(uri) {
-  return (uri || '').replace('https://d-nb.info/gnd/', '');
-}
-
-async function fetchGNDRecord(id) {
-  const res = await fetch(`https://lobid.org/gnd/${id}?format=json`);
-  if (!res.ok) throw new Error(`GND record: HTTP ${res.status}`);
-  return res.json();
-}
-
-// ── Full resolve pipeline ─────────────────────────────────────────────────────
-// Returns { enLabel, deLabel, qid, gndId, gndRecord, termEn }
-
-async function resolveConcept({ qid, gndId: knownGndId, enLabel: knownEn }) {
-  let gndId  = knownGndId;
-  let enLabel = knownEn || '';
-  let deLabel = '';
-  let resolvedQid = qid;
-
-  // If we have a Q-ID but no GND ID, fetch from Wikidata
-  if (qid && !gndId) {
-    const info = await wdGetInfo(qid);
-    gndId   = info.gndId;
-    enLabel = knownEn || info.enLabel;
-    deLabel = info.deLabel;
+  // If domain node, resolve GND ID via Wikidata first
+  if (!gndId && node.qid) {
+    gndId = await wdGetGndId(node.qid);
+    if (!gndId) throw new Error(`No GND entry found for ${node.enLabel}`);
   }
 
-  if (!gndId) throw new Error('No GND identifier found — concept may not be in GND');
+  const record  = await fetchGNDRecord(gndId);
+  const narrower = [
+    ...(record.narrowerTermInstantial || []),
+    ...(record.narrowerTermGeneral    || []),
+  ];
 
-  // Fetch the actual GND record
-  const gndRecord = await fetchGNDRecord(gndId);
-  deLabel = deLabel || gndRecord.preferredName;
+  // Batch-fetch English labels from Wikidata in one SPARQL call
+  const suffixes = narrower.map(t => gndSuffix(t.id)).filter(Boolean);
+  const enMap    = await sparqlEnglish(suffixes).catch(() => ({}));
 
-  // If no Wikidata label yet, try sameAs in the GND record
-  if (!enLabel) {
-    const wd = (gndRecord.sameAs || []).find(s => /wikidata\.org\/entity\/Q/.test(s.id || ''));
-    if (wd) {
-      resolvedQid = wd.id.match(/Q\d+/)?.[0];
-      if (resolvedQid) {
-        const info = await wdGetInfo(resolvedQid).catch(() => ({}));
-        enLabel = info.enLabel || '';
-      }
-    }
+  const children = narrower.map(t => ({
+    id:      'gnd-' + gndSuffix(t.id),
+    gndId:   gndSuffix(t.id),
+    qid:     null,
+    enLabel: enMap[t.id] || t.label,   // English if found, German fallback
+    deLabel: t.label,
+    expanded:     false,
+    loading:      false,
+    error:        null,
+    childIds:     null,   // null = not yet loaded
+    hasChildren:  true,   // assume yes until proven leaf
+  }));
+
+  return { gndId, children };
+}
+
+// ── Initial flat node map ─────────────────────────────────────────────────────
+
+function buildInitialNodes() {
+  const nodes = {};
+  for (const d of DOMAINS) {
+    const id = 'domain-' + d.en;
+    nodes[id] = {
+      id,
+      gndId:    null,
+      qid:      d.qid,
+      enLabel:  d.en,
+      deLabel:  '',
+      expanded: false,
+      loading:  false,
+      error:    null,
+      childIds: null,
+    };
   }
-  enLabel = enLabel || deLabel;
-
-  // Collect all term IDs to translate via SPARQL
-  const narrower = [...(gndRecord.narrowerTermInstantial || []), ...(gndRecord.narrowerTermGeneral || [])];
-  const related  = gndRecord.relatedTerm || [];
-  const broader  = [...(gndRecord.broaderTermInstantial || []), ...(gndRecord.broaderTermGeneral || [])];
-  const allTerms = [...narrower, ...related, ...broader];
-  const suffixes = allTerms.map(t => gndSuffix(t.id)).filter(Boolean);
-
-  const termEn = await sparqlEnglish(suffixes).catch(() => ({}));
-
-  return { enLabel, deLabel, qid: resolvedQid, gndId, gndRecord, termEn };
+  return nodes;
 }
 
-// ── UI components ─────────────────────────────────────────────────────────────
+const ROOT_IDS = DOMAINS.map(d => 'domain-' + d.en);
 
-function Dots() {
-  return (
-    <div className="flex gap-1.5">
-      {[0, 1, 2].map(i => (
-        <div key={i} className="w-1.5 h-1.5 bg-blue-300 rounded-full animate-bounce"
-          style={{ animationDelay: `${i * 120}ms` }} />
-      ))}
-    </div>
-  );
-}
+// ── Tree node component ───────────────────────────────────────────────────────
 
-function modeLabel(key) {
-  return MODES.find(m => m.key === key)?.label || 'Canon';
-}
+function TreeNode({ nodeId, nodes, depth, onToggle, onGenerate, mode }) {
+  const node = nodes[nodeId];
+  if (!node) return null;
 
-function TermRow({ term, enLabel, onDrill, onGenerate, mode }) {
-  const display = enLabel || term.label;
-  const hasEn   = !!enLabel && enLabel !== term.label;
+  const indent = depth * 20;
+  const isLeaf = Array.isArray(node.childIds) && node.childIds.length === 0;
+  const showEnglish = node.enLabel;
+  const showGerman  = node.deLabel && node.deLabel !== node.enLabel;
 
   return (
-    <div className="flex items-center gap-2 py-2 border-b border-stone-50 last:border-0 group">
-      <div className="flex-1 min-w-0">
+    <div>
+      <div
+        className="flex items-start gap-2 py-1.5 border-b border-stone-50 last:border-0 hover:bg-stone-50 group transition-colors"
+        style={{ paddingLeft: `${8 + indent}px`, paddingRight: '8px' }}
+      >
+        {/* Expand toggle */}
         <button
-          onClick={() => onDrill(term)}
-          className="block w-full text-left text-sm text-stone-800 hover:text-blue-700 font-medium truncate transition-colors"
+          onClick={() => onToggle(nodeId)}
+          disabled={node.loading || isLeaf}
+          className="shrink-0 w-5 h-5 flex items-center justify-center text-stone-400 hover:text-blue-600 disabled:cursor-default mt-0.5"
+          title={isLeaf ? 'Leaf concept' : node.expanded ? 'Collapse' : 'Expand'}
         >
-          {display}
+          {node.loading
+            ? <span className="text-[10px] animate-pulse text-blue-400">⋯</span>
+            : isLeaf
+            ? <span className="text-[10px] text-stone-200">·</span>
+            : node.expanded
+            ? <span className="text-[9px] text-blue-500">▼</span>
+            : <span className="text-[9px] text-stone-400 group-hover:text-blue-500">▶</span>
+          }
         </button>
-        {hasEn && (
-          <span className="text-[9px] font-mono text-stone-400">{term.label}</span>
-        )}
-      </div>
-      <div className="shrink-0 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onClick={() => onDrill(term)}
-          className="text-[8px] font-mono px-1.5 py-0.5 border border-stone-200 text-stone-400 hover:border-blue-300 hover:text-blue-600 transition-colors">
-          expand ▸
-        </button>
-        <button onClick={() => onGenerate(display, mode)}
-          className="text-[8px] font-mono px-1.5 py-0.5 bg-stone-900 text-white hover:bg-stone-700 transition-colors">
-          → {modeLabel(mode)}
-        </button>
-      </div>
-    </div>
-  );
-}
 
-function ConceptPanel({ data, onDrill, onGenerate, mode }) {
-  const { enLabel, deLabel, gndId, qid, gndRecord, termEn } = data;
-
-  const broader  = [...(gndRecord.broaderTermInstantial || []), ...(gndRecord.broaderTermGeneral || [])];
-  const narrower = [...(gndRecord.narrowerTermInstantial || []), ...(gndRecord.narrowerTermGeneral || [])];
-  const related  = gndRecord.relatedTerm || [];
-  const cats     = gndRecord.gndSubjectCategory || [];
-  const lcsh     = (gndRecord.sameAs || []).find(s => String(s.id || '').includes('id.loc.gov'));
-  const wd       = qid ? `https://www.wikidata.org/wiki/${qid}` : null;
-
-  return (
-    <div className="space-y-6">
-      {/* Concept header */}
-      <div className="border border-blue-100 bg-blue-50 px-5 py-4 space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-              <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-blue-600 text-white shrink-0">GND</span>
-              <h3 className="text-2xl font-bold text-stone-900 leading-tight">{enLabel}</h3>
-            </div>
-            {deLabel !== enLabel && (
-              <p className="text-xs font-mono text-stone-500">German (GND): {deLabel}</p>
-            )}
-            {cats.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {cats.map((c, i) => (
-                  <span key={i} className="text-[8px] font-mono px-1.5 py-0.5 bg-blue-100 border border-blue-200 text-blue-700">
-                    {c.label}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="shrink-0 flex gap-2 text-[9px] font-mono">
-            <a href={`https://lobid.org/gnd/${gndId}`} target="_blank" rel="noopener noreferrer"
-              className="text-blue-500 hover:underline">GND↗</a>
-            {wd && <a href={wd} target="_blank" rel="noopener noreferrer"
-              className="text-emerald-600 hover:underline">WD↗</a>}
-            {lcsh && <a href={lcsh.id} target="_blank" rel="noopener noreferrer"
-              className="text-orange-500 hover:underline">LC↗</a>}
-          </div>
+        {/* Labels */}
+        <div className="flex-1 min-w-0">
+          <span
+            className={`text-sm ${depth === 0 ? 'font-semibold text-stone-900' : 'font-medium text-stone-800'} leading-snug`}
+          >
+            {showEnglish}
+          </span>
+          {showGerman && (
+            <span className="ml-1.5 text-[10px] font-mono text-stone-400">{node.deLabel}</span>
+          )}
+          {node.error && (
+            <span className="ml-2 text-[9px] font-mono text-red-400">{node.error}</span>
+          )}
         </div>
 
-        {/* Broader context */}
-        {broader.length > 0 && (
-          <div className="pt-2 border-t border-blue-200">
-            <span className="text-[8px] font-mono text-blue-500 uppercase tracking-wider mr-2">Broader:</span>
-            {broader.map((t, i) => (
-              <span key={i}>
-                <button onClick={() => onDrill(t)}
-                  className="text-xs font-mono text-blue-700 hover:underline">
-                  {termEn[t.id] || t.label}
-                </button>
-                {i < broader.length - 1 && <span className="text-blue-300 mx-1">·</span>}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Generate */}
-        <div>
-          <button onClick={() => onGenerate(enLabel, mode)}
-            className="text-[9px] font-mono font-bold px-3 py-1.5 bg-stone-900 text-white hover:bg-stone-700 transition-colors">
-            → {modeLabel(mode)}
+        {/* Actions — show on hover */}
+        <div className="shrink-0 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <a
+            href={node.gndId ? `https://lobid.org/gnd/${node.gndId}` : '#'}
+            target="_blank" rel="noopener noreferrer"
+            onClick={e => { if (!node.gndId) e.preventDefault(); }}
+            className="text-[8px] font-mono text-blue-400 hover:underline self-center"
+          >
+            GND↗
+          </a>
+          <button
+            onClick={() => onGenerate(node.enLabel, mode)}
+            className="text-[8px] font-mono px-2 py-0.5 bg-stone-900 text-white hover:bg-stone-700 transition-colors"
+          >
+            → {MODES.find(m => m.key === mode)?.label || 'Canon'}
           </button>
         </div>
       </div>
 
-      {/* Related */}
-      {related.length > 0 && (
+      {/* Children */}
+      {node.expanded && node.childIds && node.childIds.length > 0 && (
         <div>
-          <p className="text-[9px] font-mono text-stone-400 uppercase tracking-widest mb-2">
-            Related <span className="text-stone-300 normal-case font-normal">({related.length})</span>
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {related.slice(0, 18).map((t, i) => {
-              const en = termEn[t.id] || t.label;
-              return (
-                <button key={i} onClick={() => onDrill(t)}
-                  className="text-[10px] font-mono px-2 py-0.5 bg-white border border-stone-200 text-stone-600 hover:border-blue-400 hover:text-blue-700 transition-colors">
-                  {en}
-                </button>
-              );
-            })}
-            {related.length > 18 && (
-              <span className="text-[10px] font-mono text-stone-300 self-center">+{related.length - 18} more</span>
-            )}
-          </div>
+          {node.childIds.map(cid => (
+            <TreeNode
+              key={cid}
+              nodeId={cid}
+              nodes={nodes}
+              depth={depth + 1}
+              onToggle={onToggle}
+              onGenerate={onGenerate}
+              mode={mode}
+            />
+          ))}
         </div>
-      )}
-
-      {/* Narrower */}
-      {narrower.length > 0 && (
-        <div>
-          <p className="text-[9px] font-mono text-stone-400 uppercase tracking-widest mb-2">
-            Narrower <span className="text-stone-300 normal-case font-normal">({narrower.length} — click to drill deeper)</span>
-          </p>
-          <div className="border border-stone-100 bg-white divide-y divide-stone-50 px-3">
-            {narrower.map((t, i) => (
-              <TermRow
-                key={i}
-                term={t}
-                enLabel={termEn[t.id] || ''}
-                onDrill={onDrill}
-                onGenerate={onGenerate}
-                mode={mode}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {narrower.length === 0 && related.length === 0 && (
-        <p className="text-xs font-mono text-stone-400">Leaf concept — no narrower terms in GND.</p>
       )}
     </div>
   );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// ── Main view ─────────────────────────────────────────────────────────────────
 
 export default function KeywordsView({ onGenerate }) {
-  const [mode,         setMode]        = useState('canon');
-  const [input,        setInput]       = useState('');
-  const [activeDomain, setActiveDomain]= useState(null);
-  const [conceptData,  setConceptData] = useState(null);
-  const [path,         setPath]        = useState([]);
-  const [loading,      setLoading]     = useState(false);
-  const [error,        setError]       = useState(null);
+  const [mode,  setMode]  = useState('canon');
+  const [nodes, setNodes] = useState(buildInitialNodes);
 
-  async function load(params, pathEntry) {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await resolveConcept(params);
-      setConceptData(data);
-      setPath(p => [...p, { ...pathEntry, gndId: data.gndId, enLabel: data.enLabel }]);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const toggleNode = useCallback(async (nodeId) => {
+    const node = nodes[nodeId];
+    if (!node || node.loading) return;
 
-  async function handleSearch() {
-    const q = input.trim();
-    if (!q) return;
-    setActiveDomain(null);
-    setPath([]);
-    setConceptData(null);
-    setLoading(true);
-    setError(null);
-    try {
-      const qid  = await wdSearch(q);
-      const data = await resolveConcept({ qid, enLabel: q });
-      setConceptData(data);
-      setPath([{ enLabel: data.enLabel, gndId: data.gndId }]);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
+    // Collapse if already open
+    if (node.expanded) {
+      setNodes(prev => ({ ...prev, [nodeId]: { ...prev[nodeId], expanded: false } }));
+      return;
     }
-  }
 
-  const selectDomain = useCallback(async (d) => {
-    setActiveDomain(d.en);
-    setInput('');
-    setPath([]);
-    setConceptData(null);
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await resolveConcept({ qid: d.qid, enLabel: d.en });
-      setConceptData(data);
-      setPath([{ enLabel: data.enLabel, gndId: data.gndId }]);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
+    // If children already loaded, just open
+    if (node.childIds !== null) {
+      setNodes(prev => ({ ...prev, [nodeId]: { ...prev[nodeId], expanded: true } }));
+      return;
     }
-  }, []);
 
-  const drillInto = useCallback(async (term) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const id   = gndSuffix(term.id);
-      const data = await resolveConcept({ gndId: id, enLabel: '' });
-      setConceptData(data);
-      setPath(p => [...p, { enLabel: data.enLabel, gndId: id }]);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    // Mark loading
+    setNodes(prev => ({ ...prev, [nodeId]: { ...prev[nodeId], loading: true, error: null } }));
 
-  const navigateTo = useCallback(async (idx) => {
-    const crumb = path[idx];
-    if (!crumb) return;
-    setLoading(true);
-    setError(null);
     try {
-      const data = await resolveConcept({ gndId: crumb.gndId, enLabel: crumb.enLabel });
-      setConceptData(data);
-      setPath(p => p.slice(0, idx + 1));
+      const { gndId, children } = await loadChildren(node);
+
+      const newNodes = {};
+      const childIds = [];
+      for (const child of children) {
+        newNodes[child.id] = child;
+        childIds.push(child.id);
+      }
+
+      setNodes(prev => ({
+        ...prev,
+        ...newNodes,
+        [nodeId]: {
+          ...prev[nodeId],
+          gndId:    gndId || prev[nodeId].gndId,
+          expanded: true,
+          loading:  false,
+          childIds,
+        },
+      }));
     } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
+      setNodes(prev => ({
+        ...prev,
+        [nodeId]: { ...prev[nodeId], loading: false, error: e.message },
+      }));
     }
-  }, [path]);
+  }, [nodes]);
 
   return (
     <div className="mt-8 space-y-6">
@@ -423,12 +296,12 @@ export default function KeywordsView({ onGenerate }) {
           <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-blue-600 text-white">GND</span>
         </div>
         <p className="text-sm text-stone-500 max-w-2xl leading-relaxed">
-          Search in English — Wikidata translates to German for GND lookup, then all terms are
-          translated back to English via Wikidata. No German required.
+          German National Authority File — click ▶ to expand any concept. GND is searched in German;
+          all labels are translated to English via Wikidata automatically.
         </p>
       </div>
 
-      {/* Mode */}
+      {/* Mode selector */}
       <div>
         <p className="text-[10px] font-mono text-stone-400 uppercase tracking-widest mb-2">Generate as</p>
         <div className="flex flex-wrap gap-1.5">
@@ -444,98 +317,28 @@ export default function KeywordsView({ onGenerate }) {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSearch()}
-          placeholder="Search any concept in English — e.g. Metaphysics, Topology, Postcolonialism…"
-          className="flex-1 px-3 py-2.5 text-sm border border-stone-200 bg-white text-stone-900 placeholder-stone-300 focus:outline-none focus:border-blue-400 transition-colors"
-        />
-        <button onClick={handleSearch} disabled={!input.trim() || loading}
-          className="px-5 py-2 text-sm bg-stone-900 text-white hover:bg-stone-700 transition-colors disabled:opacity-40">
-          Search
-        </button>
+      {/* Legend */}
+      <div className="flex items-center gap-4 text-[9px] font-mono text-stone-400">
+        <span><span className="text-blue-500">▶</span> expand</span>
+        <span><span className="text-blue-500">▼</span> collapse</span>
+        <span><span className="text-stone-200">·</span> leaf node</span>
+        <span className="text-stone-300">hover any row to see Generate button</span>
       </div>
 
-      {/* Domain shortcuts */}
-      <div>
-        <p className="text-[9px] font-mono text-stone-400 uppercase tracking-widest mb-2">
-          Or jump to a domain
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {DOMAINS.map(d => (
-            <button key={d.en} onClick={() => selectDomain(d)} disabled={loading}
-              className={`px-3 py-1.5 text-xs font-mono border transition-all disabled:opacity-40
-                ${activeDomain === d.en && !input
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-stone-600 border-stone-200 hover:border-blue-400 hover:text-blue-700'}`}>
-              {d.en}
-            </button>
-          ))}
-        </div>
+      {/* Tree */}
+      <div className="border border-stone-200 bg-white">
+        {ROOT_IDS.map(id => (
+          <TreeNode
+            key={id}
+            nodeId={id}
+            nodes={nodes}
+            depth={0}
+            onToggle={toggleNode}
+            onGenerate={onGenerate}
+            mode={mode}
+          />
+        ))}
       </div>
-
-      {/* Breadcrumb */}
-      {path.length > 0 && (
-        <div className="flex items-center flex-wrap gap-x-1 gap-y-1 text-sm font-mono">
-          {path.map((crumb, i) => (
-            <span key={i} className="flex items-center gap-1">
-              {i > 0 && <span className="text-stone-300">›</span>}
-              <button onClick={() => navigateTo(i)}
-                className={`transition-colors ${
-                  i === path.length - 1
-                    ? 'text-blue-700 font-bold'
-                    : 'text-stone-400 hover:text-stone-700'
-                }`}>
-                {crumb.enLabel}
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Loading */}
-      {loading && (
-        <div className="border border-blue-100 bg-blue-50 py-12 flex flex-col items-center gap-3">
-          <Dots />
-          <p className="text-xs font-mono text-blue-400">
-            Wikidata → GND → English labels via SPARQL…
-          </p>
-        </div>
-      )}
-
-      {/* Error */}
-      {!loading && error && (
-        <div className="border border-red-200 bg-red-50 px-5 py-4 space-y-1">
-          <p className="text-sm font-mono text-red-700">{error}</p>
-          <p className="text-[10px] font-mono text-stone-400">
-            Try a more specific term, a synonym, or select a domain above.
-          </p>
-        </div>
-      )}
-
-      {/* Concept panel */}
-      {!loading && conceptData && (
-        <ConceptPanel
-          data={conceptData}
-          onDrill={drillInto}
-          onGenerate={onGenerate}
-          mode={mode}
-        />
-      )}
-
-      {/* Empty state */}
-      {!loading && !conceptData && !error && (
-        <div className="border border-stone-100 bg-stone-50 py-16 text-center space-y-1">
-          <p className="text-sm font-mono text-stone-400">Type any concept in English and press Search</p>
-          <p className="text-[10px] font-mono text-stone-300">
-            Or click a domain above — each shows the full GND hierarchy with English labels throughout
-          </p>
-        </div>
-      )}
     </div>
   );
 }
