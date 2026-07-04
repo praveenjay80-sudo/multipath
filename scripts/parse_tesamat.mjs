@@ -32,7 +32,9 @@ function splitTermList(str) {
   const result = [];
   let cur = '';
   for (const t of tokens) {
-    const startsUpper = /^[A-ZÁÉÍÓÚÑÜÀÈÌÒÙÂÊÎÔÛÃÕÄËÏÖÜ(]/.test(t);
+    // A new term starts with an uppercase LETTER (not parenthesis)
+    const startsUpper = /^[A-ZÁÉÍÓÚÑÜÀÈÌÒÙÂÊÎÔÛÃÕÄËÏÖÜ]/.test(t);
+    // Previous term ends with a lowercase letter or closing paren/bracket
     const prevEndsLower = cur && /[a-záéíóúñüàèìòùâêîôûãõäëïöü)\]]$/.test(cur);
     if (cur && startsUpper && prevEndsLower) {
       result.push(cur.trim());
@@ -77,8 +79,13 @@ for (const entry of rawEntries) {
     }
   }
 
-  // English label = whatever follows the Spanish label in the header
-  const enLabel = header.slice(esLabel.length).trim() || esLabel;
+  // English label = strip the Spanish prefix, then take the first "English-looking" portion
+  // English tokens have no accented characters; strip trailing classifiers like "(Matemáticas)"
+  let rawEn = header.slice(esLabel.length).trim();
+  // Clean up: strip leading parenthetical that's still Spanish (e.g. "(Álgebra)")
+  rawEn = rawEn.replace(/^\([^)]*[áéíóúñü][^)]*\)\s*/i, '').trim();
+  // If rawEn is empty, use the Spanish label as fallback for display
+  const enLabel = rawEn || esLabel;
 
   const broader  = splitTermList(extractSection(body, 'tg'));
   const narrower = splitTermList(extractSection(body, 'te'));
@@ -105,19 +112,34 @@ function buildNode(label) {
   return { es: label, en: t?.en || label, children: kids };
 }
 
+// Build full tree — all terms, not just Matemáticas-reachable
+// Terms with no parent become roots
 const allChildLabels = new Set(Object.values(children).flatMap(s => [...s]));
-let roots;
-if (termMap['Matemáticas']) {
-  roots = [buildNode('Matemáticas')];
-} else {
-  roots = Object.keys(termMap).filter(l => !allChildLabels.has(l)).sort().map(buildNode).filter(Boolean);
+const roots = Object.keys(termMap)
+  .filter(l => !allChildLabels.has(l))
+  .sort()
+  .map(buildNode).filter(Boolean);
+
+// Also collect redirect aliases for search
+const aliases = {};
+for (const entry of rawEntries) {
+  const m = entry.match(/^\d+\.\s+(.+)/s);
+  if (!m) continue;
+  const body = m[1];
+  if (!/ v\. /.test(body) || / tg\. /.test(body) || / te\. /.test(body)) continue;
+  const header = body.split(/ (?:tg|te|tr|v|na|up)\./)[0].replace(/\s*\[.*/, '').trim();
+  const target = extractSection(body, 'v').split(/\s+/).slice(0, 6).join(' ').trim();
+  if (header && target) aliases[header] = target;
 }
 
 let total = 0;
 function countNodes(n) { total++; n.children.forEach(countNodes); }
 roots.forEach(countNodes);
-console.error(`Roots: ${roots.length}, Total: ${total}`);
-if (roots[0]) console.error('Top children:', roots[0].children.slice(0,6).map(c=>`${c.en}(${c.children.length})`).join(', '));
+console.error(`Roots: ${roots.length}, Total tree nodes: ${total}, Aliases: ${Object.keys(aliases).length}`);
+if (termMap['Matemáticas']) {
+  const matNode = roots.find(r => r.es === 'Matemáticas');
+  if (matNode) console.error('Mathematics children:', matNode.children.slice(0,6).map(c=>`${c.en}(${c.children.length})`).join(', '));
+}
 
-writeFileSync('src/data/tesamat.json', JSON.stringify(roots));
+writeFileSync('src/data/tesamat.json', JSON.stringify({ roots, aliases }));
 console.error('Done');
