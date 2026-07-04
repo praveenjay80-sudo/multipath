@@ -10,68 +10,60 @@ const MODES = [
   { key: 'reverse',      label: 'Prerequisites' },
 ];
 
-// Top-level academic domains with Wikidata QIDs
+// Top-level LCSH subject headings with known sh IDs
 const DOMAINS = [
-  { label: 'Philosophy',            qid: 'Q5891'   },
-  { label: 'Mathematics',           qid: 'Q395'    },
-  { label: 'Physics',               qid: 'Q413'    },
-  { label: 'Chemistry',             qid: 'Q2329'   },
-  { label: 'Biology',               qid: 'Q420'    },
-  { label: 'Computer Science',      qid: 'Q21198'  },
-  { label: 'Linguistics',           qid: 'Q8162'   },
-  { label: 'Economics',             qid: 'Q8134'   },
-  { label: 'Law',                   qid: 'Q7748'   },
-  { label: 'History',               qid: 'Q309'    },
-  { label: 'Geography',             qid: 'Q1071'   },
-  { label: 'Psychology',            qid: 'Q9418'   },
-  { label: 'Sociology',             qid: 'Q21201'  },
-  { label: 'Medicine',              qid: 'Q11190'  },
-  { label: 'Arts',                  qid: 'Q735'    },
-  { label: 'Music',                 qid: 'Q638'    },
-  { label: 'Literature',            qid: 'Q8242'   },
-  { label: 'Theology',              qid: 'Q34178'  },
-  { label: 'Political Science',     qid: 'Q36442'  },
-  { label: 'Engineering',           qid: 'Q11023'  },
-  { label: 'Architecture',          qid: 'Q12271'  },
-  { label: 'Education',             qid: 'Q8434'   },
-  { label: 'Anthropology',          qid: 'Q23404'  },
-  { label: 'Astronomy',             qid: 'Q333'    },
-  { label: 'Environmental Science', qid: 'Q188847' },
+  { label: 'Philosophy',            id: 'sh85100849' },
+  { label: 'Mathematics',           id: 'sh85082139' },
+  { label: 'Physics',               id: 'sh85101653' },
+  { label: 'Chemistry',             id: 'sh85022986' },
+  { label: 'Biology',               id: 'sh85014238' },
+  { label: 'Computer Science',      id: 'sh89003287' },
+  { label: 'Linguistics',           id: 'sh85077222' },
+  { label: 'Economics',             id: 'sh85040939' },
+  { label: 'Law',                   id: 'sh85075116' },
+  { label: 'History',               id: 'sh85061232' },
+  { label: 'Geography',             id: 'sh85053986' },
+  { label: 'Psychology',            id: 'sh85108459' },
+  { label: 'Sociology',             id: 'sh85123889' },
+  { label: 'Medicine',              id: 'sh85083063' },
+  { label: 'Music',                 id: 'sh85088762' },
+  { label: 'Literature',            id: 'sh85077507' },
+  { label: 'Religion',              id: 'sh85112549' },
+  { label: 'Political Science',     id: 'sh85104440' },
+  { label: 'Engineering',           id: 'sh85043235' },
+  { label: 'Architecture',          id: 'sh85006507' },
+  { label: 'Education',             id: 'sh85040989' },
+  { label: 'Anthropology',          id: 'sh85005516' },
+  { label: 'Astronomy',             id: 'sh85009003' },
+  { label: 'Environmental Sciences',id: 'sh85044203' },
+  { label: 'Social Sciences',       id: 'sh85123900' },
 ];
+
+const ROOT_IDS = DOMAINS.map(d => 'lcsh-' + d.id);
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
-async function fetchSubfields(qid) {
-  const query = `SELECT DISTINCT ?item ?label WHERE {
-    ?item wdt:P279 wd:${qid}.
-    ?item rdfs:label ?label.
-    FILTER(LANG(?label)="en")
-  } ORDER BY ?label LIMIT 80`;
-
-  const res = await fetch(`/api/sparql?query=${encodeURIComponent(query)}`);
-  if (!res.ok) throw new Error(`SPARQL HTTP ${res.status}`);
+async function fetchChildren(lcshId) {
+  const res = await fetch(`/api/lcsh/${lcshId}`);
+  if (!res.ok) throw new Error(`LCSH HTTP ${res.status}`);
   const json = await res.json();
-  return json.results?.bindings?.map(b => ({
-    label: b.label.value,
-    qid:   b.item.value.replace('http://www.wikidata.org/entity/', ''),
-  })) || [];
+  if (json.error) throw new Error(json.error);
+  return json.narrower || [];
 }
 
-// ── Initial tree state ────────────────────────────────────────────────────────
+// ── Initial state ─────────────────────────────────────────────────────────────
 
 function buildInitialNodes() {
   const nodes = {};
   for (const d of DOMAINS) {
-    const id = 'domain-' + d.qid;
+    const id = 'lcsh-' + d.id;
     nodes[id] = {
-      id, qid: d.qid, label: d.label,
+      id, lcshId: d.id, label: d.label,
       expanded: false, loading: false, error: null, childIds: null,
     };
   }
   return nodes;
 }
-
-const ROOT_IDS = DOMAINS.map(d => 'domain-' + d.qid);
 
 // ── TreeNode ──────────────────────────────────────────────────────────────────
 
@@ -88,7 +80,6 @@ function TreeNode({ nodeId, nodes, depth, onToggle, onGenerate, mode }) {
         className="flex items-start gap-2 py-1.5 border-b border-stone-50 last:border-0 hover:bg-stone-50 group transition-colors"
         style={{ paddingLeft: pl, paddingRight: 8 }}
       >
-        {/* Toggle */}
         <button
           onClick={() => onToggle(nodeId)}
           disabled={node.loading || isLeaf}
@@ -103,7 +94,6 @@ function TreeNode({ nodeId, nodes, depth, onToggle, onGenerate, mode }) {
             : <span className="text-[9px] text-stone-400 group-hover:text-blue-500">▶</span>}
         </button>
 
-        {/* Label */}
         <div className="flex-1 min-w-0">
           <span className={`${depth === 0 ? 'font-semibold text-stone-900' : 'font-medium text-stone-800'} text-sm leading-snug`}>
             {node.label}
@@ -113,13 +103,14 @@ function TreeNode({ nodeId, nodes, depth, onToggle, onGenerate, mode }) {
           )}
         </div>
 
-        {/* Hover actions */}
         <div className="shrink-0 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <a
-            href={`https://www.wikidata.org/wiki/${node.qid}`}
-            target="_blank" rel="noopener noreferrer"
-            className="text-[8px] font-mono text-blue-400 hover:underline"
-          >WD↗</a>
+          {node.lcshId && (
+            <a
+              href={`https://id.loc.gov/authorities/subjects/${node.lcshId}.html`}
+              target="_blank" rel="noopener noreferrer"
+              className="text-[8px] font-mono text-blue-400 hover:underline"
+            >LC↗</a>
+          )}
           <button
             onClick={() => onGenerate(node.label, mode)}
             className="text-[8px] font-mono px-2 py-0.5 bg-stone-900 text-white hover:bg-stone-700 transition-colors"
@@ -129,7 +120,6 @@ function TreeNode({ nodeId, nodes, depth, onToggle, onGenerate, mode }) {
         </div>
       </div>
 
-      {/* Children */}
       {node.expanded && node.childIds?.length > 0 && (
         <div>
           {node.childIds.map(cid => (
@@ -156,7 +146,6 @@ export default function KeywordsView({ onGenerate }) {
       setNodes(prev => ({ ...prev, [nodeId]: { ...prev[nodeId], expanded: false } }));
       return;
     }
-
     if (node.childIds !== null) {
       setNodes(prev => ({ ...prev, [nodeId]: { ...prev[nodeId], expanded: true } }));
       return;
@@ -165,14 +154,14 @@ export default function KeywordsView({ onGenerate }) {
     setNodes(prev => ({ ...prev, [nodeId]: { ...prev[nodeId], loading: true, error: null } }));
 
     try {
-      const results = await fetchSubfields(node.qid);
+      const children = await fetchChildren(node.lcshId);
 
       const newNodes = {};
       const childIds = [];
-      for (const r of results) {
-        const cid = 'wd-' + r.qid;
+      for (const c of children) {
+        const cid = 'lcsh-' + c.id;
         newNodes[cid] = {
-          id: cid, qid: r.qid, label: r.label,
+          id: cid, lcshId: c.id, label: c.label,
           expanded: false, loading: false, error: null, childIds: null,
         };
         childIds.push(cid);
@@ -193,19 +182,17 @@ export default function KeywordsView({ onGenerate }) {
 
   return (
     <div className="mt-8 space-y-6">
-      {/* Header */}
       <div className="border-b border-stone-200 pb-4">
         <div className="flex items-baseline gap-3 mb-1">
           <h2 className="text-2xl font-bold tracking-tight text-stone-900">Subject Vocabulary</h2>
-          <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-blue-600 text-white">Wikidata</span>
+          <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-red-700 text-white">LCSH</span>
         </div>
         <p className="text-sm text-stone-500 max-w-2xl leading-relaxed">
-          Academic discipline hierarchy from Wikidata. Click ▶ to expand any subject into its subfields.
-          Click → to generate a reading list for any concept.
+          Library of Congress Subject Headings — the authoritative controlled vocabulary for academic subjects.
+          Click ▶ to expand any heading into its narrower terms.
         </p>
       </div>
 
-      {/* Mode */}
       <div>
         <p className="text-[10px] font-mono text-stone-400 uppercase tracking-widest mb-2">Generate as</p>
         <div className="flex flex-wrap gap-1.5">
@@ -221,13 +208,11 @@ export default function KeywordsView({ onGenerate }) {
         </div>
       </div>
 
-      {/* Legend */}
       <div className="flex gap-4 text-[9px] font-mono text-stone-400">
         <span><span className="text-blue-500">▶</span> expand · <span className="text-blue-500">▼</span> collapse · <span className="text-stone-300">·</span> leaf</span>
-        <span className="text-stone-300">hover any row for Generate button</span>
+        <span className="text-stone-300">hover any row for Generate button · LC↗ opens LOC record</span>
       </div>
 
-      {/* Tree */}
       <div className="border border-stone-200 bg-white">
         {ROOT_IDS.map(id => (
           <TreeNode key={id} nodeId={id} nodes={nodes} depth={0}
