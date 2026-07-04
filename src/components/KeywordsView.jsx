@@ -47,6 +47,12 @@ function gndSuffix(uri = '') {
   return uri.replace('https://d-nb.info/gnd/', '');
 }
 
+function fetchWithTimeout(url, ms = 12000) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
 // Search GND by German preferred name → return GND suffix like "4045791-6"
 async function lobidSearchGndId(deName) {
   const params = new URLSearchParams({
@@ -55,7 +61,7 @@ async function lobidSearchGndId(deName) {
     format: 'json',
     size: '5',
   });
-  const res = await fetch(`/api/gnd/search?${params}`);
+  const res = await fetchWithTimeout(`/api/gnd/search?${params}`);
   if (!res.ok) throw new Error(`lobid search HTTP ${res.status}`);
   const json = await res.json();
   const exact = json.member?.find(m => m.preferredName === deName) || json.member?.[0];
@@ -65,7 +71,7 @@ async function lobidSearchGndId(deName) {
 
 // Fetch one GND record by its numeric ID suffix
 async function fetchGND(gndId) {
-  const res = await fetch(`/api/gnd/${gndId}`);
+  const res = await fetchWithTimeout(`/api/gnd/${gndId}`);
   if (!res.ok) throw new Error(`GND record HTTP ${res.status}`);
   return res.json();
 }
