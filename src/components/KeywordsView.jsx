@@ -49,8 +49,13 @@ function gndSuffix(uri = '') {
 
 // Search GND by German preferred name → return GND suffix like "4045791-6"
 async function lobidSearchGndId(deName) {
-  const url = `https://lobid.org/gnd/search?q=preferredName:${encodeURIComponent('"' + deName + '"')}&filter=type:SubjectHeading&format=json&size=5`;
-  const res = await fetch(url);
+  const params = new URLSearchParams({
+    q: `preferredName:"${deName}"`,
+    filter: 'type:SubjectHeading',
+    format: 'json',
+    size: '5',
+  });
+  const res = await fetch(`/api/gnd/search?${params}`);
   if (!res.ok) throw new Error(`lobid search HTTP ${res.status}`);
   const json = await res.json();
   const exact = json.member?.find(m => m.preferredName === deName) || json.member?.[0];
@@ -60,13 +65,12 @@ async function lobidSearchGndId(deName) {
 
 // Fetch one GND record by its numeric ID suffix
 async function fetchGND(gndId) {
-  const res = await fetch(`https://lobid.org/gnd/${gndId}?format=json`);
+  const res = await fetch(`/api/gnd/${gndId}`);
   if (!res.ok) throw new Error(`GND record HTTP ${res.status}`);
   return res.json();
 }
 
-// Translate GND suffixes → English via Wikidata SPARQL
-// Uses format=json URL param (NOT Accept header) to stay a "simple request" — no CORS preflight
+// Translate GND suffixes → English via Wikidata SPARQL (proxied server-side)
 async function sparqlEnglish(gndIds) {
   if (!gndIds.length) return {};
   const vals  = gndIds.slice(0, 40).map(id => `"${id}"`).join(' ');
@@ -76,17 +80,14 @@ async function sparqlEnglish(gndIds) {
     ?item rdfs:label ?label.
     FILTER(LANG(?label)="en")
   }`;
-  const res = await fetch(
-    `https://query.wikidata.org/sparql?query=${encodeURIComponent(query)}&format=json`
-    // No custom headers → simple CORS request, no preflight needed
-  );
+  const res = await fetch(`/api/sparql?query=${encodeURIComponent(query)}`);
   if (!res.ok) return {};
   const json = await res.json();
   const out  = {};
   for (const b of json.results?.bindings || []) {
     out['https://d-nb.info/gnd/' + b.g.value] = b.label.value;
   }
-  return out; // full-URI → english label
+  return out;
 }
 
 // ── Initial tree state ────────────────────────────────────────────────────────
