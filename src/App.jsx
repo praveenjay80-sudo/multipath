@@ -35,6 +35,7 @@ import InquiryInput from './components/InquiryInput';
 import InquiryView from './components/InquiryView';
 import MathExplorerView from './components/MathExplorerView';
 import ConceptsExplorerView from './components/ConceptsExplorerView';
+import KeywordsView from './components/KeywordsView';
 
 function WorkRow({ w }) {
   return (
@@ -379,6 +380,16 @@ export default function App() {
                 >
                   OpenAlex Concept Explorer
                 </button>
+                <button
+                  onClick={() => setAppMode('keywords')}
+                  className={`px-4 py-2.5 text-sm font-mono -mb-px transition-colors ${
+                    appMode === 'keywords'
+                      ? 'border-b-2 border-orange-600 text-orange-700 font-semibold'
+                      : 'border-b-2 border-transparent text-stone-400 hover:text-orange-600'
+                  }`}
+                >
+                  Authority Keywords
+                </button>
               </div>
 
               {/* Tab description */}
@@ -401,6 +412,8 @@ export default function App() {
                   ? 'Browse 15 mathematical domains — from Foundations and Algebra to Emerging Mathematics. Expand any subfield to see its role, click topic chips to refine, and get real textbooks from Open Syllabus and seminal papers from Semantic Scholar.'
                   : appMode === 'concepts'
                   ? 'The complete OpenAlex concept hierarchy — 65,025 concepts across 6 levels (Domain → Field → Sub → Topic → Concept → Micro). Select any generation mode, browse the tree, and click → on any concept to generate.'
+                  : appMode === 'keywords'
+                  ? 'Look up any concept in the German National Authority File (GND) and French IDREF/RAMEAU vocabulary. Both show English translations with a structured broader → narrower → related hierarchy. Click any term chip to generate scholarly content.'
                   : ''}
               </p>
             </header>
@@ -859,6 +872,11 @@ export default function App() {
                 onGenerate={handleConceptGenerate}
                 disabled={false}
               />
+            )}
+
+            {/* Authority Keywords — GND + IDREF */}
+            {appMode === 'keywords' && (
+              <KeywordsView onGenerate={handleConceptGenerate} />
             )}
 
             {hasOutput && !isGenerating && !isRefining && enrichment.status !== 'idle' && (
