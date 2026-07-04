@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import RAW from '../data/tesamat.json';
+import { roots as RAW } from '../data/tesamat.json';
 
 const MODES = [
   { key: 'canon',        label: 'Canon' },
