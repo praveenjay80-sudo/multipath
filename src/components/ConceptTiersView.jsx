@@ -43,7 +43,7 @@ Requirements:
 - Cover: mathematics, logic, physics, chemistry, biology, genetics, neuroscience, psychology, economics, earth sciences, ecology, computer science, cosmology, materials science
 - Every concept must be a named primitive that unlocks understanding of things above it in the hierarchy`;
 
-async function streamGenerate(apiKey, signal, onProgress) {
+async function callGenerate(apiKey, signal) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -53,9 +53,8 @@ async function streamGenerate(apiKey, signal, onProgress) {
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-5',
-      max_tokens: 16000,
-      stream: true,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 8000,
       messages: [{ role: 'user', content: GENERATION_PROMPT }],
     }),
     signal,
@@ -67,39 +66,13 @@ async function streamGenerate(apiKey, signal, onProgress) {
     throw new Error(msg);
   }
 
-  const reader = res.body.getReader();
-  const dec = new TextDecoder();
-  let buf = '', raw = '';
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += dec.decode(value, { stream: true });
-      const lines = buf.split('\n'); buf = lines.pop() ?? '';
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const d = line.slice(6).trim();
-        if (!d || d === '[DONE]') continue;
-        try {
-          const ev = JSON.parse(d);
-          if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
-            raw += ev.delta.text;
-            onProgress(raw);
-          }
-        } catch {}
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
-  return raw;
+  const data = await res.json();
+  return data.content?.[0]?.text || '';
 }
 
 export default function ConceptTiersView({ onGenerate }) {
   const [data,     setData]     = useState(null);
   const [status,   setStatus]   = useState('idle'); // idle | loading | done | error
-  const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
   const abortRef = useRef(null);
   const readingPath = useReadingPath();
@@ -118,11 +91,9 @@ export default function ConceptTiersView({ onGenerate }) {
     if (!apiKey) { setErrorMsg('No API key — enter your Anthropic key in the header.'); setStatus('error'); return; }
     abortRef.current?.abort();
     abortRef.current = new AbortController();
-    setStatus('loading'); setData(null); setProgress(0); setErrorMsg('');
+    setStatus('loading'); setData(null); setErrorMsg('');
     try {
-      const raw = await streamGenerate(apiKey, abortRef.current.signal, chunk => {
-        setProgress(chunk.length);
-      });
+      const raw = await callGenerate(apiKey, abortRef.current.signal);
       const m = raw.match(/\[[\s\S]*\]/);
       if (!m) throw new Error(`Response did not contain JSON (got ${raw.length} chars): ${raw.slice(0, 200)}`);
       const parsed = JSON.parse(m[0]);
@@ -163,22 +134,11 @@ export default function ConceptTiersView({ onGenerate }) {
 
       {/* Loading state */}
       {status === 'loading' && (
-        <div className="space-y-3 py-4">
-          <div className="flex items-center gap-3">
-            <span className="flex gap-0.5">
-              <span className="loading-dot"/><span className="loading-dot"/><span className="loading-dot"/>
-            </span>
-            <span className="text-sm font-mono text-stone-500">Generating comprehensive concept hierarchy…</span>
-          </div>
-          <div className="h-1 bg-stone-100 w-full max-w-sm">
-            <div
-              className="h-1 bg-stone-400 transition-all duration-300"
-              style={{ width: `${Math.min(100, (progress / 6000) * 100)}%` }}
-            />
-          </div>
-          <p className="text-[10px] font-mono text-stone-400">
-            {progress > 0 ? `${progress.toLocaleString()} chars streamed` : 'Connecting…'}
-          </p>
+        <div className="flex items-center gap-3 py-4">
+          <span className="flex gap-0.5">
+            <span className="loading-dot"/><span className="loading-dot"/><span className="loading-dot"/>
+          </span>
+          <span className="text-sm font-mono text-stone-500">Generating concept hierarchy — takes ~30s…</span>
         </div>
       )}
 
