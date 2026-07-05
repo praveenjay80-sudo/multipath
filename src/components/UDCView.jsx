@@ -32,17 +32,18 @@ function titleCase(str) {
   ).join(' ');
 }
 
-function NodeRow({ node, depth, openSet, onToggle, onGenerate, modeLabel }) {
+function NodeRow({ node, depth, openSet, onToggle, onGenerate, modeLabel, activeTopic, activeStatus }) {
   const hasChildren = node.children?.length > 0;
   const isOpen = openSet.has(node.code);
   const pl = 8 + depth * 20;
   const mainClass = node.code[0];
   const colorClass = CLASS_COLORS[mainClass] || 'bg-stone-500';
+  const isActive = activeTopic?.includes(`(UDC ${node.code})`);
 
   return (
     <>
       <div
-        className="flex items-start gap-2 py-1.5 border-b border-stone-50 hover:bg-stone-50 group transition-colors"
+        className={`flex items-start gap-2 py-1.5 border-b border-stone-50 group transition-colors ${isActive ? 'bg-stone-100' : 'hover:bg-stone-50'}`}
         style={{ paddingLeft: pl, paddingRight: 8 }}
       >
         <button
@@ -76,6 +77,12 @@ function NodeRow({ node, depth, openSet, onToggle, onGenerate, modeLabel }) {
           )}
         </button>
 
+        {isActive && (
+          <span className={`shrink-0 text-[9px] font-mono mt-0.5 ${activeStatus === 'loading' ? 'text-stone-400' : 'text-stone-700'}`}>
+            {activeStatus === 'loading' ? '···' : '◆'}
+          </span>
+        )}
+
         <a
           href={`https://www.worldcat.org/search?q=su%3A${encodeURIComponent(titleCase(node.name))}`}
           target="_blank" rel="noopener noreferrer"
@@ -83,14 +90,15 @@ function NodeRow({ node, depth, openSet, onToggle, onGenerate, modeLabel }) {
           title="Browse on WorldCat"
           className="shrink-0 opacity-0 group-hover:opacity-100 text-[9px] font-mono px-1.5 py-0.5 border border-stone-200 text-stone-400 hover:bg-stone-800 hover:text-white hover:border-stone-800 transition-all mt-0.5"
         >
-          WC
+          WorldCat
         </a>
       </div>
 
       {isOpen && hasChildren && (
         node.children.map(child => (
           <NodeRow key={child.code} node={child} depth={depth + 1}
-            openSet={openSet} onToggle={onToggle} onGenerate={onGenerate} modeLabel={modeLabel} />
+            openSet={openSet} onToggle={onToggle} onGenerate={onGenerate} modeLabel={modeLabel}
+            activeTopic={activeTopic} activeStatus={activeStatus} />
         ))
       )}
 
@@ -223,7 +231,7 @@ export default function UDCView({ onGenerate }) {
                   href={`https://www.worldcat.org/search?q=su%3A${encodeURIComponent(n.name)}`}
                   target="_blank" rel="noopener noreferrer"
                   className="opacity-0 group-hover:opacity-100 text-[9px] font-mono px-1.5 py-0.5 border border-stone-200 text-stone-400 hover:bg-stone-800 hover:text-white hover:border-stone-800 transition-all shrink-0"
-                >WC</a>
+                >WorldCat</a>
               </div>
             ))}
         </div>
@@ -232,7 +240,8 @@ export default function UDCView({ onGenerate }) {
           {data.map(root => (
             <NodeRow key={root.code} node={root} depth={0}
               openSet={openSet} onToggle={onToggle}
-              onGenerate={handleGenerate} modeLabel={modeLabel} />
+              onGenerate={handleGenerate} modeLabel={modeLabel}
+              activeTopic={readingPath.topic} activeStatus={readingPath.status} />
           ))}
         </div>
       )}
