@@ -235,12 +235,21 @@ function isAcademicCode(code) {
   if (!/^\d+(\.\d+)*$/.test(code)) return false;
   if (code.startsWith('4')) return false;
   if (isExcluded(code)) return false;
+  // Standard UDC uses at most one dot; multi-dot codes are ETH-specific extensions
+  // that create orphan chains and excessive depth
+  if ((code.match(/\./g) || []).length > 1) return false;
   return true;
 }
 
 function getParent(code) {
   const dotIdx = code.lastIndexOf('.');
-  if (dotIdx >= 0) return code.slice(0, dotIdx);
+  if (dotIdx >= 0) {
+    const afterDot = code.slice(dotIdx + 1);
+    // If 2+ digits after last dot, strip one digit: "512.531" → "512.53"
+    if (afterDot.length > 1) return code.slice(0, -1);
+    // If 1 digit after dot, strip the .X entirely: "512.5" → "512"
+    return code.slice(0, dotIdx);
+  }
   if (code.length > 1) return code.slice(0, -1);
   return null;
 }
@@ -307,27 +316,37 @@ for (const code of codeData.keys()) ensureNode(code);
 
 console.error(`Total nodes: ${nodeMap.size}`);
 
-// Serialize
+function sortCodes(a, b) {
+  const na = parseFloat(a), nb = parseFloat(b);
+  return na - nb || a.localeCompare(b);
+}
+
+// Collect serializable children, skipping orphan intermediates (name === code)
+// by promoting their children one level up.
+function resolvedChildren(code) {
+  const node = nodeMap.get(code);
+  if (!node) return [];
+  return [...node.children].sort(sortCodes).flatMap(c => {
+    const child = nodeMap.get(c);
+    if (!child) return [];
+    return child.name === c ? resolvedChildren(c) : [c];
+  });
+}
+
 function serializeNode(code, depth) {
   const node = nodeMap.get(code);
   if (!node) return null;
-  const children = [...node.children]
-    .sort((a, b) => {
-      // Sort numerically
-      const na = parseFloat(a), nb = parseFloat(b);
-      return na - nb || a.localeCompare(b);
-    })
+  const children = resolvedChildren(code)
     .map(c => serializeNode(c, depth + 1))
     .filter(Boolean);
 
-  // Only include terms at leaf nodes (no children) — keeps JSON manageable
+  // Only include terms at leaf nodes — keeps JSON manageable
   const terms = children.length === 0
-    ? [...new Set(node.terms)].sort().slice(0, 100).map(t => {
-        // Title-case and clean
-        return t.split(' ')
+    ? [...new Set(node.terms)].sort().slice(0, 100).map(t =>
+        t.split(' ')
           .map(w => w.length > 3 ? w[0] + w.slice(1).toLowerCase() : w.toLowerCase())
-          .join(' ');
-      })
+          .join(' ')
+      )
     : [];
 
   return { code, name: node.name, children, terms };
