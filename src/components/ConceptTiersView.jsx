@@ -12,38 +12,36 @@ const TIER_COLORS = [
   { bg: 'bg-rose-700',    text: 'text-rose-700',    chip: 'hover:bg-rose-700    hover:text-white hover:border-rose-700'    },
 ];
 
-const CACHE_KEY = 'concept_tiers_v2';
+const CACHE_KEY = 'concept_tiers_v3';
 
 function resolveApiKey() {
   return import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('canon_api_key') || '';
 }
 
-const GENERATION_PROMPT = `Generate a comprehensive 7-tier hierarchy of ALL fundamental scientific concepts across every domain of human knowledge, ordered from most abstract to most applied.
+const TIER_SPECS = [
+  { tier: 1, name: 'Mathematical Foundations',       taglineHint: 'the bedrock of all rigorous reasoning',         domain: 'Logic (propositional, first-order, modal, proof theory), set theory (ZFC, ordinals, cardinals), category theory (category, functor, adjunction, topos, Yoneda lemma), type theory, computability (Turing machine, lambda calculus, halting problem, complexity classes), model theory' },
+  { tier: 2, name: 'Core Mathematical Structures',   taglineHint: 'the objects pure mathematics studies',          domain: 'Algebra (group, ring, field, module, ideal, homomorphism), linear algebra (vector space, linear map, matrix, eigenvalue, determinant, tensor), topology (topological space, metric space, compactness, connectedness, homeomorphism, homotopy), real & complex analysis (limit, continuity, derivative, integral, series, holomorphic function), measure theory (measure, Lebesgue integral, sigma-algebra, probability space), discrete math (graph, lattice, poset, combinatorics, formal language)' },
+  { tier: 3, name: 'Advanced Mathematics & Physical Principles', taglineHint: 'mathematics applied to the structure of physical reality', domain: 'Differential geometry (manifold, tangent space, curvature, connection, Riemannian metric, fiber bundle), functional analysis (Hilbert space, Banach space, operator, spectrum, Fourier transform), number theory (prime, congruence, Diophantine equation, L-function, modular form), probability theory (random variable, expectation, variance, distribution, stochastic process, Markov chain), information theory (entropy, mutual information, channel capacity, Kolmogorov complexity), classical mechanics (Newton\'s laws, Lagrangian, Hamiltonian, symmetry, conservation law, phase space)' },
+  { tier: 4, name: 'Core Scientific Theories',       taglineHint: 'the grand unified theories of matter, energy, and change', domain: 'Thermodynamics & statistical mechanics (entropy, free energy, partition function, phase transition, Boltzmann distribution, equation of state), electromagnetism (Maxwell\'s equations, electric field, magnetic field, electromagnetic wave, gauge invariance), quantum mechanics (wave function, Schrödinger equation, superposition, entanglement, uncertainty principle, Hilbert space formalism, operator, spin), special & general relativity (spacetime, Lorentz invariance, equivalence principle, Einstein field equations, geodesic, metric tensor), chemistry fundamentals (atomic orbital, covalent bond, ionic bond, electronegativity, reaction rate, chemical equilibrium, Gibbs free energy, oxidation state, periodic table, acid-base)' },
+  { tier: 5, name: 'Life Sciences & Mind',           taglineHint: 'the principles governing living systems and cognition', domain: 'Molecular biology & genetics (DNA, RNA, protein, gene, codon, transcription, translation, mutation, replication, chromosome, epigenetics, CRISPR), cell biology (cell membrane, organelle, mitosis, meiosis, cell signaling, apoptosis, metabolism, ATP), evolutionary theory (natural selection, fitness, genetic drift, speciation, phylogeny, adaptation, sexual selection, kin selection), neuroscience (action potential, synapse, neurotransmitter, receptor, neural circuit, long-term potentiation, ion channel, membrane potential), cognitive science & psychology (perception, attention, working memory, learning, conditioning, schema, cognitive load, emotion, motivation, consciousness)' },
+  { tier: 6, name: 'Complex Systems & Social Sciences', taglineHint: 'emergence, self-organisation, and collective human behaviour', domain: 'Complex systems (emergence, self-organisation, feedback loop, attractor, chaos, bifurcation, power law, network, scale-free, phase transition), earth & climate sciences (plate tectonics, rock cycle, atmospheric circulation, carbon cycle, ocean current, hydrological cycle, greenhouse effect, climate feedback), ecology (food web, ecosystem, niche, carrying capacity, population dynamics, predator-prey, biodiversity, succession), economics (utility, supply and demand, equilibrium, marginal analysis, externality, game theory, Nash equilibrium, information asymmetry, market failure, money, inflation), social science foundations (institution, social norm, social capital, collective action, power, social network, culture, language, inequality, rational choice)' },
+  { tier: 7, name: 'Applied & Frontier Concepts',    taglineHint: 'knowledge deployed to build, heal, compute, and explore', domain: 'Machine learning & AI (gradient descent, backpropagation, neural network, convolutional network, transformer, attention mechanism, reinforcement learning, regularisation, embedding, loss function), medicine & physiology (homeostasis, immune response, inflammation, pharmacokinetics, receptor agonist, blood pressure, hormone, pathogen, vaccine, gene expression), engineering principles (control theory, feedback, signal processing, thermodynamic efficiency, stress and strain, circuit, semiconductor, algorithm complexity), cosmology & astrophysics (Big Bang, cosmic inflation, dark matter, dark energy, black hole, stellar evolution, nucleosynthesis, gravitational wave, Hubble constant), materials science (crystal structure, band gap, conductivity, polymer, phase diagram, dislocation, surface energy, superconductivity)' },
+];
 
-IMPORTANT — these are CONCEPTS (intellectual primitives), NOT fields or disciplines:
-✓ GOOD: "Vector Space", "Natural Selection", "Action Potential", "Nash Equilibrium", "Entropy", "Covalent Bond"
-✗ BAD: "Linear Algebra", "Evolutionary Biology", "Neuroscience", "Economics"
+async function callTier(apiKey, spec, signal) {
+  const prompt = `Generate one tier of a 7-tier concept hierarchy of all scientific knowledge.
 
-Tier structure:
-- Tier 1: Pure logic, foundations of mathematics, computability — bedrock of all reasoning
-- Tier 2: Core mathematical structures — algebra, topology, analysis, measure theory, discrete math
-- Tier 3: Advanced mathematics, probability, information theory, classical physical principles
-- Tier 4: Core scientific theories — quantum mechanics, relativity, thermodynamics, chemical foundations
-- Tier 5: Life sciences, neuroscience, cognitive science, evolutionary theory
-- Tier 6: Complex systems, earth sciences, economics, social science, ecology
-- Tier 7: Applied concepts — machine learning, medicine, engineering, cosmology, materials
+Tier ${spec.tier} of 7: "${spec.name}"
+This tier covers: ${spec.domain}
 
-Output ONLY valid compact JSON, no preamble or trailing text:
-[{"tier":1,"name":"...","tagline":"one sentence on why this tier sits here","groups":[{"name":"...","concepts":["Concept A","Concept B",...]},...]}]
+RULES:
+- Output ONLY valid compact JSON — no preamble, no markdown, no trailing text
+- These are CONCEPTS (intellectual primitives), NOT fields: "Vector Space" ✓, "Linear Algebra" ✗
+- 6–8 groups, 8–15 concepts each
 
-Requirements:
-- 6-10 groups per tier
-- 8-20 concepts per group
-- Total 600+ concepts — be comprehensive, leave nothing major out
-- Cover: mathematics, logic, physics, chemistry, biology, genetics, neuroscience, psychology, economics, earth sciences, ecology, computer science, cosmology, materials science
-- Every concept must be a named primitive that unlocks understanding of things above it in the hierarchy`;
+Format:
+{"tier":${spec.tier},"name":"${spec.name}","tagline":"one sentence: ${spec.taglineHint}","groups":[{"name":"group label","concepts":["Concept A","Concept B"]}]}`;
 
-async function callGenerate(apiKey, signal) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -54,8 +52,8 @@ async function callGenerate(apiKey, signal) {
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 8000,
-      messages: [{ role: 'user', content: GENERATION_PROMPT }],
+      max_tokens: 3000,
+      messages: [{ role: 'user', content: prompt }],
     }),
     signal,
   });
@@ -66,8 +64,11 @@ async function callGenerate(apiKey, signal) {
     throw new Error(msg);
   }
 
-  const data = await res.json();
-  return data.content?.[0]?.text || '';
+  const body = await res.json();
+  const raw = body.content?.[0]?.text || '';
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error(`Tier ${spec.tier}: no JSON in response`);
+  return JSON.parse(m[0]);
 }
 
 export default function ConceptTiersView({ onGenerate }) {
@@ -92,13 +93,16 @@ export default function ConceptTiersView({ onGenerate }) {
     abortRef.current?.abort();
     abortRef.current = new AbortController();
     setStatus('loading'); setData(null); setErrorMsg('');
+    const tiers = [];
     try {
-      const raw = await callGenerate(apiKey, abortRef.current.signal);
-      const m = raw.match(/\[[\s\S]*\]/);
-      if (!m) throw new Error(`Response did not contain JSON (got ${raw.length} chars): ${raw.slice(0, 200)}`);
-      const parsed = JSON.parse(m[0]);
-      localStorage.setItem(CACHE_KEY, JSON.stringify(parsed));
-      setData(parsed); setStatus('done');
+      for (const spec of TIER_SPECS) {
+        if (abortRef.current?.signal.aborted) break;
+        const tier = await callTier(apiKey, spec, abortRef.current.signal);
+        tiers.push(tier);
+        setData([...tiers]);
+      }
+      localStorage.setItem(CACHE_KEY, JSON.stringify(tiers));
+      setStatus('done');
     } catch (e) {
       if (e.name !== 'AbortError') { setErrorMsg(e.message); setStatus('error'); }
     }
@@ -134,11 +138,13 @@ export default function ConceptTiersView({ onGenerate }) {
 
       {/* Loading state */}
       {status === 'loading' && (
-        <div className="flex items-center gap-3 py-4">
+        <div className="flex items-center gap-3 py-2">
           <span className="flex gap-0.5">
             <span className="loading-dot"/><span className="loading-dot"/><span className="loading-dot"/>
           </span>
-          <span className="text-sm font-mono text-stone-500">Generating concept hierarchy — takes ~30s…</span>
+          <span className="text-sm font-mono text-stone-500">
+            Generating tier {(data?.length ?? 0) + 1} of {TIER_SPECS.length} — {TIER_SPECS[data?.length ?? 0]?.name}…
+          </span>
         </div>
       )}
 
