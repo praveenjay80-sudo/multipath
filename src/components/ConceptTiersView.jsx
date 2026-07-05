@@ -53,7 +53,7 @@ async function streamGenerate(apiKey, signal, onProgress) {
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-5',
       max_tokens: 8000,
       stream: true,
       messages: [{ role: 'user', content: GENERATION_PROMPT }],
