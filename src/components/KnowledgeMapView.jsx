@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useReadingPath } from '../hooks/useReadingPath';
+import ReadingOrderView from './ReadingOrderView';
 
 const MODES = [
+  { key: 'path',         label: 'Reading Path' },
   { key: 'canon',        label: 'Canon' },
   { key: 'curriculum',   label: 'Curriculum' },
   { key: 'dissertation', label: 'Dissertation' },
@@ -22,10 +25,11 @@ export default function KnowledgeMapView({ onGenerate }) {
   const [data,     setData]     = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState(null);
-  const [mode,     setMode]     = useState('canon');
+  const [mode,     setMode]     = useState('path');
   const [domain,   setDomain]   = useState(null);
   const [group,    setGroup]    = useState(null);
   const [search,   setSearch]   = useState('');
+  const readingPath = useReadingPath();
 
   useEffect(() => {
     fetch('/data/knowledge-map.json')
@@ -68,6 +72,14 @@ export default function KnowledgeMapView({ onGenerate }) {
   }, [search, allFields]);
 
   const switchDomain = (name) => { setDomain(name); setGroup(null); };
+
+  const handleGenerate = (topic, m) => {
+    if (m === 'path') {
+      readingPath.generate(topic);
+    } else {
+      onGenerate(topic, m);
+    }
+  };
 
   if (loading) return <div className="mt-8 text-sm font-mono text-stone-400">Loading knowledge map…</div>;
   if (error)   return <div className="mt-8 text-sm font-mono text-red-500">Error: {error}</div>;
@@ -124,7 +136,7 @@ export default function KnowledgeMapView({ onGenerate }) {
                   {f.parent && <span className="ml-1 text-[10px] text-stone-400">in {f.parent}</span>}
                   <span className="ml-2 text-[9px] text-stone-400">{f.group} · {f.domain}</span>
                 </div>
-                <button onClick={() => onGenerate(f.name, mode)}
+                <button onClick={() => handleGenerate(f.name, mode)}
                   className="shrink-0 text-[8px] font-mono px-2 py-0.5 bg-stone-900 text-white hover:bg-stone-700 opacity-0 group-hover:opacity-100 transition-opacity">
                   → {modeLabel}
                 </button>
@@ -189,7 +201,7 @@ export default function KnowledgeMapView({ onGenerate }) {
                       {f.subs.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {f.subs.map((s, j) => (
-                            <button key={j} onClick={() => onGenerate(s, mode)}
+                            <button key={j} onClick={() => handleGenerate(s, mode)}
                               className="text-[10px] font-mono px-2 py-0.5 border border-stone-200 text-stone-500 hover:bg-stone-900 hover:text-white hover:border-stone-900 transition-colors">
                               {s}
                             </button>
@@ -201,6 +213,35 @@ export default function KnowledgeMapView({ onGenerate }) {
                 </>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Reading Path panel */}
+      {(readingPath.status !== 'idle') && (
+        <div className="border border-stone-200 bg-white">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200 bg-stone-50">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-mono font-bold text-stone-700">Reading Path</span>
+              <span className="text-sm text-stone-500">{readingPath.topic}</span>
+              {readingPath.status === 'loading' && (
+                <span className="flex gap-0.5">
+                  <span className="loading-dot" />
+                  <span className="loading-dot" />
+                  <span className="loading-dot" />
+                </span>
+              )}
+            </div>
+            <button onClick={readingPath.clear}
+              className="text-[9px] font-mono text-stone-400 hover:text-stone-700 px-2 py-0.5 border border-stone-200 hover:border-stone-400 transition-colors">
+              ✕ close
+            </button>
+          </div>
+          <div className="p-4">
+            <ReadingOrderView
+              content={readingPath.content}
+              isStreaming={readingPath.status === 'loading'}
+            />
           </div>
         </div>
       )}
