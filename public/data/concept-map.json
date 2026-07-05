@@ -1,0 +1,1648 @@
+[
+  {
+    "tier": 1,
+    "name": "Foundational Concepts",
+    "tagline": "The most abstract ideas forming the bedrock of logic, mathematics, and formal reasoning — before physics, before science, before everything",
+    "groups": [
+      {
+        "name": "Logic & Proof Theory",
+        "concepts": [
+          "Propositional Logic", "First-Order Logic", "Modal Logic", "Temporal Logic", "Higher-Order Logic",
+          "Sequent Calculus", "Natural Deduction", "Cut Elimination", "Provability Logic", "Linear Logic",
+          "Intuitionistic Logic", "Soundness", "Completeness Theorem", "Consistency", "Independence",
+          "Substructural Logic", "Many-Valued Logic", "Proof Normalization"
+        ]
+      },
+      {
+        "name": "Model Theory & Metamathematics",
+        "concepts": [
+          "Model Theory", "Compactness Theorem", "Gödel Incompleteness", "Löwenheim-Skolem Theorem",
+          "Ultraproduct", "Elementary Equivalence", "Definability", "Saturation", "Categoricity",
+          "Stability Theory", "O-minimality", "Interpretability", "Formal System", "Axiom Schema",
+          "Theory of Models", "Quantifier Elimination"
+        ]
+      },
+      {
+        "name": "Set Theory",
+        "concepts": [
+          "ZFC Axioms", "Ordinal Numbers", "Cardinal Numbers", "Power Set", "Axiom of Choice",
+          "Well-Ordering Theorem", "Zorn's Lemma", "Transfinite Induction", "Cantor's Theorem",
+          "Russell's Paradox", "Continuum Hypothesis", "Forcing", "Large Cardinal Axioms",
+          "Inner Model Theory", "Forcing Extension", "Descriptive Set Theory"
+        ]
+      },
+      {
+        "name": "Category Theory",
+        "concepts": [
+          "Category", "Functor", "Natural Transformation", "Adjunction", "Yoneda Lemma",
+          "Limit", "Colimit", "Universal Property", "Monad", "Comonad", "Topos",
+          "Cartesian Closed Category", "Enriched Category", "Higher Category",
+          "Abelian Category", "Derived Category", "Kan Extension"
+        ]
+      },
+      {
+        "name": "Type Theory",
+        "concepts": [
+          "Simple Type Theory", "Dependent Type Theory", "Curry-Howard Correspondence",
+          "Propositions as Types", "Homotopy Type Theory", "Univalence Axiom",
+          "Identity Type", "Inductive Type", "Universe Polymorphism",
+          "Linear Type Theory", "Session Types", "Refinement Types"
+        ]
+      },
+      {
+        "name": "Computability Theory",
+        "concepts": [
+          "Turing Machine", "Lambda Calculus", "Church-Turing Thesis", "Halting Problem",
+          "Decidability", "Recursively Enumerable Set", "Rice's Theorem", "Kolmogorov Complexity",
+          "Oracle Computation", "Degrees of Unsolvability", "Primitive Recursive Function",
+          "Recursive Function", "Post Correspondence Problem"
+        ]
+      },
+      {
+        "name": "Computational Complexity",
+        "concepts": [
+          "P vs NP", "NP-Completeness", "Polynomial Hierarchy", "Space Complexity",
+          "Circuit Complexity", "Randomized Complexity", "Interactive Proofs", "PCP Theorem",
+          "Parameterized Complexity", "Communication Complexity", "Query Complexity",
+          "Algebraic Complexity", "One-Way Function"
+        ]
+      },
+      {
+        "name": "Philosophy of Mathematics",
+        "concepts": [
+          "Mathematical Platonism", "Formalism", "Logicism", "Structuralism",
+          "Fictionalism", "Intuitionism", "Predicativity", "Impredicativity",
+          "Abstraction Principle", "Mathematical Explanation", "Neo-Logicism",
+          "Indispensability Argument", "Mathematical Ontology"
+        ]
+      },
+      {
+        "name": "Foundational Principles",
+        "concepts": [
+          "Induction Principle", "Recursion Principle", "Substitution", "Abstraction",
+          "Extensionality", "Duality", "Compositionality", "Fixed Point", "Reflection Principle",
+          "Invariance", "Symmetry", "Reduction", "Self-Reference", "Diagonal Argument", "Encoding"
+        ]
+      }
+    ]
+  },
+  {
+    "tier": 2,
+    "name": "Core Abstract Structures",
+    "tagline": "The abstract objects pure mathematics studies and all sciences borrow — algebra, topology, analysis, and foundational domain concepts",
+    "groups": [
+      {
+        "name": "Abstract Algebra",
+        "concepts": [
+          "Group", "Subgroup", "Normal Subgroup", "Quotient Group", "Ring", "Field",
+          "Module", "Ideal", "Homomorphism", "Isomorphism", "Automorphism",
+          "Coset", "Sylow Theorem", "Free Group", "Group Presentation",
+          "Semiring", "Division Ring", "Prime Ideal", "Localization", "Noetherian Ring"
+        ]
+      },
+      {
+        "name": "Advanced Algebra",
+        "concepts": [
+          "Galois Theory", "Splitting Field", "Solvability by Radicals", "Representation Theory",
+          "Character Theory", "Group Algebra", "Tensor Product", "Exterior Algebra",
+          "Multilinear Algebra", "Lie Algebra", "Root System", "Weight",
+          "Universal Enveloping Algebra", "Hopf Algebra", "Morita Equivalence"
+        ]
+      },
+      {
+        "name": "Topology",
+        "concepts": [
+          "Topological Space", "Open Set", "Continuous Map", "Compactness", "Connectedness",
+          "Homeomorphism", "Homotopy", "Fundamental Group", "Covering Space",
+          "Euler Characteristic", "CW Complex", "Metrization", "Separation Axioms",
+          "Quotient Topology", "Product Topology", "Net", "Filter", "Paracompactness"
+        ]
+      },
+      {
+        "name": "Algebraic Topology",
+        "concepts": [
+          "Homology Group", "Cohomology Ring", "Singular Homology", "Simplicial Complex",
+          "Chain Complex", "Exact Sequence", "Mayer-Vietoris Sequence", "Fibration",
+          "Spectral Sequence", "K-Theory", "Cobordism", "Surgery Theory",
+          "Stable Homotopy", "Homotopy Group", "Hurewicz Theorem"
+        ]
+      },
+      {
+        "name": "Abstract Geometry",
+        "concepts": [
+          "Affine Space", "Projective Space", "Hyperbolic Space", "Riemannian Geometry",
+          "Symplectic Geometry", "Contact Geometry", "Algebraic Variety", "Scheme",
+          "Sheaf", "Stack", "Moduli Space", "Incidence Geometry", "Non-Euclidean Geometry"
+        ]
+      },
+      {
+        "name": "Core Analysis",
+        "concepts": [
+          "Limit", "Continuity", "Derivative", "Riemann Integral", "Series Convergence",
+          "Uniform Convergence", "Completeness", "Compactness in Metric Spaces",
+          "Baire Category Theorem", "Implicit Function Theorem", "Inverse Function Theorem",
+          "Mean Value Theorem", "Taylor Series", "Equicontinuity", "Arzelà-Ascoli Theorem"
+        ]
+      },
+      {
+        "name": "Measure Theory & Integration",
+        "concepts": [
+          "Sigma-Algebra", "Measure Space", "Lebesgue Measure", "Null Set",
+          "Lp Space", "Radon-Nikodym Theorem", "Fubini's Theorem", "Signed Measure",
+          "Borel Set", "Outer Measure", "Dominated Convergence Theorem",
+          "Monotone Convergence Theorem", "Product Measure", "Riesz Representation Theorem",
+          "Vitali Covering Theorem"
+        ]
+      },
+      {
+        "name": "Order Theory, Lattices & Combinatorics",
+        "concepts": [
+          "Partial Order", "Total Order", "Lattice", "Boolean Algebra", "Heyting Algebra",
+          "Galois Connection", "Generating Function", "Bijection Principle",
+          "Ramsey Theory", "Extremal Combinatorics", "Matroid", "Graph Minor",
+          "Formal Concept Analysis", "Well-Quasi-Order"
+        ]
+      },
+      {
+        "name": "Foundational Concepts in Physical Science",
+        "concepts": [
+          "Conservation Law", "Symmetry Group", "State Space", "Observable", "Phase Space",
+          "Field", "Force", "Energy", "Potential", "Wave", "Particle", "Interaction",
+          "Equilibrium", "Entropy", "Spectrum", "Quantization", "Gauge Invariance"
+        ]
+      },
+      {
+        "name": "Foundational Concepts in Life Science",
+        "concepts": [
+          "Cell", "Gene", "Protein", "Membrane", "Metabolism", "Replication", "Homeostasis",
+          "Fitness", "Natural Selection", "Heredity", "Variation", "Species",
+          "Ecosystem", "Trophic Level", "Biomass", "Evolution", "Adaptation"
+        ]
+      },
+      {
+        "name": "Foundational Concepts in Earth & Space",
+        "concepts": [
+          "Geological Time", "Rock Cycle", "Plate Tectonics", "Atmosphere", "Hydrosphere",
+          "Biosphere", "Lithosphere", "Stellar Life Cycle", "Galaxy", "Gravitational Binding",
+          "Spectroscopy", "Redshift", "Cosmic Scale", "Radiative Transfer"
+        ]
+      },
+      {
+        "name": "Foundational Concepts in Social Science",
+        "concepts": [
+          "Institution", "Social Norm", "Collective Action", "Power", "Culture",
+          "Social Capital", "Trust", "Legitimacy", "Social Structure", "Stratification",
+          "Rationality", "Utility", "Preference", "Market", "Public Good", "Cooperation"
+        ]
+      },
+      {
+        "name": "Foundational Concepts in Formal Systems",
+        "concepts": [
+          "Syntax", "Semantics", "Formal Language", "Grammar", "Automaton",
+          "Regular Expression", "Parsing", "Compilation", "Interpretation",
+          "Abstract Syntax Tree", "Type System", "Scope", "Binding", "Evaluation"
+        ]
+      }
+    ]
+  },
+  {
+    "tier": 3,
+    "name": "Fundamental Methods & Theories",
+    "tagline": "The core tools of mathematics, statistics, physical science, life science, computing, and the social world",
+    "groups": [
+      {
+        "name": "Calculus & Real Analysis",
+        "concepts": [
+          "Differentiation", "Integration", "Fundamental Theorem of Calculus", "Multivariable Calculus",
+          "Partial Derivative", "Gradient", "Divergence", "Curl", "Green's Theorem",
+          "Gauss's Theorem", "Stokes' Theorem", "Line Integral", "Surface Integral",
+          "Fourier Series", "Laplace Transform", "Power Series Expansion", "Contraction Mapping"
+        ]
+      },
+      {
+        "name": "Complex & Functional Analysis",
+        "concepts": [
+          "Holomorphic Function", "Cauchy-Riemann Equations", "Cauchy Integral Theorem",
+          "Residue Theorem", "Analytic Continuation", "Riemann Mapping Theorem",
+          "Hilbert Space", "Banach Space", "Bounded Operator", "Spectral Theorem",
+          "Fourier Transform", "Schwartz Distribution", "Sobolev Space",
+          "Compact Operator", "Fredholm Theory", "Trace-Class Operator"
+        ]
+      },
+      {
+        "name": "Linear Algebra",
+        "concepts": [
+          "Vector Space", "Basis", "Dimension", "Linear Map", "Matrix", "Rank",
+          "Determinant", "Eigenvalue", "Eigenvector", "Diagonalization", "Jordan Normal Form",
+          "Singular Value Decomposition", "Inner Product Space", "Gram-Schmidt Process",
+          "Orthogonal Projection", "Least Squares", "Tensor Product (Linear)", "Pseudoinverse"
+        ]
+      },
+      {
+        "name": "Differential Geometry",
+        "concepts": [
+          "Smooth Manifold", "Tangent Bundle", "Riemannian Metric", "Levi-Civita Connection",
+          "Curvature Tensor", "Geodesic", "Differential Form", "De Rham Cohomology",
+          "Lie Group", "Lie Algebra (Geometry)", "Principal Fiber Bundle", "Characteristic Class",
+          "Symplectic Manifold", "Hamiltonian Flow", "Moment Map", "Holonomy"
+        ]
+      },
+      {
+        "name": "Differential Equations",
+        "concepts": [
+          "Existence & Uniqueness", "Phase Portrait", "Linearization", "Stability Analysis",
+          "Lyapunov Function", "Bifurcation", "Limit Cycle", "Poincaré-Bendixson Theorem",
+          "Floquet Theory", "Laplace Equation", "Heat Equation", "Wave Equation",
+          "Characteristics Method", "Weak Solution", "Elliptic Regularity", "Variational Formulation",
+          "Semigroup Theory"
+        ]
+      },
+      {
+        "name": "Number Theory",
+        "concepts": [
+          "Prime Number Theorem", "Modular Arithmetic", "Quadratic Reciprocity", "p-adic Numbers",
+          "Dirichlet Series", "L-Functions", "Modular Forms", "Elliptic Curves",
+          "Langlands Program", "Galois Representation", "Automorphic Forms", "Abelian Variety",
+          "Height Functions", "Arakelov Theory", "Class Field Theory", "Weil Conjectures"
+        ]
+      },
+      {
+        "name": "Discrete Mathematics & Graph Theory",
+        "concepts": [
+          "Graph", "Tree", "Matching", "Graph Coloring", "Planarity", "Network Flow",
+          "Permutation", "Combination", "Recurrence Relation", "Chromatic Polynomial",
+          "Erdős-Rényi Model", "Probabilistic Method", "Linear Programming Duality",
+          "Integer Programming", "Polyhedral Combinatorics", "Extremal Graph Theory"
+        ]
+      },
+      {
+        "name": "Probability Theory",
+        "concepts": [
+          "Probability Space", "Random Variable", "Expectation", "Variance",
+          "Conditional Probability", "Bayes' Theorem", "Law of Large Numbers", "Central Limit Theorem",
+          "Large Deviations", "Brownian Motion", "Martingale", "Markov Chain",
+          "Poisson Process", "Renewal Theory", "Concentration Inequality", "Coupling"
+        ]
+      },
+      {
+        "name": "Stochastic Calculus",
+        "concepts": [
+          "Itô Integral", "Itô's Lemma", "Stochastic Differential Equation", "Girsanov's Theorem",
+          "Stochastic Process", "Filtration", "Stopping Time", "Optional Sampling Theorem",
+          "Feynman-Kac Formula", "Malliavin Calculus", "SPDE", "Lévy Process",
+          "Jump Diffusion", "Local Time", "Reflected Brownian Motion", "Diffusion Generator"
+        ]
+      },
+      {
+        "name": "Frequentist Statistics",
+        "concepts": [
+          "Maximum Likelihood Estimation", "Fisher Information", "Cramér-Rao Bound",
+          "Hypothesis Testing", "p-value", "Type I & II Error", "Confidence Interval",
+          "Sufficiency", "Ancillarity", "Exponential Family", "Unbiasedness",
+          "Asymptotic Theory", "Bootstrap", "Permutation Test", "Power Analysis"
+        ]
+      },
+      {
+        "name": "Bayesian Statistics",
+        "concepts": [
+          "Prior Distribution", "Posterior Distribution", "Likelihood", "Bayesian Updating",
+          "Conjugate Prior", "Markov Chain Monte Carlo", "Gibbs Sampling", "Metropolis-Hastings",
+          "Variational Inference", "Expectation Propagation", "Evidence Lower Bound",
+          "Bayesian Model Selection", "Dirichlet Process", "Gaussian Process", "Hierarchical Bayes"
+        ]
+      },
+      {
+        "name": "Regression & Statistical Models",
+        "concepts": [
+          "Linear Regression", "Logistic Regression", "Generalized Linear Model", "Residual Analysis",
+          "Overfitting", "Regularization", "Ridge Regression", "LASSO", "Elastic Net",
+          "Mixed Effects Model", "Hierarchical Model", "Survival Analysis", "Cox Model",
+          "Structural Equation Model", "Factor Analysis", "Generalized Additive Model"
+        ]
+      },
+      {
+        "name": "Causal Inference",
+        "concepts": [
+          "Potential Outcomes Framework", "Average Treatment Effect", "Randomized Experiment",
+          "Instrumental Variable", "Regression Discontinuity", "Difference-in-Differences",
+          "Directed Acyclic Graph", "Do-Calculus", "Backdoor Criterion", "Frontdoor Criterion",
+          "Confounding", "Mediation Analysis", "Counterfactual Reasoning", "Propensity Score",
+          "Synthetic Control"
+        ]
+      },
+      {
+        "name": "High-Dimensional & Nonparametric Statistics",
+        "concepts": [
+          "Curse of Dimensionality", "Sparse Estimation", "Compressed Sensing",
+          "Random Matrix Theory", "Phase Transition (Statistics)", "Kernel Methods",
+          "Nonparametric Density Estimation", "Empirical Process Theory",
+          "Concentration of Measure", "High-Dimensional Covariance", "Multiple Testing",
+          "False Discovery Rate", "Minimax Estimation"
+        ]
+      },
+      {
+        "name": "Optimization & Control",
+        "concepts": [
+          "Convex Optimization", "Gradient Descent", "Newton's Method", "Lagrangian",
+          "KKT Conditions", "Linear Programming", "Semidefinite Programming",
+          "Dynamic Programming", "Pontryagin Maximum Principle", "Hamilton-Jacobi-Bellman",
+          "Optimal Transport", "Conjugate Gradient", "Proximal Algorithm", "Subgradient"
+        ]
+      },
+      {
+        "name": "Dynamical Systems & Chaos",
+        "concepts": [
+          "Attractor", "Strange Attractor", "Lyapunov Exponent", "Chaos",
+          "Sensitivity to Initial Conditions", "Bifurcation Theory", "Poincaré Map",
+          "KAM Theory", "Ergodic Theory", "Mixing", "Entropy (Dynamical)",
+          "Symbolic Dynamics", "Fractal Dimension", "Synchronization", "Crisis"
+        ]
+      },
+      {
+        "name": "Information Theory",
+        "concepts": [
+          "Shannon Entropy", "Mutual Information", "Channel Capacity", "Data Compression",
+          "Source Coding Theorem", "Rate-Distortion Theory", "Error-Correcting Code",
+          "Hamming Code", "LDPC Code", "Turbo Code", "Algebraic Coding Theory",
+          "Information-Theoretic Security", "Differential Entropy", "KL Divergence", "Fisher Information (IT)"
+        ]
+      },
+      {
+        "name": "Physical Chemistry",
+        "concepts": [
+          "Atomic Orbital", "Electron Configuration", "Valence", "Electronegativity",
+          "Chemical Bond", "Reaction Kinetics", "Activation Energy", "Chemical Equilibrium",
+          "Gibbs Free Energy", "Chemical Potential", "Phase Diagram", "Acid-Base Chemistry",
+          "Electrochemistry", "Quantum Chemistry", "Molecular Symmetry", "Transition State"
+        ]
+      },
+      {
+        "name": "Cell & Molecular Biology",
+        "concepts": [
+          "DNA Double Helix", "Gene", "Codon", "Transcription", "Translation",
+          "DNA Replication", "Mutation", "Chromosome", "Gene Regulation", "Operon",
+          "Signal Transduction", "Cell Cycle", "Apoptosis", "Cytoskeleton",
+          "Vesicle Trafficking", "Organelle", "Phospholipid Bilayer", "Receptor Tyrosine Kinase"
+        ]
+      },
+      {
+        "name": "Genetics & Heredity",
+        "concepts": [
+          "Mendelian Inheritance", "Dominant & Recessive", "Allele", "Genotype", "Phenotype",
+          "Linkage", "Recombination", "Hardy-Weinberg Equilibrium", "Genetic Drift",
+          "Population Genetics", "Quantitative Genetics", "Epistasis", "Pleiotropy",
+          "Gene Flow", "Inbreeding Coefficient"
+        ]
+      },
+      {
+        "name": "Ecology & Evolutionary Biology",
+        "concepts": [
+          "Fitness Landscape", "Natural Selection Mechanisms", "Sexual Selection", "Kin Selection",
+          "Multilevel Selection", "Speciation", "Phylogeny", "Molecular Clock",
+          "Neutral Theory", "Ecological Niche", "Carrying Capacity", "Population Dynamics",
+          "Predator-Prey Dynamics", "Succession", "Keystone Species", "Coevolution"
+        ]
+      },
+      {
+        "name": "Earth & Atmospheric Science",
+        "concepts": [
+          "Plate Tectonics", "Subduction", "Mantle Convection", "Geochemical Cycle",
+          "Atmospheric Circulation", "Jet Stream", "Carbon Cycle", "Greenhouse Effect",
+          "Radiative Forcing", "Climate Sensitivity", "Ocean Thermohaline Circulation",
+          "ENSO", "Paleoclimatology", "Ice Core Record", "Hydrological Cycle", "Feedback (Climate)"
+        ]
+      },
+      {
+        "name": "Computer Science Fundamentals",
+        "concepts": [
+          "Algorithm", "Time Complexity", "Space Complexity", "Sorting", "Searching",
+          "Recursion", "Dynamic Programming (CS)", "Divide and Conquer", "Greedy Algorithm",
+          "Graph Algorithm", "Shortest Path", "Minimum Spanning Tree", "Network Flow (CS)",
+          "Approximation Algorithm", "Randomized Algorithm", "Amortized Analysis"
+        ]
+      },
+      {
+        "name": "Game Theory & Decision Theory",
+        "concepts": [
+          "Nash Equilibrium", "Dominant Strategy", "Zero-Sum Game", "Cooperative Game",
+          "Mechanism Design", "Auction Theory", "Information Asymmetry", "Moral Hazard",
+          "Adverse Selection", "Signaling", "Bayesian Game", "Evolutionary Game Theory",
+          "Social Choice Theory", "Arrow's Impossibility Theorem", "Fair Division"
+        ]
+      },
+      {
+        "name": "Network Science & Complex Systems",
+        "concepts": [
+          "Scale-Free Network", "Small-World Network", "Centrality", "Community Detection",
+          "Percolation", "Epidemic Spreading", "Power Law", "Self-Organized Criticality",
+          "Cellular Automaton", "Agent-Based Model", "Emergent Behavior", "Swarm Intelligence",
+          "Network Resilience", "Multiplex Network", "Temporal Network"
+        ]
+      },
+      {
+        "name": "Systems Theory & Cybernetics",
+        "concepts": [
+          "Feedback Loop", "Negative Feedback", "Positive Feedback", "Self-Organization",
+          "Emergence", "Complexity", "Nonlinearity", "Adaptation", "Robustness",
+          "System Boundary", "Stock and Flow", "Leverage Point", "Systems Archetype",
+          "Requisite Variety"
+        ]
+      },
+      {
+        "name": "Neuroscience Fundamentals",
+        "concepts": [
+          "Action Potential", "Resting Potential", "Synapse", "Neurotransmitter",
+          "Receptor", "Long-Term Potentiation", "Ion Channel", "Myelin",
+          "Neural Circuit", "Synaptic Plasticity", "Blood-Brain Barrier",
+          "Neural Coding", "Cortical Organization", "Neural Oscillation", "Connectome"
+        ]
+      },
+      {
+        "name": "Psychology Fundamentals",
+        "concepts": [
+          "Perception", "Attention", "Working Memory", "Long-Term Memory",
+          "Executive Function", "Classical Conditioning", "Operant Conditioning",
+          "Schema", "Cognitive Bias", "Emotion", "Motivation", "Consciousness",
+          "Embodied Cognition", "Language Acquisition", "Theory of Mind"
+        ]
+      },
+      {
+        "name": "Linguistics Fundamentals",
+        "concepts": [
+          "Phoneme", "Morpheme", "Syntax", "Semantics (Linguistics)", "Pragmatics",
+          "Grammar", "Universal Grammar", "Language Universals", "Chomsky Hierarchy",
+          "Language Evolution", "Pidgin & Creole", "Language Acquisition Device",
+          "Semantic Field", "Metaphor", "Pragmatic Inference", "Compositionality"
+        ]
+      },
+      {
+        "name": "Geography & Spatial Concepts",
+        "concepts": [
+          "Spatial Scale", "Geographic Information System", "Coordinate Reference System",
+          "Map Projection", "Spatial Autocorrelation", "Central Place Theory",
+          "Spatial Diffusion", "Choropleth Map", "Topographic Analysis",
+          "Region", "Territory", "Place", "Landscape", "Spatial Heterogeneity"
+        ]
+      },
+      {
+        "name": "Research Methods",
+        "concepts": [
+          "Experimental Design", "Control Group", "Randomization", "Blinding",
+          "Observational Study", "Survey Methods", "Ethnography", "Grounded Theory",
+          "Content Analysis", "Systematic Review", "Meta-Analysis", "Replication",
+          "External Validity", "Internal Validity", "Measurement Error", "Inter-rater Reliability"
+        ]
+      },
+      {
+        "name": "Philosophy of Science",
+        "concepts": [
+          "Falsificationism", "Paradigm Shift", "Scientific Method", "Underdetermination",
+          "Bayesian Confirmation", "Scientific Realism", "Antirealism", "Reduction",
+          "Laws of Nature", "Natural Kinds", "Scientific Explanation", "Causation",
+          "Theory-Ladenness", "Demarcation Problem", "Inference to Best Explanation"
+        ]
+      }
+    ]
+  },
+  {
+    "tier": 4,
+    "name": "Specific Theories, Models & Applied Knowledge",
+    "tagline": "Every named theory, equation, model, tool, and application across all branches of human knowledge",
+    "groups": [
+      {
+        "name": "Classical Mechanics",
+        "concepts": [
+          "Newton's Laws", "Lagrangian Mechanics", "Hamiltonian Mechanics", "Principle of Least Action",
+          "Noether's Theorem", "Euler-Lagrange Equations", "Generalized Coordinates", "Inertia Tensor",
+          "Rolling Motion", "Pendulum Dynamics", "Central Force Problem", "Kepler's Laws",
+          "Two-Body Problem", "Virial Theorem", "Rigid Body Dynamics", "D'Alembert's Principle",
+          "Canonical Transformation", "Poisson Bracket"
+        ]
+      },
+      {
+        "name": "Fluid Mechanics & Continuum Mechanics",
+        "concepts": [
+          "Navier-Stokes Equations", "Reynolds Number", "Turbulence", "Viscosity",
+          "Boundary Layer Theory", "Vorticity", "Potential Flow", "Bernoulli's Principle",
+          "Compressible Flow", "Shock Wave", "Kelvin-Helmholtz Instability", "Rayleigh-Taylor Instability",
+          "Stokes Flow", "Kolmogorov Microscale", "Turbulent Cascade", "Stress Tensor",
+          "Elasticity Theory", "Plasticity"
+        ]
+      },
+      {
+        "name": "Electromagnetism & Classical Optics",
+        "concepts": [
+          "Maxwell's Equations", "Electromagnetic Wave", "Lorentz Force", "Gauge Invariance",
+          "Vector Potential", "Dielectric Constant", "Magnetic Permeability", "Waveguide",
+          "Dipole Radiation", "Snell's Law", "Fresnel Equations", "Polarization",
+          "Interference", "Diffraction", "Fresnel Diffraction", "Fraunhofer Diffraction",
+          "Evanescent Wave", "Lenz's Law"
+        ]
+      },
+      {
+        "name": "Thermodynamics",
+        "concepts": [
+          "Zeroth Law of Thermodynamics", "First Law of Thermodynamics", "Second Law of Thermodynamics",
+          "Third Law of Thermodynamics", "Carnot Cycle", "Entropy (Thermo)", "Helmholtz Free Energy",
+          "Gibbs Free Energy (Thermo)", "Chemical Potential (Thermo)", "Phase Transition",
+          "Critical Point", "Landau Theory", "Van der Waals Equation", "Clausius-Clapeyron Equation",
+          "Maxwell Relations", "Thermodynamic Potential"
+        ]
+      },
+      {
+        "name": "Statistical Mechanics",
+        "concepts": [
+          "Canonical Ensemble", "Microcanonical Ensemble", "Grand Canonical Ensemble",
+          "Partition Function", "Boltzmann Distribution", "Equipartition Theorem",
+          "Ising Model", "Mean Field Theory", "Renormalization Group",
+          "Fluctuation-Dissipation Theorem", "Onsager Reciprocal Relations",
+          "Non-equilibrium Thermodynamics", "Fluctuation Theorem", "Ergodic Hypothesis",
+          "Monte Carlo (Physics)", "Molecular Dynamics", "Order Parameter"
+        ]
+      },
+      {
+        "name": "Waves, Acoustics & Vibration",
+        "concepts": [
+          "Wave Equation", "Dispersion Relation", "Group Velocity", "Phase Velocity",
+          "Standing Wave", "Normal Mode", "Resonance", "Acoustic Wave",
+          "Doppler Effect", "Nonlinear Wave", "Soliton", "Phonon", "Acoustic Impedance",
+          "Rayleigh Wave", "Love Wave", "Phononic Crystal"
+        ]
+      },
+      {
+        "name": "Special Relativity",
+        "concepts": [
+          "Spacetime Interval", "Lorentz Transformation", "Four-Vector", "Time Dilation",
+          "Length Contraction", "Mass-Energy Equivalence", "Relativistic Momentum",
+          "Minkowski Spacetime", "Relativistic Kinematics", "Relativistic Dynamics",
+          "Covariant Formulation", "Relativistic Electrodynamics", "Rapidity", "Light Cone"
+        ]
+      },
+      {
+        "name": "General Relativity & Cosmology",
+        "concepts": [
+          "Einstein Field Equations", "Equivalence Principle", "Geodesic Equation",
+          "Schwarzschild Solution", "Kerr Solution", "Gravitational Wave",
+          "Black Hole", "Penrose Diagram", "Cosmological Constant", "Friedmann Equations",
+          "FLRW Metric", "Hubble's Law", "Big Bang", "Cosmic Microwave Background",
+          "Inflation (Cosmology)", "Gravitational Redshift", "Shapiro Delay"
+        ]
+      },
+      {
+        "name": "Quantum Mechanics",
+        "concepts": [
+          "Wave Function", "Schrödinger Equation", "Superposition", "Born Rule",
+          "Heisenberg Uncertainty Principle", "Spin", "Angular Momentum Algebra",
+          "Hilbert Space Formalism (QM)", "Density Matrix", "Path Integral",
+          "Perturbation Theory", "Variational Method", "WKB Approximation",
+          "Quantum Tunneling", "Energy Level", "Harmonic Oscillator",
+          "Hydrogen Atom", "Bell's Theorem", "Quantum Entanglement", "Measurement Problem"
+        ]
+      },
+      {
+        "name": "Quantum Field Theory & Gauge Theory",
+        "concepts": [
+          "Field Operator", "Vacuum State", "Normal Ordering", "Feynman Diagram",
+          "Propagator", "S-Matrix", "Regularization", "Renormalization",
+          "Running Coupling", "Non-Abelian Gauge Theory", "Yang-Mills Theory",
+          "Spontaneous Symmetry Breaking", "Higgs Mechanism", "Anomaly",
+          "Effective Field Theory", "Ward Identity", "Operator Product Expansion",
+          "Wilson Loop", "Instantons"
+        ]
+      },
+      {
+        "name": "Standard Model & Particle Physics",
+        "concepts": [
+          "Quark", "Lepton", "Gluon", "Photon (Particle)", "W & Z Boson", "Higgs Boson",
+          "QCD Confinement", "QED", "CKM Matrix", "CP Violation", "Neutrino Oscillation",
+          "Hadron", "Meson", "Baryon", "Parton Distribution Function",
+          "Jets (Particle)", "Collider Physics", "Deep Inelastic Scattering", "SUSY"
+        ]
+      },
+      {
+        "name": "Nuclear Physics",
+        "concepts": [
+          "Nuclear Binding Energy", "Radioactive Decay", "Nuclear Fission", "Nuclear Fusion",
+          "Nuclear Shell Model", "Liquid Drop Model", "Alpha Decay", "Beta Decay",
+          "Gamma Decay", "Neutrino", "Nuclear Reaction", "Cross Section (Nuclear)",
+          "Reactor Physics", "Isotope", "Isospin", "Nuclear Force", "Magic Numbers"
+        ]
+      },
+      {
+        "name": "Atomic & Molecular Physics",
+        "concepts": [
+          "Atomic Spectrum", "Selection Rules", "Zeeman Effect", "Stark Effect",
+          "Fine Structure", "Hyperfine Structure", "Rabi Oscillation", "Laser Cooling",
+          "Bose-Einstein Condensate", "Fermi Gas", "Molecular Orbital Theory",
+          "Born-Oppenheimer Approximation", "Rotational Spectrum", "Vibrational Spectrum",
+          "Frank-Condon Principle", "Magneto-Optical Trap"
+        ]
+      },
+      {
+        "name": "Condensed Matter Physics",
+        "concepts": [
+          "Band Theory", "Fermi Surface", "Tight-Binding Model", "Bloch Theorem",
+          "Electron-Phonon Coupling", "Superconductivity", "BCS Theory", "Mott Insulator",
+          "Kondo Effect", "Quantum Hall Effect", "Topological Insulator",
+          "Ferromagnetism", "Antiferromagnetism", "Landau Level",
+          "Charge Density Wave", "Frustrated Magnetism", "Strongly Correlated Electron",
+          "Heavy Fermion", "Spin Liquid"
+        ]
+      },
+      {
+        "name": "Plasma Physics",
+        "concepts": [
+          "Debye Length", "Plasma Frequency", "Langmuir Wave", "Alfvén Wave",
+          "Magnetohydrodynamics (MHD)", "Tokamak", "Magnetic Confinement",
+          "Inertial Confinement", "Z-pinch", "Plasma Instability", "Magnetic Reconnection",
+          "Plasma Turbulence", "Saha Equation", "Gyrokinetics", "Scrape-Off Layer"
+        ]
+      },
+      {
+        "name": "Quantum Optics & Quantum Information",
+        "concepts": [
+          "Coherent State", "Squeezed State", "Photon Antibunching", "Bell Inequality",
+          "Quantum Teleportation", "Quantum Key Distribution", "Quantum Error Correction",
+          "Surface Code", "Topological Quantum Computing", "Quantum Circuit",
+          "Bloch Sphere", "Quantum Advantage", "Quantum Simulation",
+          "Boson Sampling", "Cavity QED", "Superconducting Qubit"
+        ]
+      },
+      {
+        "name": "Soft Matter & Biophysics",
+        "concepts": [
+          "Polymer Dynamics", "Rouse Model", "Reptation", "Colloidal Suspension",
+          "Gel Network", "Liquid Crystal", "Self-Assembly", "Amphiphile",
+          "Wormlike Chain Model", "Single-Molecule Experiment", "Optical Tweezer",
+          "Active Matter", "Motor Protein Dynamics", "Membrane Elasticity",
+          "Osmotic Pressure", "Diffusion (Biophysics)"
+        ]
+      },
+      {
+        "name": "Solar & Space Physics",
+        "concepts": [
+          "Solar Wind", "Coronal Mass Ejection", "Geomagnetic Storm", "Magnetosphere",
+          "Van Allen Belt", "Ionosphere", "Space Weather", "Heliosphere",
+          "Solar Flare", "Aurora", "Cosmic Ray", "Galactic Magnetic Field",
+          "Cosmic Ray Propagation", "Solar Energetic Particle"
+        ]
+      },
+      {
+        "name": "Organic Chemistry",
+        "concepts": [
+          "Reaction Mechanism", "Nucleophile", "Electrophile", "Leaving Group",
+          "Carbocation", "Carbanion", "Radical (Organic)", "SN1 Reaction", "SN2 Reaction",
+          "E1 Elimination", "E2 Elimination", "Retrosynthesis", "Protecting Group",
+          "Asymmetric Synthesis", "Organometallic Catalysis", "Cross-Coupling Reaction",
+          "Total Synthesis", "Pericyclic Reaction", "Stereochemistry"
+        ]
+      },
+      {
+        "name": "Inorganic Chemistry",
+        "concepts": [
+          "Coordination Complex", "Crystal Field Theory", "Ligand Field Theory",
+          "Organometallic Chemistry", "Oxidation State", "Redox Chemistry",
+          "Main Group Chemistry", "Bioinorganic Chemistry", "Metal Cluster",
+          "Solid State Chemistry", "Zeolite", "Perovskite Structure",
+          "Magnetism (Inorganic)", "Transition Metal Catalysis", "Superconducting Oxide"
+        ]
+      },
+      {
+        "name": "Analytical Chemistry",
+        "concepts": [
+          "HPLC", "Gas Chromatography", "Mass Spectrometry (Analytical)",
+          "Atomic Absorption Spectroscopy", "Fluorescence Spectroscopy",
+          "Electroanalytical Chemistry", "Titration", "Calibration Curve",
+          "Limit of Detection", "Chemometrics", "Isotope Ratio Analysis",
+          "NMR Spectroscopy (Analytical)", "X-ray Crystallography", "Flow Injection Analysis"
+        ]
+      },
+      {
+        "name": "Atmospheric & Environmental Chemistry",
+        "concepts": [
+          "Tropospheric Chemistry", "Stratospheric Ozone", "Hydroxyl Radical",
+          "Aerosol Particle", "Acid Rain", "VOC Chemistry", "NOx Chemistry",
+          "Photochemical Smog", "Henry's Law (Atmospheric)", "Wet Deposition",
+          "Dry Deposition", "Secondary Organic Aerosol", "Climate-Chemistry Coupling"
+        ]
+      },
+      {
+        "name": "Geochemistry",
+        "concepts": [
+          "Isotope Geochemistry", "Radiometric Dating", "Carbon Isotope Fractionation",
+          "Oxygen Isotopes", "Trace Element Geochemistry", "REE Pattern",
+          "Mantle Geochemistry", "Crustal Composition", "Weathering Chemistry",
+          "Hydrothermal Vent Chemistry", "Mineral Stability", "Redox Geochemistry", "Geochronology"
+        ]
+      },
+      {
+        "name": "Medicinal & Chemical Biology",
+        "concepts": [
+          "Drug-Target Interaction", "Pharmacophore", "Ligand Binding Affinity",
+          "Druggability", "ADMET Properties", "Prodrug", "Bioisostere",
+          "Fragment-Based Drug Discovery", "Covalent Inhibitor", "Allosteric Modulator",
+          "Chemical Probe", "Activity-Based Proteomics", "Chemoproteomic",
+          "Structure-Activity Relationship", "Lead Optimization"
+        ]
+      },
+      {
+        "name": "Materials Science & Polymer Chemistry",
+        "concepts": [
+          "Polymer Chain Statistics", "Glass Transition Temperature", "Crystallinity",
+          "Copolymer", "Block Copolymer", "Polymer Blend", "Nanoparticle",
+          "Quantum Dot", "Carbon Nanotube", "Graphene", "Metal-Organic Framework",
+          "Sol-Gel Process", "Thin Film Deposition", "Semiconductor Processing",
+          "2D Materials", "Perovskite Solar Cell"
+        ]
+      },
+      {
+        "name": "Molecular Biology & Biochemistry",
+        "concepts": [
+          "Enzyme Kinetics", "Michaelis-Menten", "Allosteric Regulation",
+          "Post-Translational Modification", "Protein Folding", "Chaperone",
+          "Ubiquitin-Proteasome System", "mRNA Processing", "Alternative Splicing",
+          "Non-coding RNA", "miRNA", "siRNA", "CRISPR-Cas9", "PCR",
+          "Next-Generation Sequencing", "Protein-Protein Interaction", "Metabolic Flux"
+        ]
+      },
+      {
+        "name": "Cell Biology (Advanced)",
+        "concepts": [
+          "MAPK Pathway", "PI3K/AKT Pathway", "mTOR Signaling", "JAK-STAT Pathway",
+          "Wnt Signaling", "Notch Signaling", "Hedgehog Signaling",
+          "Autophagy", "Endosomal Sorting", "Exosome", "Mitophagy",
+          "ER Stress", "Unfolded Protein Response", "Calcium Signaling",
+          "Mitochondrial Dynamics", "Reactive Oxygen Species"
+        ]
+      },
+      {
+        "name": "Genetics (Advanced)",
+        "concepts": [
+          "Genome-Wide Association Study", "Quantitative Trait Locus",
+          "Histone Modification", "DNA Methylation", "Chromatin Accessibility",
+          "3D Genome Organization", "Hi-C", "Transposable Element",
+          "Horizontal Gene Transfer", "Comparative Genomics", "Synteny",
+          "Copy Number Variation", "Structural Variant", "Polygenic Score"
+        ]
+      },
+      {
+        "name": "Genomics, Proteomics & Bioinformatics",
+        "concepts": [
+          "Sequence Alignment", "BLAST", "Multiple Sequence Alignment",
+          "Hidden Markov Model (Bioinformatics)", "Protein Structure Prediction",
+          "AlphaFold", "RNA-seq", "Single-Cell RNA-seq", "Metagenomics",
+          "Phylogenomics", "Variant Calling", "SNP", "Metabolomics",
+          "Proteomics Pipeline", "Genome Assembly"
+        ]
+      },
+      {
+        "name": "Evolutionary Biology (Advanced)",
+        "concepts": [
+          "Evo-Devo", "Homology", "Convergent Evolution", "Arms Race",
+          "Mutualism", "Parasitism", "Phylogenetic Comparative Method",
+          "Ancestral Reconstruction", "Adaptive Radiation", "Mass Extinction",
+          "Macroevolution", "Evolutionary Constraint", "Punctuated Equilibrium",
+          "Niche Construction", "Cultural Evolution"
+        ]
+      },
+      {
+        "name": "Ecology (Advanced)",
+        "concepts": [
+          "Community Ecology", "Island Biogeography", "Metapopulation", "Metacommunity",
+          "Food Web Analysis", "Trophic Cascade", "Ecosystem Services",
+          "Biodiversity-Ecosystem Function", "Regime Shift", "Alternative Stable States",
+          "Resilience (Ecology)", "Disturbance Ecology", "Biogeography",
+          "Macroecology", "Landscape Ecology"
+        ]
+      },
+      {
+        "name": "Microbiology & Virology",
+        "concepts": [
+          "Bacterial Cell Structure", "Peptidoglycan", "LPS", "Plasmid",
+          "Conjugation", "Transformation (Microbiology)", "Transduction",
+          "Quorum Sensing", "Biofilm", "Antimicrobial Resistance",
+          "Viral Replication Cycle", "Capsid", "Viral Entry", "Tropism",
+          "Interferon Response", "Bacteriophage", "Prion"
+        ]
+      },
+      {
+        "name": "Immunology",
+        "concepts": [
+          "Innate Immunity", "Adaptive Immunity", "T Cell Activation", "B Cell Activation",
+          "Antibody", "Antigen", "MHC Molecule", "Complement System",
+          "Inflammation", "Cytokine", "Toll-Like Receptor", "Autoimmunity",
+          "Vaccine Mechanism", "Immunological Memory", "Clonal Selection",
+          "Regulatory T Cell", "Checkpoint Inhibitor (Immunology)"
+        ]
+      },
+      {
+        "name": "Neuroscience (Advanced)",
+        "concepts": [
+          "Synaptic Transmission", "AMPA Receptor", "NMDA Receptor", "GABAergic Inhibition",
+          "Dopaminergic System", "Serotonergic System", "Noradrenergic System",
+          "Cholinergic System", "Limbic System", "Hippocampal Memory",
+          "Motor Cortex", "Sensory Cortex", "Default Mode Network",
+          "Functional Connectivity", "Neurogenesis", "Glial Cell Function"
+        ]
+      },
+      {
+        "name": "Human Physiology & Pathophysiology",
+        "concepts": [
+          "Cardiac Output", "Starling's Law", "Blood Pressure Regulation",
+          "Renal Filtration", "Glomerular Filtration Rate", "Tubular Reabsorption",
+          "Lung Compliance", "Alveolar Gas Exchange", "Liver Metabolism",
+          "Gut Microbiome", "HPA Axis", "Glucocorticoid", "Insulin Signaling",
+          "Adipokine", "Cytokine Storm", "Coagulation Cascade"
+        ]
+      },
+      {
+        "name": "Developmental Biology",
+        "concepts": [
+          "Induction (Development)", "Positional Information", "Morphogen Gradient",
+          "Hox Gene", "Segmentation", "Neural Tube Formation", "Gastrulation",
+          "Germ Layer", "Organogenesis", "Stem Cell Niche", "Cell Fate",
+          "Reprogramming", "Pluripotency", "Totipotency", "Cell Polarity"
+        ]
+      },
+      {
+        "name": "Plant Biology",
+        "concepts": [
+          "Calvin Cycle", "Photorespiration", "C4 Pathway", "CAM Metabolism",
+          "Stomatal Guard Cell", "Auxin", "Gibberellin", "Cytokinin",
+          "Abscisic Acid", "Ethylene (Plant)", "Plant Immunity", "R Protein",
+          "Mycorrhiza", "Nodulation", "Phloem Transport", "Xylem Transport"
+        ]
+      },
+      {
+        "name": "Ethology & Animal Behavior",
+        "concepts": [
+          "Fixed Action Pattern", "Sign Stimulus", "Imprinting", "Operant Conditioning (Animal)",
+          "Foraging Theory", "Optimal Foraging", "Mate Choice", "Honest Signal",
+          "Communication Signal", "Territorial Behavior", "Migration (Animal)",
+          "Circadian Rhythm", "Altruism (Biology)", "Reciprocal Altruism",
+          "Group Living", "Predator Avoidance"
+        ]
+      },
+      {
+        "name": "Marine Biology, Mycology & Astrobiology",
+        "concepts": [
+          "Coral Bleaching", "Ocean Acidification", "Deep Sea Ecology",
+          "Hydrothermal Vent Ecosystem", "Mycelial Network", "Fungal Pathogen",
+          "Lichen Symbiosis", "Extremophile", "Habitability Zone",
+          "Drake Equation", "Biosignature", "Prebiotic Chemistry",
+          "Planktonic Ecosystem", "Marine Food Web"
+        ]
+      },
+      {
+        "name": "Aging Biology & Chronobiology",
+        "concepts": [
+          "Telomere Shortening", "Cellular Senescence", "SASP",
+          "Proteostasis", "Mitochondrial Dysfunction (Aging)",
+          "Epigenetic Clock", "Circadian Clock", "Suprachiasmatic Nucleus",
+          "Melatonin", "Zeitgeber", "Clock Gene", "Chronotype",
+          "mTOR Inhibition (Aging)", "Caloric Restriction Mimetic"
+        ]
+      },
+      {
+        "name": "Synthetic Biology & Biotechnology",
+        "concepts": [
+          "Genetic Circuit", "Toggle Switch", "Repressilator", "Gene Regulatory Network",
+          "Directed Evolution", "DNA Assembly", "Metabolic Engineering",
+          "Flux Balance Analysis (SynBio)", "Protein Engineering",
+          "mRNA Therapeutics", "Organoid", "Cell-Free System",
+          "Biosensor", "De Novo Protein Design", "Gene Therapy Vector"
+        ]
+      },
+      {
+        "name": "Computational & Systems Biology",
+        "concepts": [
+          "Network Motif", "Regulatory Network", "Boolean Network",
+          "Reaction-Diffusion System", "Turing Pattern", "Whole-Cell Model",
+          "Constraint-Based Modeling", "Structural Bioinformatics",
+          "Coevolutionary Coupling", "Molecular Docking", "MD Simulation (Biology)",
+          "Single-Cell Analysis", "Spatial Transcriptomics"
+        ]
+      },
+      {
+        "name": "Geology & Geophysics",
+        "concepts": [
+          "Seismic Wave", "Seismograph", "Focal Mechanism", "Earthquake Rupture",
+          "Volcanic Arc", "Intrusive Igneous Rock", "Sedimentary Facies",
+          "Metamorphic Grade", "Structural Geology", "Fault Mechanics",
+          "Isostasy", "Gravity Anomaly", "Paleomagnetism", "Geodynamics",
+          "Mantle Plume", "Hot Spot (Geology)"
+        ]
+      },
+      {
+        "name": "Oceanography & Hydrology",
+        "concepts": [
+          "Thermohaline Circulation", "AMOC", "Upwelling", "Deep Water Formation",
+          "Tidal Dynamics", "Wave Breaking", "Coastal Erosion", "Sea Level Change",
+          "Ocean Biogeochemistry", "River Discharge", "Groundwater Flow",
+          "Aquifer", "Hydraulic Conductivity", "Hydrograph", "Streamflow"
+        ]
+      },
+      {
+        "name": "Environmental Science & Sustainability",
+        "concepts": [
+          "Ecological Footprint", "Life Cycle Assessment", "Planetary Boundaries",
+          "Tipping Point (Environment)", "Biodiversity Loss", "Habitat Fragmentation",
+          "Invasive Species", "Pollutant Fate", "Bioaccumulation",
+          "Remediation", "Circular Economy", "Ecosystem Restoration",
+          "Environmental Justice", "Sustainable Development Goal"
+        ]
+      },
+      {
+        "name": "Stellar Physics & Nucleosynthesis",
+        "concepts": [
+          "Stellar Structure", "Hydrostatic Equilibrium", "Nuclear Burning (Stellar)",
+          "Main Sequence", "Giant Branch", "White Dwarf", "Neutron Star",
+          "Stellar Wind", "Hertzsprung-Russell Diagram", "Chandrasekhar Limit",
+          "r-Process Nucleosynthesis", "s-Process Nucleosynthesis",
+          "Type Ia Supernova", "Core Collapse Supernova", "Kilonova"
+        ]
+      },
+      {
+        "name": "Galactic & Extragalactic Astronomy",
+        "concepts": [
+          "Galaxy Morphology", "Spiral Arm", "Galactic Rotation Curve", "Dark Matter Halo",
+          "Galaxy Merger", "AGN", "Quasar", "Radio Galaxy", "Interstellar Medium",
+          "Molecular Cloud", "Star Formation Rate", "Reionization",
+          "Intergalactic Medium", "Circumgalactic Medium", "Galaxy Cluster"
+        ]
+      },
+      {
+        "name": "Cosmology & Large-Scale Structure",
+        "concepts": [
+          "Dark Energy Equation of State", "Baryon Acoustic Oscillation", "CMB Anisotropy",
+          "Inflationary Perturbation", "N-body Simulation", "Halo Model",
+          "Lyman-Alpha Forest", "Primordial Nucleosynthesis", "Matter Power Spectrum",
+          "Weak Gravitational Lensing", "Galaxy Clustering", "Hubble Tension", "Dark Matter Candidate"
+        ]
+      },
+      {
+        "name": "Gravitational Physics & Black Holes",
+        "concepts": [
+          "Event Horizon", "Singularity", "Hawking Radiation", "Black Hole Thermodynamics",
+          "Penrose Process", "Ergosphere", "Tidal Force", "Strong Gravitational Lensing",
+          "Gravitational Wave Detection", "LIGO", "Binary Black Hole Merger",
+          "BH-Neutron Star Merger", "No-Hair Theorem", "Information Paradox"
+        ]
+      },
+      {
+        "name": "High-Energy Astrophysics",
+        "concepts": [
+          "Gamma-Ray Burst", "X-ray Binary", "Accretion Disk", "Relativistic Jet",
+          "Pulsar", "Magnetar", "Cosmic Ray Spectrum", "Fermi Acceleration",
+          "Cherenkov Radiation", "Neutrino Astronomy", "Multi-Messenger Astronomy",
+          "Blazar", "TeV Astronomy", "Fast Radio Burst"
+        ]
+      },
+      {
+        "name": "Numerical Analysis",
+        "concepts": [
+          "Floating-Point Arithmetic", "Round-off Error", "Condition Number",
+          "Numerical Integration", "Gaussian Quadrature", "Newton-Raphson Method",
+          "Finite Difference Method", "Finite Element Method", "Spectral Method",
+          "Runge-Kutta Method", "Stability Analysis (Numerical)", "Iterative Solver",
+          "Preconditioner", "Multigrid Method"
+        ]
+      },
+      {
+        "name": "Mathematical Physics (Advanced)",
+        "concepts": [
+          "Chern-Weil Theory", "Index Theorem", "Spin Geometry",
+          "Mirror Symmetry", "Topological Field Theory", "Conformal Field Theory",
+          "Integrability", "Quantum Group", "Vertex Algebra",
+          "Moonshine", "String Theory", "AdS/CFT Correspondence", "M-Theory"
+        ]
+      },
+      {
+        "name": "Operations Research & Combinatorial Optimization",
+        "concepts": [
+          "Integer Programming", "Branch and Bound", "Cutting Plane Method",
+          "Network Simplex", "Assignment Problem", "Traveling Salesman Problem",
+          "Vehicle Routing", "Scheduling Theory", "Stochastic Programming",
+          "Robust Optimization", "Multi-Objective Optimization", "Approximation Ratio",
+          "Queuing Theory"
+        ]
+      },
+      {
+        "name": "Mathematical Finance",
+        "concepts": [
+          "Black-Scholes Model", "Option Pricing", "Greeks (Finance)", "Binomial Tree",
+          "Risk-Neutral Measure", "Martingale Pricing", "Credit Risk",
+          "Value at Risk", "CVaR", "Interest Rate Model", "HJM Framework",
+          "Actuarial Life Table", "Risk Theory", "Reinsurance"
+        ]
+      },
+      {
+        "name": "Cryptography & Coding Theory",
+        "concepts": [
+          "Symmetric Encryption", "AES", "Public-Key Cryptography", "RSA",
+          "Elliptic Curve Cryptography", "Diffie-Hellman", "Zero-Knowledge Proof",
+          "Hash Function", "Digital Signature", "Block Cipher",
+          "Side-Channel Attack", "Post-Quantum Cryptography",
+          "Lattice-Based Cryptography", "Oblivious RAM"
+        ]
+      },
+      {
+        "name": "Advanced Algorithms",
+        "concepts": [
+          "Amortized Analysis", "Randomized Data Structure", "Streaming Algorithm",
+          "Online Algorithm", "External Memory Algorithm", "Cache-Oblivious Algorithm",
+          "Parallel Algorithm", "Geometric Algorithm", "String Algorithm",
+          "Suffix Array", "Wavelet Tree", "Persistent Data Structure",
+          "Sketching Algorithm"
+        ]
+      },
+      {
+        "name": "Computer Architecture",
+        "concepts": [
+          "Instruction Set Architecture", "Pipeline", "Cache Hierarchy",
+          "Out-of-Order Execution", "Branch Prediction", "SIMD", "GPU Architecture",
+          "Virtual Memory", "TLB", "NUMA Architecture", "Hardware Accelerator",
+          "Memory Consistency Model", "Cache Coherence"
+        ]
+      },
+      {
+        "name": "Operating Systems & Distributed Systems",
+        "concepts": [
+          "Process Management", "Thread", "Scheduler", "Page Fault",
+          "File System", "Device Driver", "System Call", "IPC",
+          "Synchronization Primitive", "Deadlock", "Consensus Protocol",
+          "Paxos", "Raft", "Byzantine Fault Tolerance", "CAP Theorem",
+          "Eventual Consistency", "Distributed Transaction"
+        ]
+      },
+      {
+        "name": "Database Systems",
+        "concepts": [
+          "Relational Algebra", "SQL", "Query Optimization", "B-Tree",
+          "Hash Index", "Transaction (DB)", "ACID", "Isolation Level",
+          "Concurrency Control", "Write-Ahead Log", "Recovery (DB)",
+          "Columnar Storage", "OLAP", "Data Warehouse", "Query Plan"
+        ]
+      },
+      {
+        "name": "Programming Languages & Compilers",
+        "concepts": [
+          "Type Inference", "Polymorphism", "Closure", "Garbage Collection",
+          "JIT Compilation", "Abstract Interpretation", "Dataflow Analysis",
+          "SSA Form", "Register Allocation", "Optimization Pass",
+          "Functional Programming", "Effect System", "Continuations",
+          "Dependent Types (PL)", "Module System"
+        ]
+      },
+      {
+        "name": "Formal Verification & Logic in Computing",
+        "concepts": [
+          "Model Checking", "Temporal Logic Specification", "Bisimulation",
+          "Separation Logic", "Hoare Logic", "Refinement Types",
+          "Program Synthesis", "SMT Solver", "SAT Solver",
+          "Decision Procedure", "Type Safety", "Proof Assistant",
+          "Certified Program", "Abstract Interpretation (Verification)"
+        ]
+      },
+      {
+        "name": "Computer Graphics, Vision & HCI",
+        "concepts": [
+          "Rendering Pipeline", "Rasterization", "Ray Tracing", "Shader",
+          "Global Illumination", "Physically Based Rendering", "3D Mesh",
+          "Texture Mapping", "Depth Buffer", "Image Classification",
+          "Object Detection", "Semantic Segmentation", "Optical Flow",
+          "Fitts's Law", "Affordance", "Usability Testing"
+        ]
+      },
+      {
+        "name": "Quantum Computing",
+        "concepts": [
+          "Quantum Gate", "Quantum Circuit", "Qubit", "Decoherence",
+          "Quantum Error Correction (Computing)", "Fault-Tolerant Computing",
+          "Shor's Algorithm", "Grover's Algorithm", "Variational Quantum Eigensolver",
+          "Quantum Approximate Optimization", "Quantum Simulation (Computing)",
+          "NISQ Device", "Topological Qubit", "Quantum Advantage"
+        ]
+      },
+      {
+        "name": "Computer Security",
+        "concepts": [
+          "Vulnerability", "Exploit", "Buffer Overflow", "SQL Injection",
+          "Cross-Site Scripting", "Authentication", "Authorization",
+          "TLS/SSL", "PKI", "Intrusion Detection", "Malware Analysis",
+          "Reverse Engineering", "Penetration Testing",
+          "Formal Security Proof", "Threat Model"
+        ]
+      },
+      {
+        "name": "Supervised Learning",
+        "concepts": [
+          "Decision Tree", "Random Forest", "Support Vector Machine", "k-NN",
+          "Gradient Boosting", "XGBoost", "Neural Network (ML)", "Backpropagation",
+          "Loss Function", "Regularization (ML)", "Hyperparameter Tuning",
+          "Cross-Validation", "Bias-Variance Tradeoff", "Ensemble Methods",
+          "Calibration (ML)"
+        ]
+      },
+      {
+        "name": "Deep Learning Architectures",
+        "concepts": [
+          "Convolutional Neural Network", "Recurrent Neural Network", "LSTM", "GRU",
+          "Attention Mechanism", "Transformer Architecture", "BERT", "GPT",
+          "Positional Encoding", "Batch Normalization", "Dropout",
+          "Residual Connection", "Normalization Layer", "Vision Transformer",
+          "Mixture of Experts"
+        ]
+      },
+      {
+        "name": "Unsupervised & Self-Supervised Learning",
+        "concepts": [
+          "k-Means Clustering", "DBSCAN", "Gaussian Mixture Model",
+          "Dimensionality Reduction", "PCA", "t-SNE", "UMAP",
+          "Autoencoder", "Contrastive Learning", "BYOL", "SimCLR",
+          "Masked Autoencoding", "Representation Learning", "Manifold Learning"
+        ]
+      },
+      {
+        "name": "Reinforcement Learning",
+        "concepts": [
+          "Markov Decision Process (RL)", "Policy", "Value Function",
+          "Q-Learning", "Policy Gradient", "Actor-Critic", "Proximal Policy Optimization",
+          "Model-Based RL", "Exploration-Exploitation", "Reward Shaping",
+          "Imitation Learning", "Inverse RL", "Multi-Agent RL", "Hierarchical RL"
+        ]
+      },
+      {
+        "name": "Probabilistic Machine Learning",
+        "concepts": [
+          "Bayesian Network", "Markov Random Field", "Factor Graph",
+          "Belief Propagation", "Expectation-Maximization", "Latent Dirichlet Allocation",
+          "Hidden Markov Model (ML)", "Kalman Filter", "Particle Filter",
+          "Variational Autoencoder", "Normalizing Flow", "Gaussian Process (ML)"
+        ]
+      },
+      {
+        "name": "Natural Language Processing",
+        "concepts": [
+          "Tokenization", "Word Embedding", "Word2Vec", "Contextual Embedding",
+          "Named Entity Recognition", "Part-of-Speech Tagging", "Dependency Parsing",
+          "Sentiment Analysis", "Machine Translation", "Seq2Seq",
+          "Question Answering", "Dialogue System", "Information Extraction",
+          "Retrieval-Augmented Generation", "In-Context Learning"
+        ]
+      },
+      {
+        "name": "Generative AI Models",
+        "concepts": [
+          "Generative Adversarial Network", "Diffusion Model", "Score Matching",
+          "Denoising Diffusion Probabilistic Model", "Normalizing Flow (Generative)",
+          "Flow Matching", "Consistency Model", "Latent Diffusion Model",
+          "Classifier-Free Guidance", "Stable Diffusion", "Text-to-Image",
+          "Large Language Model", "Foundation Model"
+        ]
+      },
+      {
+        "name": "AI Alignment, Safety & Fairness",
+        "concepts": [
+          "Reward Misspecification", "Goodhart's Law (AI)", "Mesa-Optimization",
+          "Inner Alignment", "Outer Alignment", "Deceptive Alignment",
+          "Constitutional AI", "RLHF", "Red-Teaming", "Adversarial Robustness",
+          "Distribution Shift", "Algorithmic Fairness", "Disparate Impact",
+          "SHAP Values", "Counterfactual Explanation"
+        ]
+      },
+      {
+        "name": "Civil & Structural Engineering",
+        "concepts": [
+          "Structural Load", "Bending Moment", "Shear Force", "Beam Theory",
+          "Column Buckling", "Truss", "Frame Analysis", "Foundation Engineering",
+          "Soil Bearing Capacity", "Reinforced Concrete", "Prestressed Concrete",
+          "Earthquake Engineering", "Wind Load", "Bridge Design", "Structural Reliability"
+        ]
+      },
+      {
+        "name": "Mechanical Engineering",
+        "concepts": [
+          "Stress-Strain Relation", "Elastic Modulus", "Fatigue (Mechanical)",
+          "Fracture Mechanics", "Tribology", "Conduction", "Convection (Heat)",
+          "Radiation (Heat Transfer)", "Heat Exchanger", "Thermodynamic Cycle (Engineering)",
+          "Refrigeration", "Turbomachinery", "Manufacturing Process", "Vibration Analysis"
+        ]
+      },
+      {
+        "name": "Electrical Engineering",
+        "concepts": [
+          "Circuit Analysis", "Kirchhoff's Laws", "RC/RL/RLC Circuits", "Op-Amp",
+          "Transistor", "MOSFET", "BJT", "Digital Logic", "FPGA",
+          "Power Electronics", "Motor Control", "Electromagnetic Compatibility",
+          "Signal Integrity", "RF Circuit", "Impedance Matching"
+        ]
+      },
+      {
+        "name": "Chemical Engineering",
+        "concepts": [
+          "Mass Transfer", "Reaction Engineering", "CSTR", "Plug Flow Reactor",
+          "Distillation", "Absorption (ChE)", "Extraction (ChE)", "Membrane Separation",
+          "Fluid Dynamics (ChE)", "Process Control", "HAZOP Analysis",
+          "Process Intensification", "Scale-Up", "Reaction Kinetics (ChE)"
+        ]
+      },
+      {
+        "name": "Aerospace Engineering",
+        "concepts": [
+          "Aerodynamics", "Lift Generation", "Drag", "Mach Number",
+          "Compressible Aerodynamics", "Aeroelasticity", "Orbital Mechanics",
+          "Rocket Propulsion", "Jet Engine", "Flight Dynamics",
+          "Avionics", "Re-entry Heating", "Spacecraft Design", "Attitude Control"
+        ]
+      },
+      {
+        "name": "Biomedical Engineering",
+        "concepts": [
+          "Medical Imaging Physics", "CT Reconstruction", "MRI Physics",
+          "Ultrasound Imaging", "Biomechanics", "Tissue Engineering",
+          "Neural Interface", "Prosthetics", "Drug Delivery System",
+          "Biosensor Design", "Bioreactor", "Regulatory Affairs (Medical Device)"
+        ]
+      },
+      {
+        "name": "Systems & Nuclear Engineering",
+        "concepts": [
+          "System Architecture", "Requirements Engineering", "Trade Study",
+          "Failure Mode Analysis", "Queuing Theory (Engineering)", "Monte Carlo Simulation (Engineering)",
+          "Neutron Transport", "Reactor Criticality", "Chain Reaction",
+          "Reactor Design", "Radiation Shielding", "Radiation Dosimetry",
+          "Radioactive Waste Management", "Fusion Reactor"
+        ]
+      },
+      {
+        "name": "Photonics & Environmental Engineering",
+        "concepts": [
+          "Laser Design", "Optical Fiber", "Optical Amplifier",
+          "Photodetector", "Nonlinear Optics (Engineering)", "Optical Communication",
+          "Water Treatment", "Wastewater Engineering", "Air Pollution Control",
+          "Soil Remediation", "Environmental Impact Assessment", "Green Engineering"
+        ]
+      },
+      {
+        "name": "Cardiology",
+        "concepts": [
+          "Cardiac Electrophysiology", "Cardiac Action Potential", "ECG",
+          "Arrhythmia", "Atrial Fibrillation", "Heart Failure",
+          "Coronary Artery Disease", "Atherosclerosis", "Cardiac Biomarker",
+          "Echocardiography", "PCI", "CABG", "Anticoagulation", "Lipid Management"
+        ]
+      },
+      {
+        "name": "Oncology & Cancer Biology",
+        "concepts": [
+          "Oncogene", "Tumor Suppressor Gene", "Cell Cycle Checkpoint",
+          "Angiogenesis", "Metastasis", "Warburg Effect",
+          "Checkpoint Inhibitor (Cancer)", "CAR-T Therapy", "Targeted Therapy",
+          "Liquid Biopsy", "Cancer Genomics", "Tumor Microenvironment",
+          "Radiotherapy", "Cancer Immunotherapy"
+        ]
+      },
+      {
+        "name": "Infectious Disease",
+        "concepts": [
+          "Pathogen", "Virulence Factor", "Host-Pathogen Interaction",
+          "Transmission Route", "Antibiotic", "Antiviral", "Antifungal",
+          "Antibiotic Resistance", "Sepsis", "Zoonosis",
+          "Emerging Pathogen", "Vaccine Development", "Epidemic Control",
+          "Contact Tracing", "R0 (Reproduction Number)"
+        ]
+      },
+      {
+        "name": "Endocrinology & Metabolism",
+        "concepts": [
+          "Hormone Receptor", "Feedback Regulation (Endocrine)", "HPA Axis (Clinical)",
+          "HPG Axis", "Thyroid Hormone", "Insulin", "Glucagon",
+          "Type 1 Diabetes", "Type 2 Diabetes", "Metabolic Syndrome",
+          "Obesity Pathophysiology", "Adrenal Disorder", "Thyroid Disorder",
+          "Pituitary Adenoma"
+        ]
+      },
+      {
+        "name": "Pulmonology, Nephrology & Gastroenterology",
+        "concepts": [
+          "Spirometry", "FEV1/FVC Ratio", "COPD", "Asthma",
+          "Pulmonary Fibrosis", "ARDS", "Mechanical Ventilation",
+          "GFR (Clinical)", "Nephrotic Syndrome", "Acute Kidney Injury",
+          "CKD", "Dialysis", "Inflammatory Bowel Disease",
+          "Liver Fibrosis", "Cirrhosis", "Hepatitis Virus", "NASH"
+        ]
+      },
+      {
+        "name": "Neurology & Psychiatry",
+        "concepts": [
+          "Stroke", "Epilepsy", "Multiple Sclerosis", "Parkinson's Disease",
+          "Alzheimer's Disease", "Peripheral Neuropathy", "ALS",
+          "Deep Brain Stimulation", "EEG (Clinical)", "DSM Classification",
+          "Schizophrenia", "Bipolar Disorder", "Major Depression",
+          "PTSD", "Cognitive Behavioral Therapy", "Psychopharmacology"
+        ]
+      },
+      {
+        "name": "Rheumatology, Dermatology & Other Specialties",
+        "concepts": [
+          "Rheumatoid Arthritis", "Systemic Lupus Erythematosus", "Sjögren's Syndrome",
+          "Gout", "Osteoporosis", "DMARD", "Biologics (Rheumatology)",
+          "Atopic Dermatitis", "Psoriasis", "Melanoma", "Wound Healing",
+          "Ophthalmology (Retinal Disease)", "Glaucoma", "Cataract"
+        ]
+      },
+      {
+        "name": "Reproductive, Pediatric & Geriatric Medicine",
+        "concepts": [
+          "Preeclampsia", "Gestational Diabetes", "Labor Physiology",
+          "IVF", "PCOS", "Menopause", "Developmental Milestone",
+          "Congenital Heart Disease", "Neonatal Sepsis", "Pediatric Oncology",
+          "Frailty", "Sarcopenia", "Cognitive Decline", "Polypharmacy",
+          "Palliative Care"
+        ]
+      },
+      {
+        "name": "Pharmacology, Surgery & Public Health",
+        "concepts": [
+          "Dose-Response Curve", "Therapeutic Index", "Pharmacokinetics",
+          "Pharmacodynamics", "Drug Interaction", "CYP Enzyme", "Bioavailability",
+          "Clinical Trial Phases", "Minimally Invasive Surgery", "Anesthesia",
+          "Trauma Surgery", "Cohort Study", "Case-Control Study",
+          "DALY", "Health Inequity", "One Health"
+        ]
+      },
+      {
+        "name": "Cognitive & Behavioral Psychology",
+        "concepts": [
+          "Dual-Process Theory", "Heuristics", "Cognitive Bias (Psychology)",
+          "Executive Function (Psychology)", "Episodic Memory", "Semantic Memory",
+          "Implicit Memory", "Memory Consolidation", "Mental Imagery",
+          "Metacognition", "Attention Control", "Perception (Advanced)",
+          "Working Memory Model", "Embodied Simulation"
+        ]
+      },
+      {
+        "name": "Social & Developmental Psychology",
+        "concepts": [
+          "Attachment Theory", "Social Influence", "Conformity", "Obedience",
+          "Group Dynamics", "Intergroup Conflict", "Self-Concept",
+          "Identity Development", "Moral Development", "Emotion Regulation",
+          "Adolescent Development", "Social Comparison", "Self-Determination Theory"
+        ]
+      },
+      {
+        "name": "Macroeconomics & Growth",
+        "concepts": [
+          "GDP Accounting", "Business Cycle", "Fiscal Policy", "Monetary Policy",
+          "Inflation (Economics)", "Taylor Rule", "IS-LM Model",
+          "Aggregate Demand", "Solow Growth Model", "Total Factor Productivity",
+          "Human Capital (Economics)", "Convergence", "Trade Balance",
+          "Open Economy Model"
+        ]
+      },
+      {
+        "name": "Microeconomics & Industrial Organization",
+        "concepts": [
+          "Consumer Theory", "Producer Theory", "Market Equilibrium",
+          "Monopoly", "Oligopoly", "Bertrand Competition", "Cournot Competition",
+          "Welfare Analysis", "Externality", "Pigouvian Tax",
+          "Tax Incidence", "Poverty Measurement", "Gini Coefficient",
+          "Behavioral Economics", "Prospect Theory"
+        ]
+      },
+      {
+        "name": "International & Financial Economics",
+        "concepts": [
+          "Exchange Rate", "Current Account", "Capital Account",
+          "Comparative Advantage (Advanced)", "Factor Endowment", "Trade Policy",
+          "WTO", "Asset Pricing Model", "CAPM", "Efficient Market Hypothesis",
+          "Portfolio Theory", "Financial Contagion", "Systemic Risk", "Credit Cycle"
+        ]
+      },
+      {
+        "name": "Political Science & International Relations",
+        "concepts": [
+          "State Sovereignty", "Legitimacy (Political)", "Democracy",
+          "Authoritarianism", "Electoral System", "Political Party",
+          "Interest Group", "Legislative Process", "Federalism",
+          "Judicial Review", "Realism (IR)", "Liberalism (IR)",
+          "Constructivism (IR)", "International Regime", "Nuclear Deterrence"
+        ]
+      },
+      {
+        "name": "Sociology & Social Theory",
+        "concepts": [
+          "Sociological Theory", "Functionalism (Sociology)", "Conflict Theory",
+          "Symbolic Interactionism", "Habitus", "Capital (Bourdieu)",
+          "Field (Bourdieu)", "Social Reproduction", "Intersectionality",
+          "Race & Racism", "Gender Studies", "Social Movement",
+          "Collective Identity", "World-Systems Theory"
+        ]
+      },
+      {
+        "name": "Anthropology",
+        "concepts": [
+          "Cultural Relativism", "Thick Description", "Participant Observation",
+          "Kinship System", "Gift Exchange", "Ritual", "Symbol",
+          "Myth", "Colonialism", "Postcolonialism", "Material Culture",
+          "Primate Behavior", "Paleoanthropology", "Human Fossil Record",
+          "Cognitive Anthropology"
+        ]
+      },
+      {
+        "name": "Linguistics (Advanced)",
+        "concepts": [
+          "Phonological Rule", "Morphological Rule", "Syntactic Tree",
+          "Government & Binding", "Minimalist Program", "Semantic Compositionality",
+          "Formal Semantics", "Discourse Analysis", "Conversation Analysis",
+          "Corpus Linguistics", "Historical Sound Change", "Grammaticalization",
+          "Sociolinguistic Variation", "Language Policy"
+        ]
+      },
+      {
+        "name": "Jurisprudence & Legal Theory",
+        "concepts": [
+          "Legal Positivism", "Natural Law Theory", "Legal Realism",
+          "Dworkin's Interpretivism", "Rule of Law", "Legitimacy of Law",
+          "Kelsen's Pure Theory", "Hart's Concept of Law", "Separation of Powers",
+          "Constitutional Supremacy", "Judicial Precedent", "Legal Norm",
+          "Comparative Law", "Transnational Law"
+        ]
+      },
+      {
+        "name": "Constitutional & Criminal Law",
+        "concepts": [
+          "Constitutional Rights", "Due Process", "Equal Protection",
+          "Free Speech", "Privacy Rights", "Administrative Discretion",
+          "Proportionality", "Emergency Powers", "Elements of a Crime",
+          "Mens Rea", "Actus Reus", "Strict Liability (Criminal)",
+          "Burden of Proof", "Sentencing", "Restorative Justice"
+        ]
+      },
+      {
+        "name": "Private Law & Intellectual Property",
+        "concepts": [
+          "Offer & Acceptance", "Consideration (Contract)", "Breach of Contract",
+          "Remedies (Contract)", "Frustration of Contract", "Misrepresentation",
+          "Negligence", "Duty of Care", "Proximate Cause", "Damages (Tort)",
+          "Property Rights", "Adverse Possession", "Patent", "Copyright",
+          "Trademark", "Trade Secret"
+        ]
+      },
+      {
+        "name": "International & Regulatory Law",
+        "concepts": [
+          "Public International Law", "Treaty", "Customary International Law",
+          "UN Charter", "Human Rights Law", "International Humanitarian Law",
+          "ICJ", "ICC", "WTO Dispute Settlement", "EU Law",
+          "Regulatory Agency", "Environmental Law", "Competition Law",
+          "Data Protection Law", "GDPR"
+        ]
+      },
+      {
+        "name": "Law & Technology",
+        "concepts": [
+          "Privacy by Design", "Cybercrime", "Digital Evidence",
+          "E-Commerce Law", "Platform Liability", "AI Regulation",
+          "Algorithmic Accountability", "Blockchain Law",
+          "Surveillance Law", "Biometric Data Law", "Autonomous Vehicle Liability",
+          "Content Moderation Law"
+        ]
+      },
+      {
+        "name": "Phenomenology & Existentialism",
+        "concepts": [
+          "Intentionality", "Phenomenological Reduction", "Lifeworld",
+          "Being-in-the-World", "Dasein", "Authenticity", "Bad Faith",
+          "Facticity", "Thrownness", "Being-toward-Death",
+          "Existential Anxiety", "Temporality (Phenomenology)", "Intersubjectivity",
+          "Embodiment (Phenomenology)"
+        ]
+      },
+      {
+        "name": "Critical Theory & Continental Philosophy",
+        "concepts": [
+          "Dialectic of Enlightenment", "Instrumental Reason", "Culture Industry",
+          "Communicative Action", "Ideology Critique", "Reification",
+          "Negative Dialectics", "Emancipation", "Recognition (Hegel)",
+          "Deconstruction", "Différance", "Power/Knowledge (Foucault)",
+          "Genealogy (Foucault)", "Biopower", "Simulacrum"
+        ]
+      },
+      {
+        "name": "Political Philosophy & Ethics",
+        "concepts": [
+          "Social Contract", "State of Nature", "Justice as Fairness",
+          "Rawlsian Veil of Ignorance", "Libertarianism", "Communitarianism",
+          "Republicanism", "Deliberative Democracy", "Capabilities Approach",
+          "Global Justice", "Distributive Justice", "Multiculturalism",
+          "Utilitarianism", "Deontology", "Virtue Ethics", "Contractualism"
+        ]
+      },
+      {
+        "name": "Hermeneutics, Aesthetics & Pragmatism",
+        "concepts": [
+          "Hermeneutic Circle", "Gadamerian Fusion of Horizons", "Aesthetic Judgment",
+          "Sublime (Aesthetics)", "Mimesis", "Aesthetic Experience",
+          "Pragmatic Truth", "Fallibilism", "Inquiry (Dewey)",
+          "Semiotics", "Signifier & Signified", "Symbol vs. Icon vs. Index",
+          "Iconography", "Iconology"
+        ]
+      },
+      {
+        "name": "History, Literary Theory & Art",
+        "concepts": [
+          "Historiography", "Primary Source", "Historical Method",
+          "Oral History", "Microhistory", "Social History", "Cultural History",
+          "Annales School", "Historical Materialism", "Periodization",
+          "New Criticism", "Reader-Response Theory", "Narratology",
+          "Intertextuality", "Postcolonial Literature", "Feminist Literary Criticism"
+        ]
+      },
+      {
+        "name": "Music Theory & Religious Studies",
+        "concepts": [
+          "Tonal Harmony", "Counterpoint", "Sonata Form", "Rhythm & Meter",
+          "Atonality", "Serialism", "Improvisation (Music)",
+          "Musical Semiotics", "Sacred & Profane", "Ritual (Religion)",
+          "Theodicy", "Exegesis", "Comparative Religion",
+          "Secularization", "Mysticism", "Liberation Theology"
+        ]
+      },
+      {
+        "name": "Organizational Theory & Strategy",
+        "concepts": [
+          "Organizational Structure", "Hierarchy", "Bureaucracy",
+          "Agency Problem", "Principal-Agent Theory", "Organizational Culture",
+          "Change Management", "Transaction Cost Economics", "Resource Dependence Theory",
+          "Competitive Advantage", "Porter's Five Forces", "Value Chain",
+          "Business Model", "Core Competence", "Dynamic Capability",
+          "Disruptive Innovation"
+        ]
+      },
+      {
+        "name": "Marketing, Finance & Operations",
+        "concepts": [
+          "Market Segmentation", "Brand Equity", "Customer Lifetime Value",
+          "Consumer Decision Process", "Pricing Strategy", "Digital Marketing",
+          "Financial Statement Analysis", "WACC", "DCF Valuation",
+          "Capital Structure", "Corporate Governance", "Supply Chain Management",
+          "Inventory Management", "Just-in-Time", "Total Quality Management",
+          "Six Sigma"
+        ]
+      },
+      {
+        "name": "Entrepreneurship & Innovation",
+        "concepts": [
+          "Entrepreneurial Process", "Lean Startup", "Business Model Canvas",
+          "Venture Capital", "Angel Investor", "Startup Ecosystem",
+          "Product-Market Fit", "Pivot", "Scale-Up", "Open Innovation",
+          "Intellectual Property Strategy", "Technology Transfer", "Platform Business"
+        ]
+      },
+      {
+        "name": "Physical & Human Geography",
+        "concepts": [
+          "Fluvial Geomorphology", "Glacial Geomorphology", "Coastal Geomorphology",
+          "Karst Landscape", "Aeolian Process", "Mass Movement",
+          "Soil Formation", "Land Degradation", "River Basin",
+          "Urban System", "Urban Sprawl", "Gentrification",
+          "Migration Theory", "Remittance", "Refugee", "Sense of Place"
+        ]
+      },
+      {
+        "name": "Geospatial Science",
+        "concepts": [
+          "Remote Sensing", "Satellite Image Analysis", "GIS Analysis",
+          "Spatial Statistics", "Kriging", "Digital Elevation Model",
+          "LiDAR (Geospatial)", "GPS", "Map Accuracy",
+          "Spatial Data Infrastructure", "OpenStreetMap",
+          "Spatial Modeling", "Cartographic Projection"
+        ]
+      },
+      {
+        "name": "Criminology & Forensic Science",
+        "concepts": [
+          "Social Disorganization Theory", "Strain Theory", "Labeling Theory",
+          "Rational Choice Theory (Crime)", "Routine Activity Theory",
+          "General Theory of Crime", "Incarceration", "Recidivism (Criminology)",
+          "Restorative Justice (Criminology)", "Policing Models", "Crime Prevention",
+          "Forensic DNA Analysis", "Fingerprint Identification",
+          "Digital Forensics", "Forensic Pathology", "Chain of Custody"
+        ]
+      },
+      {
+        "name": "Science & Technology Studies",
+        "concepts": [
+          "Technological Determinism", "Social Construction of Technology",
+          "Actor-Network Theory", "Black Box (STS)", "Translation (STS)",
+          "Inscription (STS)", "Sociotechnical System", "Values in Technology",
+          "Platform Studies", "Surveillance Capitalism", "Algorithmic Governance",
+          "Bioethics", "Research Ethics", "Responsible Innovation",
+          "Technology Assessment"
+        ]
+      }
+    ]
+  }
+]
