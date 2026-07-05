@@ -26,10 +26,12 @@ Deploy command: `railway up`
 6. **Consilience** (`appMode === 'consilience'`) — cross-disciplinary synthesis: each field's lens, answer, convergences, tensions
 7. **The Inquiry** (`appMode === 'inquiry'`) — open frontier questions: formulated, why hard, what's been tried, entry point
 8. **Math Universe** (`appMode === 'math'`) — browse 15 math domains → subfields → topic chips → ordered reading sequence + beginner explanations
+9. **Concept Map** (`appMode === 'concepts'`) — 7-tier hierarchy of all scientific knowledge (~700 concepts); click any concept for a reading path from zero · hover for lightbulb explain; cached in localStorage (key: `concept_tiers_v4`)
 
 ## File Structure
 
 ### Hooks
+- `src/hooks/useReadingPath.js` — standalone hook for concept-map reading paths; streams Claude Haiku; Phase 1 assumes zero prior knowledge (popular science / gentle primer); used by ConceptTiersView and UDCView
 - `src/hooks/useCanonGenerator.js` — harvest → score → compose pipeline, streaming, refinement
 - `src/hooks/useCanonHistory.js` — localStorage CRUD (key: `canon_history`, max 50)
 - `src/hooks/useEnrichment.js` — background CrossRef + OpenAlex verification per canon entry
@@ -54,6 +56,7 @@ Deploy command: `railway up`
 - `src/constants/fields.js` — 3-level field taxonomy (22 top-level fields)
 
 ### Components
+- `src/components/ConceptTiersView.jsx` — 7-tier concept hierarchy; TIER_SPECS with domain strings drive Claude Haiku generation (one API call per tier, 3000 tokens); arrow SVG on chip = reading path, lightbulb SVG = explain (streams via Haiku); cache key `concept_tiers_v4`; always override `parsed.tier = spec.tier` after parse
 - `src/components/CanonInput.jsx` — topic input + quick generate
 - `src/components/CanonOutput.jsx` — renders parsed canon; prop `noTopMargin` for tabbed view
 - `src/components/ReadingOrderView.jsx` — PHASE N format, 5 color sets, loading dots
