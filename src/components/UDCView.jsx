@@ -75,6 +75,16 @@ function NodeRow({ node, depth, openSet, onToggle, onGenerate, modeLabel }) {
             <span className="text-[9px] font-mono text-stone-300">{node.terms.length}</span>
           )}
         </button>
+
+        <a
+          href={`https://www.worldcat.org/search?q=su%3A${encodeURIComponent(titleCase(node.name))}`}
+          target="_blank" rel="noopener noreferrer"
+          onClick={e => e.stopPropagation()}
+          title="Browse on WorldCat"
+          className="shrink-0 opacity-0 group-hover:opacity-100 text-[9px] font-mono px-1.5 py-0.5 border border-stone-200 text-stone-400 hover:bg-stone-800 hover:text-white hover:border-stone-800 transition-all mt-0.5"
+        >
+          WC
+        </a>
       </div>
 
       {isOpen && hasChildren && (
@@ -201,13 +211,20 @@ export default function UDCView({ onGenerate }) {
           {searchResults.length === 0
             ? <div className="p-4 text-sm text-stone-400 font-mono">No matches</div>
             : searchResults.map((n, i) => (
-              <button key={i} onClick={() => handleGenerate(`${n.name} (UDC ${n.code})`, mode)}
-                className="w-full flex items-center gap-3 px-3 py-2 border-b border-stone-50 hover:bg-stone-50 text-left transition-colors">
-                <span className={`text-[8px] font-mono px-1 py-0.5 text-white shrink-0 ${CLASS_COLORS[n.code[0]] || 'bg-stone-500'}`}>
-                  {n.code}
-                </span>
-                <span className="flex-1 text-sm text-stone-800 hover:underline decoration-stone-300">{n.name}</span>
-              </button>
+              <div key={i} className="group flex items-center gap-3 px-3 py-2 border-b border-stone-50 hover:bg-stone-50 transition-colors">
+                <button onClick={() => handleGenerate(`${n.name} (UDC ${n.code})`, mode)}
+                  className="flex-1 flex items-center gap-3 text-left">
+                  <span className={`text-[8px] font-mono px-1 py-0.5 text-white shrink-0 ${CLASS_COLORS[n.code[0]] || 'bg-stone-500'}`}>
+                    {n.code}
+                  </span>
+                  <span className="text-sm text-stone-800 hover:underline decoration-stone-300">{n.name}</span>
+                </button>
+                <a
+                  href={`https://www.worldcat.org/search?q=su%3A${encodeURIComponent(n.name)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="opacity-0 group-hover:opacity-100 text-[9px] font-mono px-1.5 py-0.5 border border-stone-200 text-stone-400 hover:bg-stone-800 hover:text-white hover:border-stone-800 transition-all shrink-0"
+                >WC</a>
+              </div>
             ))}
         </div>
       ) : (
