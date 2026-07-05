@@ -4,7 +4,7 @@ function resolveApiKey() {
   return import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('canon_api_key') || '';
 }
 
-const SYSTEM_PROMPT = `You are a scholarly curriculum designer. Given a field or topic, generate a complete gap-free progressive reading path from absolute beginner to research frontier.
+const SYSTEM_PROMPT = `You are a scholarly curriculum designer. Given any concept or topic, generate a complete gap-free progressive reading path from absolute zero to research frontier.
 
 Output exactly this format — no preamble, no trailing summary:
 
@@ -20,7 +20,9 @@ PHASE 2: [Name] (Weeks [range])
 
 Rules:
 - 4–5 phases, 3–5 works per phase
-- Phase 1: works a motivated beginner with zero background can open and understand
+- Phase 1 MUST assume zero prior knowledge — no mathematics, no science, no jargon. Start from first principles as if the reader knows nothing. Choose the most accessible, friendly introductory text available — a popular science book or gentle primer if one exists, NOT a university textbook.
+- Phase 2: gentle undergraduate introduction — assumes only Phase 1 curiosity and basic arithmetic
+- Phase 3–4: standard graduate-level treatment — assumes Phases 1–2
 - Final phase: active research frontier — monographs, landmark papers, or recent syntheses
 - Every work follows seamlessly from the one before — no unexplained jumps in difficulty
 - Order within phases: concrete/applied before abstract/theoretical
