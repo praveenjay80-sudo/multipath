@@ -57,7 +57,10 @@ function NodeRow({ node, depth, openSet, onToggle, onGenerate, modeLabel }) {
             : <span className="text-[9px] text-stone-200">·</span>}
         </button>
 
-        <div className="flex-1 min-w-0 flex items-baseline gap-2">
+        <button
+          onClick={() => onGenerate(`${titleCase(node.name)} (UDC ${node.code})`, 'path')}
+          className="flex-1 min-w-0 flex items-baseline gap-2 text-left hover:underline decoration-stone-300"
+        >
           <span className={`shrink-0 text-[8px] font-mono px-1 py-0.5 text-white ${colorClass}`}>
             {node.code}
           </span>
@@ -71,16 +74,7 @@ function NodeRow({ node, depth, openSet, onToggle, onGenerate, modeLabel }) {
           {node.terms?.length > 0 && (
             <span className="text-[9px] font-mono text-stone-300">{node.terms.length}</span>
           )}
-        </div>
-
-        <div className="shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => onGenerate(titleCase(node.name), 'path')}
-            className="text-[8px] font-mono px-2 py-0.5 bg-stone-900 text-white hover:bg-stone-700 transition-colors"
-          >
-            → {modeLabel}
-          </button>
-        </div>
+        </button>
       </div>
 
       {isOpen && hasChildren && (
@@ -207,16 +201,13 @@ export default function UDCView({ onGenerate }) {
           {searchResults.length === 0
             ? <div className="p-4 text-sm text-stone-400 font-mono">No matches</div>
             : searchResults.map((n, i) => (
-              <div key={i} className="flex items-center gap-3 px-3 py-2 border-b border-stone-50 hover:bg-stone-50 group transition-colors">
+              <button key={i} onClick={() => handleGenerate(`${n.name} (UDC ${n.code})`, mode)}
+                className="w-full flex items-center gap-3 px-3 py-2 border-b border-stone-50 hover:bg-stone-50 text-left transition-colors">
                 <span className={`text-[8px] font-mono px-1 py-0.5 text-white shrink-0 ${CLASS_COLORS[n.code[0]] || 'bg-stone-500'}`}>
                   {n.code}
                 </span>
-                <span className="flex-1 text-sm text-stone-800">{n.name}</span>
-                <button onClick={() => handleGenerate(n.name, mode)}
-                  className="shrink-0 text-[8px] font-mono px-2 py-0.5 bg-stone-900 text-white hover:bg-stone-700 opacity-0 group-hover:opacity-100 transition-opacity">
-                  → {modeLabel}
-                </button>
-              </div>
+                <span className="flex-1 text-sm text-stone-800 hover:underline decoration-stone-300">{n.name}</span>
+              </button>
             ))}
         </div>
       ) : (

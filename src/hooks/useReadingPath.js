@@ -59,7 +59,7 @@ export function useReadingPath() {
           max_tokens: 3000,
           stream: true,
           system: SYSTEM_PROMPT,
-          messages: [{ role: 'user', content: `Generate a progressive reading path for: ${topicName}` }],
+          messages: [{ role: 'user', content: `Generate a progressive reading path for: ${topicName}${topicName.includes('UDC') ? ' — use the UDC classification as context to identify the exact scholarly field and produce a precise, canonical reading progression.' : ''}` }],
         }),
         signal,
       });
