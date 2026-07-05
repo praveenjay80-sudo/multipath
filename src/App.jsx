@@ -36,6 +36,7 @@ import InquiryView from './components/InquiryView';
 import MathExplorerView from './components/MathExplorerView';
 import ConceptsExplorerView from './components/ConceptsExplorerView';
 import KeywordsView from './components/KeywordsView';
+import MSCView from './components/MSCView';
 
 function WorkRow({ w }) {
   return (
@@ -362,6 +363,16 @@ export default function App() {
                 </button>
 
                 <button
+                  onClick={() => setAppMode('msc')}
+                  className={`px-4 py-2.5 text-sm font-mono -mb-px transition-colors ${
+                    appMode === 'msc'
+                      ? 'border-b-2 border-emerald-600 text-emerald-700 font-semibold'
+                      : 'border-b-2 border-transparent text-stone-400 hover:text-emerald-600'
+                  }`}
+                >
+                  MSC Vocabulary
+                </button>
+                <button
                   onClick={() => setAppMode('concepts')}
                   className={`px-4 py-2.5 text-sm font-mono -mb-px transition-colors ${
                     appMode === 'concepts'
@@ -399,6 +410,8 @@ export default function App() {
                   ? "Enter any cross-disciplinary question and see what every field says — each discipline's lens, answer, and key works. Surfaces convergences, tensions, and a synthesis no single field can reach alone."
                   : appMode === 'inquiry'
                   ? 'Enter any field or topic and get the open questions at its frontier — precisely formulated, with what makes each hard, what has been tried, who is working on it, and the best entry point.'
+                  : appMode === 'msc'
+                  ? 'MSC 2020 Mathematics Subject Classification — 15,000+ keywords across 63 fields. Browse by category, drill into subcategories, search any term, and click → to generate a reading list.'
                   : appMode === 'concepts'
                   ? 'The complete OpenAlex concept hierarchy — 65,025 concepts across 6 levels (Domain → Field → Sub → Topic → Concept → Micro). Select any generation mode, browse the tree, and click → on any concept to generate.'
                   : appMode === 'keywords'
@@ -851,6 +864,9 @@ export default function App() {
                 </button>
               </div>
             )}
+
+            {/* MSC Vocabulary */}
+            {appMode === 'msc' && <MSCView onGenerate={handleConceptGenerate} />}
 
             {/* OpenAlex Concept Explorer */}
             {appMode === 'concepts' && (
