@@ -26,9 +26,10 @@ Deploy command: `railway up`
 6. **Consilience** (`appMode === 'consilience'`) — cross-disciplinary synthesis: each field's lens, answer, convergences, tensions
 7. **The Inquiry** (`appMode === 'inquiry'`) — open frontier questions: formulated, why hard, what's been tried, entry point
 8. **Spectrum** (`appMode === 'spectrum'`) — real-life questions whose complete answer genuinely spans multiple disciplines (generated from a topic, tagged with discipline + tier, or typed directly); two-stage pipeline: (1) sonnet-5 generates 6 candidate questions with a "why it spans" justification, (2) picking/typing one triggers OSP + Semantic Scholar harvest + sonnet-5 concept breakdown (plain language, comprehensive, uncapped) + staged reading list (uncapped, covers every discipline's perspective, reuses `ReadingOrderView` unmodified) + a 4-6 paragraph synthesized ANSWER that explicitly names concepts and cites works by title
-9. **Field Intelligence** (`appMode === 'intelligence'`) — 3-tab deep analysis: Landscape (all schools of thought), Audit (hidden assumptions + paradigm), Bibliography (exhaustive annotated bibliography with reading order + click-to-expand synopsis)
-10. **Math Universe** (`appMode === 'math'`) — browse 15 math domains → subfields → topic chips → ordered reading sequence + beginner explanations
-11. **Concept Map** (`appMode === 'concepts'`) — 4-tier static hierarchy of 2,575 concepts across 170 groups covering all of human knowledge (science, mathematics, medicine, law, humanities, business); loaded instantly from `public/data/concept-map.json` (no API calls for hierarchy); two-column layout: chips left, sticky 348px side panel right; side panel shows reading path OR explanation with PATH/EXPLAIN tabs when both are active
+9. **Noesis** (`appMode === 'noesis'`) — the six-station map of what fully understanding a topic requires: Orient (question + prerequisites), Grasp (concepts, intuition, notation, method), Prove (works, examples, alternative formulations), Contextualize (thinkers, schools, history, debates), Apply (cases, boundaries, misconceptions), Extend (postrequisites, open questions, synthesis) — plus a Level Line (which of the 4 tiers the topic sits at) and an Angle Line (every discipline a complete understanding must be approached from, uncapped). Rendered as a transit-map diagram (`NoesisView.jsx`): vertical trunk line, alternating left/right station cards, dot markers, accent triad depth `#24478C` / level `#B0701F` / angle `#1C7A6E`
+10. **Field Intelligence** (`appMode === 'intelligence'`) — 3-tab deep analysis: Landscape (all schools of thought), Audit (hidden assumptions + paradigm), Bibliography (exhaustive annotated bibliography with reading order + click-to-expand synopsis)
+11. **Math Universe** (`appMode === 'math'`) — browse 15 math domains → subfields → topic chips → ordered reading sequence + beginner explanations
+12. **Concept Map** (`appMode === 'concepts'`) — 4-tier static hierarchy of 2,575 concepts across 170 groups covering all of human knowledge (science, mathematics, medicine, law, humanities, business); loaded instantly from `public/data/concept-map.json` (no API calls for hierarchy); two-column layout: chips left, sticky 348px side panel right; side panel shows reading path OR explanation with PATH/EXPLAIN tabs when both are active
 
 ## File Structure
 
@@ -42,7 +43,8 @@ Deploy command: `railway up`
 - `src/hooks/useReadingOrder.js` — Claude Haiku: sequences canon into gap-free reading plan, auto-triggers on canon complete
 - `src/hooks/useReverseMode.js` — Claude Sonnet 5: maps prerequisites + postrequisites for any paper/book
 - `src/hooks/useCurriculumMode.js` — two-phase: (1) harvest OSP, (2) Claude Sonnet 5 builds curriculum
-- `src/hooks/useSpectrum.js` — two-stage: (1) Claude Sonnet 5 generates 6 candidate real-life transdisciplinary questions (no harvest), (2) selecting/typing a question triggers OSP + Semantic Scholar harvest then Claude Sonnet 5 concept breakdown + staged reading list in one streamed call; local `streamClaude()` helper shared between both stages
+- `src/hooks/useSpectrum.js` — two-stage: (1) Claude Sonnet 5 generates 6 candidate real-life transdisciplinary questions (no harvest), (2) selecting/typing a question triggers OSP + Semantic Scholar harvest then one streamed Claude Sonnet 5 call producing concept breakdown (uncapped) + staged reading list (uncapped) + a synthesized ANSWER section; local `streamClaude()` helper shared between both stages
+- `src/hooks/useNoesis.js` — single-stage: OSP + Semantic Scholar harvest keyed by topic, then one streamed Claude Sonnet 5 call (28000 max_tokens) producing the six-station understanding map + Level/Angle metadata in one document; same hand-rolled `streamClaude()` SSE loop shape as `useSpectrum.js`
 
 ### Utils
 - `src/utils/parseCanon.js` — markdown → structured canon (sections, works)
@@ -50,6 +52,7 @@ Deploy command: `railway up`
 - `src/utils/parseCurriculum.js` — TOPIC/COURSE N/LEVEL/TOTAL CURRICULUM format parser
 - `src/utils/parseSpectrumQuestions.js` — QUESTION N/DISCIPLINES/SPANS format parser for Spectrum's candidate question list
 - `src/utils/parseSpectrumConcepts.js` — QUESTION/CONCEPT/DISCIPLINE/TIER/EXPLANATION/RELEVANCE format parser; stops at `READING LIST:`; also exports `extractReadingListSection()` (slices the raw PHASE N text between `READING LIST:` and `ANSWER:`, handed to `ReadingOrderView`) and `extractAnswerParagraphs()` (splits the text after `ANSWER:` into paragraphs)
+- `src/utils/parseNoesis.js` — generic `TOPIC`/`TIER`/`LEVEL WHY`/`ANGLES` + `STATION N: NAME` block parser; each station's fields are captured into a `fields` map keyed by whatever label appears (no per-station branching); exports `splitSemicolonList()` (shared `label — detail` splitter used for `CONCEPTS`/`WORKS`/`THINKERS`/`SCHOOLS`/`CASES`/`MISCONCEPTIONS`/`ANGLES`)
 - `src/utils/scoreWorks.js` — composite scoring: papers (citation-heavy) vs books (teaching score + editions)
 - `src/utils/harvestData.js` — 8-source parallel harvest (OpenAlex ×3, Semantic Scholar ×2, Google Books, Open Library, Open Syllabus)
 - `src/utils/syllabusHarvest.js` — OSP API: `syllabusSearch(topic, limit)` + `syllabusHarvest(topic)` (4 parallel queries, dedup, top 80)
@@ -73,6 +76,8 @@ Deploy command: `railway up`
 - `src/components/SpectrumInput.jsx` — topic textbox (generate candidate questions) with a toggle to type a question directly instead
 - `src/components/SpectrumQuestionsView.jsx` — candidate question cards with discipline+tier chips and "why it spans" line; click to select and trigger the answer pipeline
 - `src/components/SpectrumView.jsx` — two-column result: concept cards (plain explanation + relevance) left, `ReadingOrderView` (reused unmodified) right
+- `src/components/NoesisInput.jsx` — plain topic textbox, button reads "Map It"
+- `src/components/NoesisView.jsx` — transit-map diagram: vertical trunk line with alternating left/right station cards and dot markers (pure Tailwind utility classes + inline style for the three accent hex colors, no custom CSS block, no custom fonts — matches every other View component's implementation style), followed by a Level Line ladder (4 fixed tiers, topic's own tier highlighted) and an Angle Line (the topic's own generated disciplines)
 - `src/components/Sidebar.jsx` — 3-level field nav + history
 - `src/components/ApiKeyInput.jsx` — Anthropic key input (localStorage `canon_api_key`)
 - `src/components/ActionBar.jsx` — copy/save/regenerate/new
