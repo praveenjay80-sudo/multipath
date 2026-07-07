@@ -91,7 +91,17 @@ export function parseSpectrumConcepts(text) {
 
 export function extractReadingListSection(text) {
   if (!text) return '';
-  const idx = text.search(/READING LIST:\s*/i);
-  if (idx === -1) return '';
-  return text.slice(idx).replace(/^READING LIST:\s*/i, '');
+  const start = text.match(/^READING LIST:\s*/im);
+  if (!start) return '';
+  const rest = text.slice(start.index + start[0].length);
+  const answerStart = rest.match(/^ANSWER:\s*/im);
+  return answerStart ? rest.slice(0, answerStart.index) : rest;
+}
+
+export function extractAnswerParagraphs(text) {
+  if (!text) return [];
+  const start = text.match(/^ANSWER:\s*/im);
+  if (!start) return [];
+  const rest = text.slice(start.index + start[0].length);
+  return rest.split(/\n\s*\n/).map(p => clean(p.replace(/\n/g, ' '))).filter(Boolean);
 }

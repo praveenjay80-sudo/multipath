@@ -11,7 +11,7 @@ const CONCEPT_COLORS = [
   { border: 'border-rose-200',    badge: 'bg-rose-100 text-rose-700'       },
 ];
 
-export default function SpectrumView({ parsed, readingListText, isStreaming }) {
+export default function SpectrumView({ parsed, readingListText, answerParagraphs, isStreaming }) {
   if (!parsed) return null;
 
   const hasContent = parsed.question || parsed.concepts.length > 0;
@@ -33,6 +33,18 @@ export default function SpectrumView({ parsed, readingListText, isStreaming }) {
           <p className="text-xs font-mono text-stone-400 mb-1">Spectrum</p>
           <h2 className="text-xl font-semibold text-stone-900 tracking-tight leading-snug max-w-2xl">{parsed.question}</h2>
           <div className="mt-4 h-px bg-stone-200" />
+        </div>
+      )}
+
+      {answerParagraphs && answerParagraphs.length > 0 && (
+        <div className="mb-10">
+          <p className="text-xs font-mono text-stone-400 mb-3">Answer</p>
+          <div className="space-y-4 max-w-3xl">
+            {answerParagraphs.map((p, i) => (
+              <p key={i} className="text-sm text-stone-800 leading-relaxed">{p}</p>
+            ))}
+          </div>
+          <div className="mt-8 h-px bg-stone-200" />
         </div>
       )}
 

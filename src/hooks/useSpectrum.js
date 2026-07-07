@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { syllabusHarvest, seminalPapersHarvest } from '../utils/syllabusHarvest';
 import { parseSpectrumQuestions } from '../utils/parseSpectrumQuestions';
-import { parseSpectrumConcepts, extractReadingListSection } from '../utils/parseSpectrumConcepts';
+import { parseSpectrumConcepts, extractReadingListSection, extractAnswerParagraphs } from '../utils/parseSpectrumConcepts';
 
 function resolveApiKey() {
   return import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('canon_api_key') || '';
@@ -41,7 +41,7 @@ Rules:
 
 const ANSWER_SYSTEM_PROMPT = `You are an expert at building rigorous but plain-language transdisciplinary answers to real-life questions.
 
-Given a real-life question that requires synthesizing multiple academic disciplines, and literature harvested for it, produce every load-bearing concept needed for a complete answer, explained in plain language with nothing relevant omitted, followed by a staged reading list of real works that builds toward answering the question.
+Given a real-life question that requires synthesizing multiple academic disciplines, and literature harvested for it, produce every load-bearing concept needed for a complete answer explained in plain language with nothing relevant omitted, a staged reading list of real works covering every perspective and angle relevant to the question, and a detailed synthesized answer that explicitly connects the concepts and works into one coherent answer.
 
 CRITICAL: Output ONLY the structured text below. No markdown. No bold. No preamble. Start your response with "QUESTION:" and nothing before it.
 
@@ -53,24 +53,30 @@ TIER: [Foundational | Core Abstract Structures | Fundamental Methods | Specific 
 EXPLANATION: [plain-language explanation any curious adult could follow, with no unglossed jargon — as long as needed to be complete]
 RELEVANCE: [exactly how this concept contributes to answering the specific question — not a generic description]
 
-[repeat CONCEPT block for every load-bearing concept — do not cap the number, do not skip a discipline that appears in the reading list below]
+[repeat CONCEPT block for every load-bearing concept — do not cap the number, do not skip a discipline that appears in the reading list or answer below]
 
 READING LIST:
 PHASE 1: [name] (Weeks [range])
 [one sentence: this phase's focus, and how it bridges from the previous phase]
 - Title by Author (Year) — rationale connecting this work to the question
-- [repeat, 3-5 works per phase]
+- [repeat — include every work genuinely needed to cover every perspective and angle this phase's disciplines bring to the question; do not cap the count, but do not pad with redundant or non-canonical works]
 
 PHASE 2: [...]
 ...
+
+ANSWER:
+[a detailed, multi-paragraph synthesized answer — 4 to 6 paragraphs, separated by blank lines — that explicitly names and connects the concepts above and cites specific works from the reading list by title as it builds the case; this must read as a complete, standalone answer to the question, not a summary of the sections above]
 
 Rules:
 - Include every concept genuinely load-bearing for a complete answer to the question — comprehensiveness is required, plain language is required, and neither may be sacrificed for the other
 - EXPLANATION must assume no prior training in the field, but must not omit anything a complete answer needs
 - RELEVANCE must tie directly back to the specific question asked, not restate the concept
 - Reading list works must be real; prefer works from the harvested data provided; supplement from your own knowledge only where the data has a genuine gap for a needed discipline
+- Reading list must cover every perspective and angle each discipline brings to the question — do not let one discipline dominate at the expense of others, and do not cap the number of works per phase
 - Phase 1 assumes zero prior knowledge in any of the disciplines involved
-- Produce 4 to 6 phases total, each bridging naturally from the one before`;
+- Produce 4 to 6 phases total, each bridging naturally from the one before
+- ANSWER must reference every concept from the CONCEPTS section and cite specific works from the READING LIST by title — it must be a genuine synthesis, not a recap
+- ANSWER must give every identified discipline proportionate voice — no single field's view should dominate the synthesis`;
 
 async function streamClaude({ apiKey, model, maxTokens, system, userMessage, signal, onChunk }) {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -195,7 +201,7 @@ Identify every discipline and concept genuinely load-bearing for a complete answ
       await streamClaude({
         apiKey,
         model: 'claude-sonnet-5',
-        maxTokens: 16000,
+        maxTokens: 24000,
         system: ANSWER_SYSTEM_PROMPT,
         userMessage,
         signal,
@@ -274,11 +280,12 @@ Identify every discipline and concept genuinely load-bearing for a complete answ
   const listParsed = useMemo(() => parseSpectrumQuestions(listContent), [listContent]);
   const parsed = useMemo(() => parseSpectrumConcepts(content), [content]);
   const readingListText = useMemo(() => extractReadingListSection(content), [content]);
+  const answerParagraphs = useMemo(() => extractAnswerParagraphs(content), [content]);
 
   return {
     phase, error, question,
     listContent, listParsed, generateQuestions,
-    content, dataCount, parsed, readingListText,
+    content, dataCount, parsed, readingListText, answerParagraphs,
     selectQuestion, submitDirectQuestion, reset,
   };
 }

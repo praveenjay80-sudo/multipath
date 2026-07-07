@@ -936,7 +936,7 @@ export default function App() {
               </div>
             )}
             {appMode === 'spectrum' && (spectrum.phase === 'generating' || spectrum.phase === 'complete') && spectrum.parsed && (
-              <SpectrumView parsed={spectrum.parsed} readingListText={spectrum.readingListText} isStreaming={spectrum.phase === 'generating'} />
+              <SpectrumView parsed={spectrum.parsed} readingListText={spectrum.readingListText} answerParagraphs={spectrum.answerParagraphs} isStreaming={spectrum.phase === 'generating'} />
             )}
             {appMode === 'spectrum' && spectrum.phase === 'complete' && (
               <div className="mt-8 pt-6 border-t border-stone-200 flex gap-2">
