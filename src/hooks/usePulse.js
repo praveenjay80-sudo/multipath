@@ -115,7 +115,9 @@ STAGE: <stage name>
 - Title by Author (Year) — rationale
 ...
 
-If you don't know of a genuine work for a stage, write exactly "- None known" under that stage instead of inventing one. Use the exact stage names given, in the exact order given.`;
+If you don't know of a genuine work for a stage, write exactly "- None known" under that stage instead of inventing one. Use the exact stage names given, in the exact order given.
+
+Plain text only — no markdown bold/italic (**...**, *...*), no headers (#), no numbered lists. Every stage line must start with the literal text "STAGE: " and every entry line must start with a literal "- ", exactly as shown above.`;
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -144,7 +146,10 @@ If you don't know of a genuine work for a stage, write exactly "- None known" un
 // "Title by Author (Year) — rationale" mirrors the citation format used
 // throughout the rest of the app's Claude-generated reading lists.
 function parseReadingOrderEntry(line) {
-  const [head, ...rest] = line.split(/\s+—\s+/);
+  // Prefer the em-dash separator asked for; fall back to a plain " - " (with
+  // spaces on both sides, so it won't fire on a hyphenated word in a title).
+  let [head, ...rest] = line.split(/\s+—\s+/);
+  if (!rest.length && / - /.test(line)) [head, ...rest] = line.split(/ - /);
   const rationale = rest.join(' — ').trim();
   const yearMatch = head.match(/\((\d{4})\)\s*$/);
   const year = yearMatch ? yearMatch[1] : null;
@@ -156,20 +161,39 @@ function parseReadingOrderEntry(line) {
   return { title, authors, year, rationale };
 }
 
+// Strips markdown the model adds despite being told not to (bold/italic
+// emphasis, heading hashes) — without this, a single "**STAGE: ...**" line
+// fails the literal STAGE: match, `current` never gets set, and every entry
+// after it gets silently dropped (confirmed: an entire real, comprehensive
+// response for "Stochastic processes and statistical mechanics" parsed to
+// six empty stages because of exactly this).
+function stripLineMarkdown(line) {
+  return line
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/^#{1,6}\s*/, '')
+    .trim();
+}
+
 function parseReadingOrder(text) {
   const byNormalized = new Map(READING_STAGES.map(s => [normalizeStageName(s), s]));
   const groups = {};
   for (const s of READING_STAGES) groups[s] = [];
   let current = null;
   for (const raw of (text || '').split('\n')) {
-    const line = raw.trim();
+    const line = stripLineMarkdown(raw);
+    if (!line) continue;
     const stageMatch = line.match(/^STAGE:\s*(.+)$/i);
     if (stageMatch) {
-      current = byNormalized.get(normalizeStageName(stageMatch[1])) || null;
+      current = byNormalized.get(normalizeStageName(stageMatch[1])) || current;
       continue;
     }
-    if (!current || !line.startsWith('-')) continue;
-    const entryText = line.replace(/^-\s*/, '');
+    // Bullet markers: "-", "*", "•", or a leading "1." / "1)" — the model was
+    // told to use "- " but tolerate the common alternates rather than drop
+    // an otherwise-good entry over a formatting mismatch.
+    const bulletMatch = line.match(/^(?:[-*•]|\d+[.)])\s*(.+)$/);
+    if (!current || !bulletMatch) continue;
+    const entryText = bulletMatch[1].trim();
     if (/^none known$/i.test(entryText)) continue;
     const entry = parseReadingOrderEntry(entryText);
     if (entry) groups[current].push(entry);
