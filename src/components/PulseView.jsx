@@ -344,14 +344,21 @@ export default function PulseView({
                 </div>
               ) : stageGroups ? (
                 <>
-                  {READING_STAGES.filter(s => stageGroups.groups.get(s).length > 0).map(stage => (
-                    <div key={stage} className="pt-4 first:pt-0">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-600 mb-1">{stage}</p>
-                      {stageGroups.groups.get(stage).map((item, i) => (
-                        <ItemRow key={i} item={item} renderMetric={WORK_SORTS.citations.metric} renderLink={w => w.oaUrl || (w.doi ? w.doi : null)} renderBadges={workBadges} />
-                      ))}
-                    </div>
-                  ))}
+                  {READING_STAGES.map(stage => {
+                    const stageWorks = stageGroups.groups.get(stage);
+                    return (
+                      <div key={stage} className="pt-4 first:pt-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-600 mb-1">{stage}</p>
+                        {stageWorks.length === 0 ? (
+                          <p className="text-xs text-stone-300 pb-2">No work in this set fit this stage.</p>
+                        ) : (
+                          stageWorks.map((item, i) => (
+                            <ItemRow key={i} item={item} renderMetric={WORK_SORTS.citations.metric} renderLink={w => w.oaUrl || (w.doi ? w.doi : null)} renderBadges={workBadges} />
+                          ))
+                        )}
+                      </div>
+                    );
+                  })}
                   {stageGroups.unclassified.length > 0 && (
                     <div className="pt-4">
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400 mb-1">Unclassified</p>
