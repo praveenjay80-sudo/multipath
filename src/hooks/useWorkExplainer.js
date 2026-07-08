@@ -41,7 +41,9 @@ Respond in exactly this structure:
 
   if (!res.ok) throw new Error(`API error ${res.status}`);
   const data = await res.json();
-  return data.content[0]?.text || '';
+  // content[0] isn't necessarily the text block (e.g. a thinking block can
+  // precede it) — find the text block explicitly rather than assume index 0.
+  return (data.content || []).find(b => b.type === 'text')?.text || '';
 }
 
 function entryKey(title) {

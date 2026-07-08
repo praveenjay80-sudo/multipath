@@ -7,6 +7,17 @@ function resolveApiKey() {
   return import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('canon_api_key') || '';
 }
 
+// Every other Claude caller in this app streams and explicitly filters for
+// text_delta events, skipping any other content-block type (e.g. thinking).
+// These are the app's only non-streaming calls, and grabbing content[0]
+// blindly assumes the first block is always the text block — if a non-text
+// block (like extended thinking) precedes it, content[0].text is undefined
+// and everything downstream silently parses nothing. Confirmed as the cause
+// of generateReadingOrder repeatedly parsing to all-empty on real topics.
+function extractText(data) {
+  return (data.content || []).find(b => b.type === 'text')?.text || '';
+}
+
 // Last line of defense for the text-search fallback path: even with a
 // subfield filter and a boolean-AND query, word overlap can still let through
 // a work that's genuinely unrelated (confirmed: Lions' calculus-of-variations
@@ -46,7 +57,7 @@ List only the numbers of works that are genuinely, substantively about this topi
     });
     if (!res.ok) return works;
     const data = await res.json();
-    const text = (data.content?.[0]?.text || '').trim();
+    const text = extractText(data).trim();
     if (/^NONE$/i.test(text)) return [];
     const keep = new Set(text.split('\n').map(l => parseInt(l.trim(), 10)).filter(n => !Number.isNaN(n)));
     if (!keep.size) return works;
@@ -137,7 +148,7 @@ Plain text only — no markdown bold/italic (**...**, *...*), no headers (#), no
     });
     if (!res.ok) return null;
     const data = await res.json();
-    return parseReadingOrder(data.content?.[0]?.text);
+    return parseReadingOrder(extractText(data));
   } catch {
     return null;
   }

@@ -37,7 +37,9 @@ export function useTaxonomy() {
 
       if (!response.ok) { setError('Failed to analyse topic'); return; }
       const data = await response.json();
-      const text = data.content?.[0]?.text || '';
+      // content[0] isn't necessarily the text block (e.g. a thinking block can
+      // precede it) — find the text block explicitly rather than assume index 0.
+      const text = (data.content || []).find(b => b.type === 'text')?.text || '';
       const jsonMatch = text.match(/\{[\s\S]+\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);

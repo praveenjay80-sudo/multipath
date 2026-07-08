@@ -33,7 +33,9 @@ List 15-20 specific research topics within this subfield. One per line, no numbe
 
   if (!res.ok) throw new Error(`API error ${res.status}`);
   const data = await res.json();
-  const text = data.content[0]?.text || '';
+  // content[0] isn't necessarily the text block (e.g. a thinking block can
+  // precede it) — find the text block explicitly rather than assume index 0.
+  const text = (data.content || []).find(b => b.type === 'text')?.text || '';
   return [...new Set(
     text
       .split('\n')
