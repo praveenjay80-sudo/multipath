@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { fetchTopicWorks, fetchTopicWorksByText, fetchStageBackfillWorks, resolveOpenAlexTopicId, aggregateTopAuthors, fetchAuthorStats } from '../utils/pulseOpenAlex';
+import { fetchTopicWorks, fetchTopicWorksByText, resolveOpenAlexTopicId, aggregateTopAuthors, fetchAuthorStats } from '../utils/pulseOpenAlex';
 
 const WORKER_BASE = 'https://canon-enrichment.canonworks.workers.dev';
 
@@ -69,7 +69,7 @@ export const READING_STAGES = [
   'Philosophical Frameworks',
 ];
 
-// One-line definitions so classification is consistent rather than guessed
+// One-line definitions so generation is consistent rather than guessed
 // from the stage name alone — without these, "Advanced Concepts" vs.
 // "Specialized Topics" vs. "Mathematical Rigor" is ambiguous even to a human.
 const STAGE_DEFINITIONS = {
@@ -85,61 +85,37 @@ function normalizeStageName(s) {
   return s.toLowerCase().replace(/[^a-z0-9\s&]/g, '').trim();
 }
 
-// Shared "<number>: <stage name>" parser — tolerant of case/punctuation drift
-// in Claude's response (e.g. "foundational textbooks.") but still requires
-// the full normalized name to match one of the six exactly, no partial credit.
-function parseStageMap(text) {
-  const byNormalized = new Map(READING_STAGES.map(s => [normalizeStageName(s), s]));
-  const map = {};
-  for (const line of (text || '').split('\n')) {
-    const m = line.match(/^\s*(\d+)\s*:\s*(.+?)\s*$/);
-    if (!m) continue;
-    const idx = parseInt(m[1], 10);
-    const stage = byNormalized.get(normalizeStageName(m[2]));
-    if (!Number.isNaN(idx) && stage) map[idx] = stage;
-  }
-  return map;
-}
-
-// Search-query hints used to backfill a stage that comes up empty after
-// classifying the citation-ranked set — citation rank has nothing to do with
-// whether a work is historically-intuitive or philosophically-framed, so a
-// stage can be genuinely well-represented in the literature while still
-// missing entirely from the top-N-by-citations pool this app otherwise fetches.
-const STAGE_QUERY_HINTS = {
-  'Historical Context & Intuition': 'history introduction overview',
-  'Foundational Textbooks': 'textbook introduction',
-  'Mathematical Rigor': 'rigorous theory foundations',
-  'Advanced Concepts': 'advanced theory',
-  'Specialized Topics': 'special topics applications',
-  'Philosophical Frameworks': 'philosophy foundations interpretation',
-};
-
-function dedupeKey(w) {
-  return w.doi || w.title.toLowerCase().slice(0, 60);
-}
-
-// None of these six stages are derivable from OpenAlex's numeric metadata
-// (citations, FWCI, type, venue) — placing a specific work requires judging
-// what it's actually about, which needs Claude. Unlike claudeValidateWorks,
-// this only runs when the user explicitly switches to the Reading Order view
-// (never on the default load), so Pulse's data stays AI-free by default.
-async function classifyWorksByStage(topicName, works) {
+// Chasing precision through OpenAlex classification (real works, but
+// forced into whatever the citation-ranked set happened to contain) kept
+// hitting the same wall: citation rank has nothing to do with pedagogical
+// role, and word-overlap search kept letting unrelated papers through no
+// matter how the query was tightened. This generates the reading list
+// directly from Claude's own knowledge instead — comprehensive per stage,
+// not constrained to a pre-fetched database pool. The tradeoff is explicit
+// and disclosed in the UI: these works are not cross-checked against
+// OpenAlex, so verify anything load-bearing yourself (the Google Scholar
+// links on each entry are a real, deterministic search — not AI-generated
+// — for exactly that purpose).
+async function generateReadingOrder(topicName) {
   const apiKey = resolveApiKey();
-  if (!apiKey || !works.length) return null;
+  if (!apiKey) return null;
 
-  const list = works.map((w, i) => `${i}. ${w.title}${w.authors ? ` — ${w.authors}` : ''}${w.year ? ` (${w.year})` : ''}`).join('\n');
-  const stageList = READING_STAGES.map(s => `${s} (${STAGE_DEFINITIONS[s]})`).join('\n');
-  const system = `You place academic works into the stage where a learner would naturally encounter them while working through a topic, in this fixed pedagogical order:\n${stageList}\n\nAssign each work to exactly one stage — the single best fit, not every stage it could arguably touch.`;
+  const stageBlock = READING_STAGES.map(s => `STAGE: ${s}\n(${STAGE_DEFINITIONS[s]})`).join('\n\n');
+  const system = `You build comprehensive, pedagogically-ordered reading lists for academic topics. Only name real, verifiable books and papers you are confident actually exist, with accurate author and year. Never invent or approximate a title, author, or year you are not sure of — it is far better to list fewer genuinely real works in a stage than to pad it with an invented one.`;
   const user = `Topic: "${topicName}"
 
-Works:
-${list}
+Build a comprehensive reading list for this topic, organized into exactly these six pedagogical stages in this order:
 
-For every work number, output one line in exactly this format:
-<number>: <stage name>
+${stageBlock}
 
-Use only these exact stage names, spelled exactly as given: ${READING_STAGES.join(' / ')}`;
+For each stage, list every genuinely relevant real work you know of — no arbitrary cap, but don't pad with marginal or invented entries. Format:
+
+STAGE: <stage name>
+- Title by Author (Year) — one-sentence rationale for why it belongs in this specific stage
+- Title by Author (Year) — rationale
+...
+
+If you don't know of a genuine work for a stage, write exactly "- None known" under that stage instead of inventing one. Use the exact stage names given, in the exact order given.`;
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -151,71 +127,54 @@ Use only these exact stage names, spelled exactly as given: ${READING_STAGES.joi
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 800,
+        model: 'claude-sonnet-5',
+        max_tokens: 6000,
         system,
         messages: [{ role: 'user', content: user }],
       }),
     });
     if (!res.ok) return null;
     const data = await res.json();
-    const map = parseStageMap(data.content?.[0]?.text);
-    return Object.keys(map).length ? map : null;
+    return parseReadingOrder(data.content?.[0]?.text);
   } catch {
     return null;
   }
 }
 
-// Backfill candidates come from a search that's already precision-constrained
-// (see fetchStageBackfillWorks) — but that's a query-level guarantee, not a
-// judgment call, and it's a second, independent search separate from the one
-// that produced the main pool, so it gets its own relevance check rather than
-// trusting query construction alone. Combines "is this genuinely about the
-// topic" and "does it fit the stage it was fetched for" into one call instead
-// of two, using the fetched-for stage (embedded in brackets) as the candidate
-// Claude must independently confirm — not just accept at face value.
-async function classifyBackfillCandidates(topicName, candidates) {
-  const apiKey = resolveApiKey();
-  if (!apiKey || !candidates.length) return {};
+// "Title by Author (Year) — rationale" mirrors the citation format used
+// throughout the rest of the app's Claude-generated reading lists.
+function parseReadingOrderEntry(line) {
+  const [head, ...rest] = line.split(/\s+—\s+/);
+  const rationale = rest.join(' — ').trim();
+  const yearMatch = head.match(/\((\d{4})\)\s*$/);
+  const year = yearMatch ? yearMatch[1] : null;
+  const withoutYear = (yearMatch ? head.slice(0, yearMatch.index) : head).trim();
+  const byIdx = withoutYear.toLowerCase().lastIndexOf(' by ');
+  const title = byIdx >= 0 ? withoutYear.slice(0, byIdx).trim() : withoutYear;
+  const authors = byIdx >= 0 ? withoutYear.slice(byIdx + 4).trim() : '';
+  if (!title) return null;
+  return { title, authors, year, rationale };
+}
 
-  const list = candidates.map((w, i) =>
-    `${i}. [fetched for: ${w._targetStage}] ${w.title}${w.authors ? ` — ${w.authors}` : ''}${w.year ? ` (${w.year})` : ''}`
-  ).join('\n');
-  const system = `You verify candidates found by a targeted backfill search for a reading-sequence gap. For each, confirm BOTH that it is genuinely, substantively about the given topic AND that it truly fits the stage shown in brackets — reject anything off-topic or mismatched even if it superficially matched the search keywords.`;
-  const user = `Topic: "${topicName}"
-
-Candidates:
-${list}
-
-For each number that passes both checks, output one line:
-<number>: <the stage name from its brackets, spelled exactly>
-
-Omit any number that fails either check entirely. If none pass, respond with exactly: NONE`;
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 500,
-        system,
-        messages: [{ role: 'user', content: user }],
-      }),
-    });
-    if (!res.ok) return {};
-    const data = await res.json();
-    const text = (data.content?.[0]?.text || '').trim();
-    if (/^NONE$/i.test(text)) return {};
-    return parseStageMap(text);
-  } catch {
-    return {};
+function parseReadingOrder(text) {
+  const byNormalized = new Map(READING_STAGES.map(s => [normalizeStageName(s), s]));
+  const groups = {};
+  for (const s of READING_STAGES) groups[s] = [];
+  let current = null;
+  for (const raw of (text || '').split('\n')) {
+    const line = raw.trim();
+    const stageMatch = line.match(/^STAGE:\s*(.+)$/i);
+    if (stageMatch) {
+      current = byNormalized.get(normalizeStageName(stageMatch[1])) || null;
+      continue;
+    }
+    if (!current || !line.startsWith('-')) continue;
+    const entryText = line.replace(/^-\s*/, '');
+    if (/^none known$/i.test(entryText)) continue;
+    const entry = parseReadingOrderEntry(entryText);
+    if (entry) groups[current].push(entry);
   }
+  return groups;
 }
 
 // Google Scholar has no public API, and SerpAPI (the paid proxy for it) does not
@@ -287,12 +246,10 @@ export function usePulse() {
   const [scholar, setScholar] = useState([]);
   const [scholarFailed, setScholarFailed] = useState(false);
   const [scholarLoading, setScholarLoading] = useState(false);
-  const [readingStageGroups, setReadingStageGroups] = useState(null); // { [stage]: works[] }
-  const [readingStagesUnclassified, setReadingStagesUnclassified] = useState([]);
+  const [readingStageGroups, setReadingStageGroups] = useState(null); // { [stage]: entries[] }
   const [readingStagesLoading, setReadingStagesLoading] = useState(false);
   const [readingStagesFailed, setReadingStagesFailed] = useState(false);
   const cancelRef = useRef({ aborted: false });
-  const topicMetaRef = useRef({ resolvedId: null, subfieldId: null });
 
   const hasScholarKey = !!localStorage.getItem('canon_serp_key');
 
@@ -311,7 +268,6 @@ export function usePulse() {
     setScholarFailed(false);
     setWasClaudeValidated(false);
     setReadingStageGroups(null);
-    setReadingStagesUnclassified([]);
     setReadingStagesFailed(false);
 
     const serpKey = localStorage.getItem('canon_serp_key') || '';
@@ -328,7 +284,6 @@ export function usePulse() {
       const resolvedId = topicId || await resolveOpenAlexTopicId(name);
       if (token.aborted) return;
       setIsTextMatch(!resolvedId);
-      topicMetaRef.current = { resolvedId, subfieldId };
 
       let [works, scholarOutcome] = await Promise.all([
         resolvedId ? fetchTopicWorks(resolvedId, 30) : fetchTopicWorksByText(name, 30, subfieldId),
@@ -384,83 +339,19 @@ export function usePulse() {
 
   // Only called when the user explicitly switches the Works panel to the
   // Reading Order view — cached per topic (readingStageGroups stays null
-  // until then) so picking a topic never runs this by default.
+  // until then) so picking a topic never runs this by default. Generates
+  // directly from Claude's own knowledge (see generateReadingOrder) rather
+  // than classifying a pre-fetched OpenAlex pool — deliberate, per repeated
+  // precision issues with database-constrained classification.
   const loadReadingStages = useCallback(async () => {
-    if (readingStageGroups || readingStagesLoading || !mostCited.length) return;
+    if (readingStageGroups || readingStagesLoading || !topicName) return;
     setReadingStagesLoading(true);
     setReadingStagesFailed(false);
-
-    const { resolvedId, subfieldId } = topicMetaRef.current;
-    const seen = new Set(mostCited.map(dedupeKey));
-
-    // The default citation-ranked fetch skews toward papers — explicitly pull
-    // books too, so "Foundational Textbooks" has real candidates to classify
-    // into rather than relying on one happening to be in the top-30-by-citations.
-    const supplementalBooks = resolvedId
-      ? await fetchTopicWorks(resolvedId, 15, 'book')
-      : await fetchTopicWorksByText(topicName, 15, subfieldId, 'book');
-    const pool = [...mostCited];
-    for (const b of supplementalBooks) {
-      const key = dedupeKey(b);
-      if (!seen.has(key)) { seen.add(key); pool.push(b); }
-    }
-
-    const map = await classifyWorksByStage(topicName, pool);
-    if (!map) {
-      setReadingStagesFailed(true);
-      setReadingStagesLoading(false);
-      return;
-    }
-
-    const groups = {};
-    for (const s of READING_STAGES) groups[s] = [];
-    const unclassified = [];
-    pool.forEach((w, i) => {
-      const stage = map[i];
-      if (stage) groups[stage].push(w);
-      else unclassified.push(w);
-    });
-
-    // A stage can be empty not because no such work exists, but because
-    // citation rank has nothing to do with a work's pedagogical role — go
-    // looking specifically for that stage's character rather than leaving it
-    // blank. Runs in parallel, only for stages that actually came up empty.
-    const emptyStages = READING_STAGES.filter(s => groups[s].length === 0);
-    if (emptyStages.length) {
-      const perStage = await Promise.all(emptyStages.map(async stage => {
-        const types = stage === 'Foundational Textbooks' ? 'book' : 'article|book';
-        const candidates = await fetchStageBackfillWorks(topicName, STAGE_QUERY_HINTS[stage], 8, subfieldId, types);
-        return { stage, candidates };
-      }));
-
-      const backfillCandidates = [];
-      for (const { stage, candidates } of perStage) {
-        for (const c of candidates) {
-          const key = dedupeKey(c);
-          if (!seen.has(key)) { seen.add(key); backfillCandidates.push({ ...c, _targetStage: stage }); }
-        }
-      }
-
-      if (backfillCandidates.length) {
-        // Relevance + stage-fit are both re-checked here (see
-        // classifyBackfillCandidates) — fetchStageBackfillWorks' query already
-        // requires every topic word present, but that's a query-level
-        // guarantee, not a substitute for an independent judgment call.
-        const backfillMap = await classifyBackfillCandidates(topicName, backfillCandidates);
-        backfillCandidates.forEach((w, i) => {
-          const stage = backfillMap[i];
-          if (stage && stage === w._targetStage) {
-            const { _targetStage, ...work } = w;
-            groups[stage].push(work);
-          }
-        });
-      }
-    }
-
-    setReadingStageGroups(groups);
-    setReadingStagesUnclassified(unclassified);
+    const groups = await generateReadingOrder(topicName);
+    if (groups) setReadingStageGroups(groups);
+    else setReadingStagesFailed(true);
     setReadingStagesLoading(false);
-  }, [topicName, mostCited, readingStageGroups, readingStagesLoading]);
+  }, [topicName, readingStageGroups, readingStagesLoading]);
 
   const reset = useCallback(() => {
     cancelRef.current.aborted = true;
@@ -475,13 +366,12 @@ export function usePulse() {
     setScholar([]);
     setScholarFailed(false);
     setReadingStageGroups(null);
-    setReadingStagesUnclassified([]);
     setReadingStagesFailed(false);
   }, []);
 
   return {
     phase, error, topicName, isTextMatch, wasClaudeValidated, mostCited, topAuthors, mostInfluential, scholar, scholarFailed, scholarLoading,
-    readingStageGroups, readingStagesUnclassified, readingStagesLoading, readingStagesFailed, loadReadingStages,
+    readingStageGroups, readingStagesLoading, readingStagesFailed, loadReadingStages,
     hasScholarKey, select, reset, refreshScholar,
   };
 }

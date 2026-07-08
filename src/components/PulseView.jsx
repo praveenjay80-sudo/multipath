@@ -173,7 +173,7 @@ function SortSelect({ value, onChange, options }) {
   );
 }
 
-function ItemRow({ item, renderMetric, renderLink, renderSecondary, renderBadges }) {
+function ItemRow({ item, renderMetric, renderLink, renderSecondary, renderBadges, renderTertiary }) {
   const link = renderLink ? renderLink(item) : null;
   const titleEl = link ? (
     <a href={link} target="_blank" rel="noreferrer" className="text-sm font-medium text-stone-800 hover:text-stone-950 hover:underline leading-snug">
@@ -186,16 +186,20 @@ function ItemRow({ item, renderMetric, renderLink, renderSecondary, renderBadges
     ? renderSecondary(item)
     : `${item.authors || ''}${item.authors && item.year ? ' · ' : ''}${item.year || ''}`;
   const badges = renderBadges ? renderBadges(item) : null;
+  const tertiary = renderTertiary ? renderTertiary(item) : null;
   return (
     <div className="py-3 border-b border-stone-100 last:border-0 flex items-start justify-between gap-4">
       <div className="min-w-0 flex-1">
         {titleEl}
         {secondary && <p className="text-xs text-stone-400 mt-0.5">{secondary}</p>}
+        {tertiary && <p className="text-xs text-stone-500 mt-1 leading-relaxed">{tertiary}</p>}
         {badges && <div className="flex flex-wrap items-center gap-1.5 mt-1.5">{badges}</div>}
       </div>
-      <div className="shrink-0 text-xs font-mono text-stone-500 whitespace-nowrap pt-0.5">
-        {renderMetric(item)}
-      </div>
+      {renderMetric && (
+        <div className="shrink-0 text-xs font-mono text-stone-500 whitespace-nowrap pt-0.5">
+          {renderMetric(item)}
+        </div>
+      )}
     </div>
   );
 }
@@ -254,7 +258,7 @@ function ViewToggle({ mode, onChange }) {
         type="button"
         onClick={() => onChange('stages')}
         className={`${base} border-l-0 ${mode === 'stages' ? 'bg-violet-700 text-white border-violet-700' : 'bg-white text-violet-600 border-stone-200 hover:bg-violet-50'}`}
-        title="Groups works into a pedagogical reading sequence — classified by Claude, not by any citation metric"
+        title="A comprehensive reading list generated directly by Claude, not filtered through OpenAlex — verify anything load-bearing yourself"
       >
         ✨ Reading Order
       </button>
@@ -262,9 +266,14 @@ function ViewToggle({ mode, onChange }) {
   );
 }
 
+function scholarSearchLink(item) {
+  const q = [item.title, item.authors].filter(Boolean).join(' ');
+  return `https://scholar.google.com/scholar?q=${encodeURIComponent(q)}`;
+}
+
 export default function PulseView({
   topicName, isTextMatch, wasClaudeValidated, mostCited, topAuthors, mostInfluential, scholar, scholarLoading, scholarFailed, onScholarKeySaved,
-  readingStageGroups, readingStagesUnclassified, readingStagesLoading, readingStagesFailed, onLoadReadingStages,
+  readingStageGroups, readingStagesLoading, readingStagesFailed, onLoadReadingStages,
 }) {
   const asOf = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   const [workSort, setWorkSort] = useState('citations');
@@ -304,7 +313,7 @@ export default function PulseView({
           <Panel
             title="Most Cited Works"
             subtitle={worksView === 'stages'
-              ? 'Grouped into a Claude-classified pedagogical sequence — the numbers below are still real, only the grouping is AI-assigned'
+              ? 'Comprehensive reading list generated directly by Claude — not filtered through OpenAlex, verify anything load-bearing yourself'
               : worksSubtitle(isTextMatch, wasClaudeValidated)}
             items={sortedWorks}
             renderMetric={WORK_SORTS[workSort].metric}
@@ -324,38 +333,35 @@ export default function PulseView({
                   <span className="flex gap-0.5">
                     <span className="loading-dot" /><span className="loading-dot" /><span className="loading-dot" />
                   </span>
-                  <span className="text-sm">Claude is placing each work in the reading sequence...</span>
+                  <span className="text-sm">Claude is building the reading list...</span>
                 </div>
               ) : readingStagesFailed ? (
                 <div className="py-6">
-                  <p className="text-sm text-stone-400 mb-2">Couldn't classify these works right now.</p>
+                  <p className="text-sm text-stone-400 mb-2">Couldn't generate the reading list right now.</p>
                   <button onClick={onLoadReadingStages} className="text-xs text-violet-600 hover:underline">Try again</button>
                 </div>
               ) : readingStageGroups ? (
                 <>
                   {READING_STAGES.map(stage => {
-                    const stageWorks = [...(readingStageGroups[stage] || [])].sort((a, b) => b.citationCount - a.citationCount);
+                    const stageWorks = readingStageGroups[stage] || [];
                     return (
                       <div key={stage} className="pt-4 first:pt-0">
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-600 mb-1">{stage}</p>
                         {stageWorks.length === 0 ? (
-                          <p className="text-xs text-stone-300 pb-2">No work found for this stage, even after a targeted search.</p>
+                          <p className="text-xs text-stone-300 pb-2">No genuine work known for this stage.</p>
                         ) : (
                           stageWorks.map((item, i) => (
-                            <ItemRow key={i} item={item} renderMetric={WORK_SORTS.citations.metric} renderLink={w => w.oaUrl || (w.doi ? w.doi : null)} renderBadges={workBadges} />
+                            <ItemRow
+                              key={i}
+                              item={item}
+                              renderLink={scholarSearchLink}
+                              renderTertiary={w => w.rationale}
+                            />
                           ))
                         )}
                       </div>
                     );
                   })}
-                  {readingStagesUnclassified.length > 0 && (
-                    <div className="pt-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400 mb-1">Unclassified</p>
-                      {readingStagesUnclassified.map((item, i) => (
-                        <ItemRow key={i} item={item} renderMetric={WORK_SORTS.citations.metric} renderLink={w => w.oaUrl || (w.doi ? w.doi : null)} renderBadges={workBadges} />
-                      ))}
-                    </div>
-                  )}
                 </>
               ) : null
             )}

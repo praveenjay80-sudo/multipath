@@ -113,9 +113,9 @@ async function runWorksQuery(url, limit) {
     .slice(0, limit);
 }
 
-export async function fetchTopicWorks(topicId, limit = 30, types = 'article|book') {
+export async function fetchTopicWorks(topicId, limit = 30) {
   const fetchLimit = Math.min(limit * 3, 100);
-  const url = `https://api.openalex.org/works?filter=topics.id:${encodeURIComponent(bareId(topicId))},type:${types}&select=${WORK_SELECT}&sort=cited_by_count:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
+  const url = `https://api.openalex.org/works?filter=topics.id:${encodeURIComponent(bareId(topicId))},type:article|book&select=${WORK_SELECT}&sort=cited_by_count:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
   return runWorksQuery(url, limit);
 }
 
@@ -181,40 +181,18 @@ function booleanAndQuery(topicName) {
 // subfield classification — without it, word-overlap alone lets works from an
 // unrelated subfield through (e.g. "Topological Quantum Field Theory" pulling
 // in chemoinformatics papers that separately use "topological" and "quantum").
-export async function fetchTopicWorksByText(topicName, limit = 30, subfieldId = null, types = 'article|book') {
+export async function fetchTopicWorksByText(topicName, limit = 30, subfieldId = null) {
   const fetchLimit = Math.min(limit * 3, 100);
   const andQuery = booleanAndQuery(topicName);
   const subfieldFilter = subfieldId ? `,topics.subfield.id:${encodeURIComponent(bareId(subfieldId))}` : '';
 
-  const strictUrl = `https://api.openalex.org/works?search=${encodeURIComponent(andQuery)}&filter=type:${types}${subfieldFilter}&select=${WORK_SELECT}&sort=cited_by_count:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
+  const strictUrl = `https://api.openalex.org/works?search=${encodeURIComponent(andQuery)}&filter=type:article|book${subfieldFilter}&select=${WORK_SELECT}&sort=cited_by_count:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
   const strict = await runWorksQuery(strictUrl, limit);
   if (strict.length >= 5 || andQuery === topicName) return strict;
 
   // Requiring every word was too strict for this phrasing (near-empty result) —
   // fall back to a relevance-ranked loose search, still subfield-constrained,
   // rather than showing nothing.
-  const looseUrl = `https://api.openalex.org/works?search=${encodeURIComponent(topicName)}&filter=type:${types}${subfieldFilter}&select=${WORK_SELECT}&sort=relevance_score:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
+  const looseUrl = `https://api.openalex.org/works?search=${encodeURIComponent(topicName)}&filter=type:article|book${subfieldFilter}&select=${WORK_SELECT}&sort=relevance_score:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
   return runWorksQuery(looseUrl, limit);
-}
-
-// For Reading Order's stage backfill: appending stage-hint words directly to
-// the topic name and running it through fetchTopicWorksByText's normal
-// booleanAndQuery would require every hint word present too, which is so
-// strict it usually falls through to that function's loose relevance-sorted
-// fallback — the exact citation-boosted mismatch bug already fixed for the
-// main topic search (confirmed: an "Index theory and Dirac operators" +
-// "philosophy foundations interpretation" backfill surfaced a Neutrosophic
-// Logic paper with zero connection to the topic). Keeping the topic's own
-// AND-of-every-word requirement intact and treating the hint words as an
-// OR-group — (topic words) AND (hint1 OR hint2 OR ...) — guarantees every
-// candidate is still genuinely about the topic, never falls back to loose
-// matching, and simply returns fewer/no results if nothing fits both.
-export async function fetchStageBackfillWorks(topicName, hintWords, limit = 8, subfieldId = null, types = 'article|book') {
-  const topicAnd = booleanAndQuery(topicName);
-  const hintOr = hintWords.split(/\s+/).filter(Boolean).join(' OR ');
-  const query = `(${topicAnd}) AND (${hintOr})`;
-  const subfieldFilter = subfieldId ? `,topics.subfield.id:${encodeURIComponent(bareId(subfieldId))}` : '';
-  const fetchLimit = Math.min(limit * 3, 100);
-  const url = `https://api.openalex.org/works?search=${encodeURIComponent(query)}&filter=type:${types}${subfieldFilter}&select=${WORK_SELECT}&sort=cited_by_count:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
-  return runWorksQuery(url, limit);
 }
