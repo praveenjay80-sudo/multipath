@@ -175,6 +175,23 @@ function stripLineMarkdown(line) {
     .trim();
 }
 
+// Matches a header line to one of the six stages regardless of whether the
+// literal "STAGE:" prefix, a trailing colon, or leading numbering survived —
+// checks whether the line, once that scaffolding is stripped, IS one of the
+// six stage names, rather than requiring an exact literal keyword. This is
+// what actually saved a second empty-everything failure ("Quantum chaos and
+// semiclassical analysis"): the earlier fix only tolerated markdown *around*
+// "STAGE:", but the model had dropped that literal prefix entirely and
+// written the bare stage name as its own heading line instead.
+function matchStageHeader(line, byNormalized) {
+  const candidate = line
+    .replace(/^STAGE:\s*/i, '')
+    .replace(/^\d+[.)]\s*/, '')
+    .replace(/:\s*$/, '')
+    .trim();
+  return byNormalized.get(normalizeStageName(candidate)) || null;
+}
+
 function parseReadingOrder(text) {
   const byNormalized = new Map(READING_STAGES.map(s => [normalizeStageName(s), s]));
   const groups = {};
@@ -183,20 +200,23 @@ function parseReadingOrder(text) {
   for (const raw of (text || '').split('\n')) {
     const line = stripLineMarkdown(raw);
     if (!line) continue;
-    const stageMatch = line.match(/^STAGE:\s*(.+)$/i);
-    if (stageMatch) {
-      current = byNormalized.get(normalizeStageName(stageMatch[1])) || current;
-      continue;
-    }
+
     // Bullet markers: "-", "*", "•", or a leading "1." / "1)" — the model was
     // told to use "- " but tolerate the common alternates rather than drop
-    // an otherwise-good entry over a formatting mismatch.
+    // an otherwise-good entry over a formatting mismatch. Checked before the
+    // header match so a numbered bullet line is never mistaken for a header.
     const bulletMatch = line.match(/^(?:[-*•]|\d+[.)])\s*(.+)$/);
-    if (!current || !bulletMatch) continue;
-    const entryText = bulletMatch[1].trim();
-    if (/^none known$/i.test(entryText)) continue;
-    const entry = parseReadingOrderEntry(entryText);
-    if (entry) groups[current].push(entry);
+    if (bulletMatch) {
+      if (!current) continue;
+      const entryText = bulletMatch[1].trim();
+      if (/^none known$/i.test(entryText)) continue;
+      const entry = parseReadingOrderEntry(entryText);
+      if (entry) groups[current].push(entry);
+      continue;
+    }
+
+    const stage = matchStageHeader(line, byNormalized);
+    if (stage) current = stage;
   }
   return groups;
 }
@@ -372,7 +392,13 @@ export function usePulse() {
     setReadingStagesLoading(true);
     setReadingStagesFailed(false);
     const groups = await generateReadingOrder(topicName);
-    if (groups) setReadingStageGroups(groups);
+    // Every stage coming back empty is essentially always a parsing failure,
+    // not Claude genuinely knowing nothing — confirmed twice on mainstream
+    // topics ("Stochastic processes and statistical mechanics", "Quantum
+    // chaos and semiclassical analysis"). Surface it as a retryable failure
+    // instead of silently claiming no genuine work exists for any stage.
+    const hasAnyWork = groups && READING_STAGES.some(s => (groups[s] || []).length > 0);
+    if (hasAnyWork) setReadingStageGroups(groups);
     else setReadingStagesFailed(true);
     setReadingStagesLoading(false);
   }, [topicName, readingStageGroups, readingStagesLoading]);
