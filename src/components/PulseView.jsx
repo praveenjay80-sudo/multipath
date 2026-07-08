@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { recentCitationVelocity } from '../utils/pulseOpenAlex';
 
 function ScholarKeyPrompt({ onSaved }) {
-  const [draft, setDraft] = useState('');
+  const hasSavedKey = !!localStorage.getItem('canon_serp_key');
+  const [draft, setDraft] = useState(() => localStorage.getItem('canon_serp_key') || '');
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -16,7 +17,13 @@ function ScholarKeyPrompt({ onSaved }) {
 
   return (
     <div className="px-5 py-6">
-      <p className="text-sm text-stone-500 mb-3">The shared Google Scholar lookup didn't return results (likely quota-limited). Add your own SerpAPI key to see results for this topic.</p>
+      {hasSavedKey ? (
+        <p className="text-sm text-stone-500 mb-3">
+          A SerpAPI key is already saved, but the last request still failed — either the key itself is wrong, or the backend endpoint this depends on hasn't finished deploying yet. Update the key below, or click Reload to try again.
+        </p>
+      ) : (
+        <p className="text-sm text-stone-500 mb-3">The shared Google Scholar lookup didn't return results (likely quota-limited). Add your own SerpAPI key to see results for this topic.</p>
+      )}
       <div className="flex gap-2">
         <input
           type="password"
@@ -31,7 +38,7 @@ function ScholarKeyPrompt({ onSaved }) {
           disabled={!draft.trim() || saving}
           className="px-4 py-2 text-xs bg-stone-900 text-white hover:bg-stone-700 transition-colors disabled:opacity-40 whitespace-nowrap"
         >
-          {saving ? 'Loading...' : 'Save & Load'}
+          {saving ? 'Loading...' : hasSavedKey ? 'Reload' : 'Save & Load'}
         </button>
       </div>
       <p className="text-xs text-stone-300 mt-2">
