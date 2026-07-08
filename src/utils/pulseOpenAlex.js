@@ -119,17 +119,35 @@ export async function fetchTopicWorks(topicId, limit = 30) {
   return runWorksQuery(url, limit);
 }
 
+const STOPWORDS = new Set(['a', 'an', 'and', 'of', 'the', 'in', 'on', 'for', 'with', 'to', 'at', 'by', 'or', 'vs', 'via', 'as']);
+
+// OpenAlex's `search` enables its own boolean mode when it sees the literal
+// uppercase word AND/OR/NOT — joining the topic's significant words with AND
+// requires every one of them to appear (anywhere, not necessarily adjacent),
+// instead of the default loose match. That default loose match is *also*
+// citation-boosted internally, so even sort=relevance_score:desc wasn't
+// enough on its own — a query for "Modular forms and L-functions" still
+// surfaced lme4, QUANTUM ESPRESSO, and InterProScan ahead of genuinely
+// on-topic papers, because they merely contained "modular" and are hugely
+// cited. Requiring every substantive word (via AND) rules those out.
+function booleanAndQuery(topicName) {
+  const words = topicName.split(/\s+/).map(w => w.trim()).filter(w => w && !STOPWORDS.has(w.toLowerCase()));
+  return words.length > 1 ? words.join(' AND ') : topicName;
+}
+
 // For topics that don't come from the OpenAlex taxonomy (e.g. a Claude-suggested
 // topic name) — falls back to full-text search instead of an exact topics.id
-// filter, since there's no id to filter on. Must sort by relevance_score, not
-// cited_by_count: OpenAlex's `search` does loose, stemmed multi-word matching,
-// and asking it to sort by citations instead discards relevance entirely —
-// surfacing whatever's most-cited globally among a barely-related match set
-// (confirmed: "Algebraic K-theory" returned lme4, LeCun's CNN paper, SciPy...).
-// Sorting by relevance first keeps the returned set actually on-topic; the
-// panel's own "Total citations" sort option then re-ranks within that set.
+// filter, since there's no id to filter on.
 export async function fetchTopicWorksByText(topicName, limit = 30) {
   const fetchLimit = Math.min(limit * 3, 100);
-  const url = `https://api.openalex.org/works?search=${encodeURIComponent(topicName)}&filter=type:article|book&select=${WORK_SELECT}&sort=relevance_score:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
-  return runWorksQuery(url, limit);
+  const andQuery = booleanAndQuery(topicName);
+
+  const strictUrl = `https://api.openalex.org/works?search=${encodeURIComponent(andQuery)}&filter=type:article|book&select=${WORK_SELECT}&sort=cited_by_count:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
+  const strict = await runWorksQuery(strictUrl, limit);
+  if (strict.length >= 5 || andQuery === topicName) return strict;
+
+  // Requiring every word was too strict for this phrasing (near-empty result) —
+  // fall back to a relevance-ranked loose search rather than showing nothing.
+  const looseUrl = `https://api.openalex.org/works?search=${encodeURIComponent(topicName)}&filter=type:article|book&select=${WORK_SELECT}&sort=relevance_score:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
+  return runWorksQuery(looseUrl, limit);
 }
