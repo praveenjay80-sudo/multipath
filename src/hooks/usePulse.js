@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { fetchTopicWorks, fetchTopicWorksByText, resolveOpenAlexTopicId, aggregateTopAuthors, fetchAuthorStats } from '../utils/pulseOpenAlex';
+import { fetchTopicWorks, fetchTopicWorksByText, fetchStageBackfillWorks, resolveOpenAlexTopicId, aggregateTopAuthors, fetchAuthorStats } from '../utils/pulseOpenAlex';
 
 const WORKER_BASE = 'https://canon-enrichment.canonworks.workers.dev';
 
@@ -73,7 +73,7 @@ export const READING_STAGES = [
 // from the stage name alone — without these, "Advanced Concepts" vs.
 // "Specialized Topics" vs. "Mathematical Rigor" is ambiguous even to a human.
 const STAGE_DEFINITIONS = {
-  'Historical Context & Intuition': 'explains the motivating problem, origin story, or builds physical/conceptual intuition before the formalism',
+  'Historical Context & Intuition': 'a gentle, accessible work that explains the motivating problem and builds physical/conceptual intuition in plain terms — NOT the original technical paper that founded the field, even if it is historically first; a dense original research paper belongs in Mathematical Rigor or Advanced Concepts instead, however historically important it is',
   'Foundational Textbooks': 'a standard textbook or expository work establishing the core definitions and baseline theory',
   'Mathematical Rigor': 'focused on precise, formal derivations or proofs that establish the theory rigorously',
   'Advanced Concepts': 'extends the core theory into more advanced or technically demanding territory',
@@ -83,6 +83,22 @@ const STAGE_DEFINITIONS = {
 
 function normalizeStageName(s) {
   return s.toLowerCase().replace(/[^a-z0-9\s&]/g, '').trim();
+}
+
+// Shared "<number>: <stage name>" parser — tolerant of case/punctuation drift
+// in Claude's response (e.g. "foundational textbooks.") but still requires
+// the full normalized name to match one of the six exactly, no partial credit.
+function parseStageMap(text) {
+  const byNormalized = new Map(READING_STAGES.map(s => [normalizeStageName(s), s]));
+  const map = {};
+  for (const line of (text || '').split('\n')) {
+    const m = line.match(/^\s*(\d+)\s*:\s*(.+?)\s*$/);
+    if (!m) continue;
+    const idx = parseInt(m[1], 10);
+    const stage = byNormalized.get(normalizeStageName(m[2]));
+    if (!Number.isNaN(idx) && stage) map[idx] = stage;
+  }
+  return map;
 }
 
 // Search-query hints used to backfill a stage that comes up empty after
@@ -143,21 +159,62 @@ Use only these exact stage names, spelled exactly as given: ${READING_STAGES.joi
     });
     if (!res.ok) return null;
     const data = await res.json();
-    const text = (data.content?.[0]?.text || '').trim();
-    // Match tolerant of case/punctuation drift (e.g. "foundational textbooks."),
-    // but still requires the full normalized name — no fuzzy/partial credit.
-    const byNormalized = new Map(READING_STAGES.map(s => [normalizeStageName(s), s]));
-    const map = {};
-    for (const line of text.split('\n')) {
-      const m = line.match(/^\s*(\d+)\s*:\s*(.+?)\s*$/);
-      if (!m) continue;
-      const idx = parseInt(m[1], 10);
-      const stage = byNormalized.get(normalizeStageName(m[2]));
-      if (!Number.isNaN(idx) && stage) map[idx] = stage;
-    }
+    const map = parseStageMap(data.content?.[0]?.text);
     return Object.keys(map).length ? map : null;
   } catch {
     return null;
+  }
+}
+
+// Backfill candidates come from a search that's already precision-constrained
+// (see fetchStageBackfillWorks) — but that's a query-level guarantee, not a
+// judgment call, and it's a second, independent search separate from the one
+// that produced the main pool, so it gets its own relevance check rather than
+// trusting query construction alone. Combines "is this genuinely about the
+// topic" and "does it fit the stage it was fetched for" into one call instead
+// of two, using the fetched-for stage (embedded in brackets) as the candidate
+// Claude must independently confirm — not just accept at face value.
+async function classifyBackfillCandidates(topicName, candidates) {
+  const apiKey = resolveApiKey();
+  if (!apiKey || !candidates.length) return {};
+
+  const list = candidates.map((w, i) =>
+    `${i}. [fetched for: ${w._targetStage}] ${w.title}${w.authors ? ` — ${w.authors}` : ''}${w.year ? ` (${w.year})` : ''}`
+  ).join('\n');
+  const system = `You verify candidates found by a targeted backfill search for a reading-sequence gap. For each, confirm BOTH that it is genuinely, substantively about the given topic AND that it truly fits the stage shown in brackets — reject anything off-topic or mismatched even if it superficially matched the search keywords.`;
+  const user = `Topic: "${topicName}"
+
+Candidates:
+${list}
+
+For each number that passes both checks, output one line:
+<number>: <the stage name from its brackets, spelled exactly>
+
+Omit any number that fails either check entirely. If none pass, respond with exactly: NONE`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        system,
+        messages: [{ role: 'user', content: user }],
+      }),
+    });
+    if (!res.ok) return {};
+    const data = await res.json();
+    const text = (data.content?.[0]?.text || '').trim();
+    if (/^NONE$/i.test(text)) return {};
+    return parseStageMap(text);
+  } catch {
+    return {};
   }
 }
 
@@ -371,9 +428,8 @@ export function usePulse() {
     const emptyStages = READING_STAGES.filter(s => groups[s].length === 0);
     if (emptyStages.length) {
       const perStage = await Promise.all(emptyStages.map(async stage => {
-        const query = `${topicName} ${STAGE_QUERY_HINTS[stage]}`;
         const types = stage === 'Foundational Textbooks' ? 'book' : 'article|book';
-        const candidates = await fetchTopicWorksByText(query, 8, subfieldId, types);
+        const candidates = await fetchStageBackfillWorks(topicName, STAGE_QUERY_HINTS[stage], 8, subfieldId, types);
         return { stage, candidates };
       }));
 
@@ -386,19 +442,18 @@ export function usePulse() {
       }
 
       if (backfillCandidates.length) {
-        const backfillMap = await classifyWorksByStage(topicName, backfillCandidates);
-        if (backfillMap) {
-          backfillCandidates.forEach((w, i) => {
-            const stage = backfillMap[i];
-            // Only accept if Claude independently confirms the stage it was
-            // fetched for — a targeted search can still surface a work that
-            // actually fits a different (already-populated) stage better.
-            if (stage && stage === w._targetStage) {
-              const { _targetStage, ...work } = w;
-              groups[stage].push(work);
-            }
-          });
-        }
+        // Relevance + stage-fit are both re-checked here (see
+        // classifyBackfillCandidates) — fetchStageBackfillWorks' query already
+        // requires every topic word present, but that's a query-level
+        // guarantee, not a substitute for an independent judgment call.
+        const backfillMap = await classifyBackfillCandidates(topicName, backfillCandidates);
+        backfillCandidates.forEach((w, i) => {
+          const stage = backfillMap[i];
+          if (stage && stage === w._targetStage) {
+            const { _targetStage, ...work } = w;
+            groups[stage].push(work);
+          }
+        });
       }
     }
 

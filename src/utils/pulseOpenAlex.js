@@ -196,3 +196,25 @@ export async function fetchTopicWorksByText(topicName, limit = 30, subfieldId = 
   const looseUrl = `https://api.openalex.org/works?search=${encodeURIComponent(topicName)}&filter=type:${types}${subfieldFilter}&select=${WORK_SELECT}&sort=relevance_score:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
   return runWorksQuery(looseUrl, limit);
 }
+
+// For Reading Order's stage backfill: appending stage-hint words directly to
+// the topic name and running it through fetchTopicWorksByText's normal
+// booleanAndQuery would require every hint word present too, which is so
+// strict it usually falls through to that function's loose relevance-sorted
+// fallback — the exact citation-boosted mismatch bug already fixed for the
+// main topic search (confirmed: an "Index theory and Dirac operators" +
+// "philosophy foundations interpretation" backfill surfaced a Neutrosophic
+// Logic paper with zero connection to the topic). Keeping the topic's own
+// AND-of-every-word requirement intact and treating the hint words as an
+// OR-group — (topic words) AND (hint1 OR hint2 OR ...) — guarantees every
+// candidate is still genuinely about the topic, never falls back to loose
+// matching, and simply returns fewer/no results if nothing fits both.
+export async function fetchStageBackfillWorks(topicName, hintWords, limit = 8, subfieldId = null, types = 'article|book') {
+  const topicAnd = booleanAndQuery(topicName);
+  const hintOr = hintWords.split(/\s+/).filter(Boolean).join(' OR ');
+  const query = `(${topicAnd}) AND (${hintOr})`;
+  const subfieldFilter = subfieldId ? `,topics.subfield.id:${encodeURIComponent(bareId(subfieldId))}` : '';
+  const fetchLimit = Math.min(limit * 3, 100);
+  const url = `https://api.openalex.org/works?search=${encodeURIComponent(query)}&filter=type:${types}${subfieldFilter}&select=${WORK_SELECT}&sort=cited_by_count:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
+  return runWorksQuery(url, limit);
+}
