@@ -120,10 +120,16 @@ export async function fetchTopicWorks(topicId, limit = 30) {
 }
 
 // For topics that don't come from the OpenAlex taxonomy (e.g. a Claude-suggested
-// topic name) — falls back to full-text relevance search instead of an exact
-// topics.id filter, since there's no id to filter on.
+// topic name) — falls back to full-text search instead of an exact topics.id
+// filter, since there's no id to filter on. Must sort by relevance_score, not
+// cited_by_count: OpenAlex's `search` does loose, stemmed multi-word matching,
+// and asking it to sort by citations instead discards relevance entirely —
+// surfacing whatever's most-cited globally among a barely-related match set
+// (confirmed: "Algebraic K-theory" returned lme4, LeCun's CNN paper, SciPy...).
+// Sorting by relevance first keeps the returned set actually on-topic; the
+// panel's own "Total citations" sort option then re-ranks within that set.
 export async function fetchTopicWorksByText(topicName, limit = 30) {
   const fetchLimit = Math.min(limit * 3, 100);
-  const url = `https://api.openalex.org/works?search=${encodeURIComponent(topicName)}&filter=type:article|book&select=${WORK_SELECT}&sort=cited_by_count:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
+  const url = `https://api.openalex.org/works?search=${encodeURIComponent(topicName)}&filter=type:article|book&select=${WORK_SELECT}&sort=relevance_score:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
   return runWorksQuery(url, limit);
 }
