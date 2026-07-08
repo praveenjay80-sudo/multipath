@@ -101,9 +101,9 @@ export async function fetchAuthorStats(authorIds) {
   }
 }
 
-export async function fetchTopicWorks(topicId, limit = 30) {
-  const fetchLimit = Math.min(limit * 3, 100);
-  const url = `https://api.openalex.org/works?filter=topics.id:${encodeURIComponent(bareId(topicId))},type:article|book&select=title,authorships,publication_year,cited_by_count,fwci,cited_by_percentile_year,type,open_access,primary_location,doi,counts_by_year&sort=cited_by_count:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
+const WORK_SELECT = 'title,authorships,publication_year,cited_by_count,fwci,cited_by_percentile_year,type,open_access,primary_location,doi,counts_by_year';
+
+async function runWorksQuery(url, limit) {
   const res = await fetchWithTimeout(url);
   if (!res.ok) throw new Error(`OpenAlex fetch failed: ${res.status}`);
   const json = await res.json();
@@ -111,4 +111,19 @@ export async function fetchTopicWorks(topicId, limit = 30) {
     .map(oaWork)
     .filter(w => !isNoisyTitle(w.title))
     .slice(0, limit);
+}
+
+export async function fetchTopicWorks(topicId, limit = 30) {
+  const fetchLimit = Math.min(limit * 3, 100);
+  const url = `https://api.openalex.org/works?filter=topics.id:${encodeURIComponent(bareId(topicId))},type:article|book&select=${WORK_SELECT}&sort=cited_by_count:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
+  return runWorksQuery(url, limit);
+}
+
+// For topics that don't come from the OpenAlex taxonomy (e.g. a Claude-suggested
+// topic name) — falls back to full-text relevance search instead of an exact
+// topics.id filter, since there's no id to filter on.
+export async function fetchTopicWorksByText(topicName, limit = 30) {
+  const fetchLimit = Math.min(limit * 3, 100);
+  const url = `https://api.openalex.org/works?search=${encodeURIComponent(topicName)}&filter=type:article|book&select=${WORK_SELECT}&sort=cited_by_count:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
+  return runWorksQuery(url, limit);
 }

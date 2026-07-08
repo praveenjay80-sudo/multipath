@@ -219,7 +219,7 @@ function Panel({ title, subtitle, items, renderMetric, renderLink, renderSeconda
 }
 
 export default function PulseView({
-  topicName, mostCited, topAuthors, mostInfluential, scholar, scholarLoading, scholarFailed, onScholarKeySaved,
+  topicName, isTextMatch, mostCited, topAuthors, mostInfluential, scholar, scholarLoading, scholarFailed, onScholarKeySaved,
 }) {
   const asOf = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   const [workSort, setWorkSort] = useState('citations');
@@ -246,7 +246,7 @@ export default function PulseView({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Panel
             title="Most Cited Works"
-            subtitle="OpenAlex, filtered to this exact topic"
+            subtitle={isTextMatch ? 'OpenAlex — text-matched to this Claude-suggested topic, not ID-filtered' : 'OpenAlex, filtered to this exact topic'}
             items={sortedWorks}
             renderMetric={WORK_SORTS[workSort].metric}
             renderLink={w => w.oaUrl || (w.doi ? w.doi : null)}

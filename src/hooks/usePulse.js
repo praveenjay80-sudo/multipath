@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { fetchTopicWorks, aggregateTopAuthors, fetchAuthorStats } from '../utils/pulseOpenAlex';
+import { fetchTopicWorks, fetchTopicWorksByText, aggregateTopAuthors, fetchAuthorStats } from '../utils/pulseOpenAlex';
 
 const WORKER_BASE = 'https://canon-enrichment.canonworks.workers.dev';
 
@@ -59,6 +59,7 @@ export function usePulse() {
   const [phase, setPhase] = useState('idle'); // idle | loading | complete | error
   const [error, setError] = useState(null);
   const [topicName, setTopicName] = useState('');
+  const [isTextMatch, setIsTextMatch] = useState(false);
   const [mostCited, setMostCited] = useState([]);
   const [topAuthors, setTopAuthors] = useState([]);
   const [mostInfluential, setMostInfluential] = useState([]);
@@ -77,6 +78,7 @@ export function usePulse() {
     setPhase('loading');
     setError(null);
     setTopicName(name);
+    setIsTextMatch(!topicId);
     setMostCited([]);
     setTopAuthors([]);
     setMostInfluential([]);
@@ -87,7 +89,7 @@ export function usePulse() {
 
     try {
       const [works, scholarOutcome] = await Promise.all([
-        fetchTopicWorks(topicId, 30),
+        topicId ? fetchTopicWorks(topicId, 30) : fetchTopicWorksByText(name, 30),
         serpScholarSearch(name, serpKey, 20),
       ]);
       if (token.aborted) return;
@@ -134,6 +136,7 @@ export function usePulse() {
     setPhase('idle');
     setError(null);
     setTopicName('');
+    setIsTextMatch(false);
     setMostCited([]);
     setTopAuthors([]);
     setMostInfluential([]);
@@ -142,7 +145,7 @@ export function usePulse() {
   }, []);
 
   return {
-    phase, error, topicName, mostCited, topAuthors, mostInfluential, scholar, scholarFailed, scholarLoading,
+    phase, error, topicName, isTextMatch, mostCited, topAuthors, mostInfluential, scholar, scholarFailed, scholarLoading,
     hasScholarKey, select, reset, refreshScholar,
   };
 }

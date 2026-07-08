@@ -436,7 +436,7 @@ export default function App() {
                   : appMode === 'spectrum'
                   ? 'Enter a topic and get real-life questions whose complete answer genuinely spans multiple disciplines — or type your own. Get a plain-language concept breakdown and a staged reading list grounded in real literature.'
                   : appMode === 'pulse'
-                  ? 'Pick a field, subfield, and topic — see live citation counts, citation velocity, influential papers, and Google Scholar results right now. No AI, just the raw numbers from OpenAlex, Semantic Scholar, and Google Scholar.'
+                  ? 'Pick a field, subfield, and topic (optionally ask Claude to suggest more specific ones) — see live citation counts, citation velocity, influential papers, and Google Scholar results right now. The data itself is always raw numbers from OpenAlex, Semantic Scholar, and Google Scholar — never AI-generated.'
                   : appMode === 'intelligence'
                   ? 'Map any field\'s complete intellectual landscape — all schools of thought, key interlocutors, and the central argument structure. Then audit its hidden assumptions and paradigm status.'
                   : appMode === 'knowledge'
@@ -998,6 +998,7 @@ export default function App() {
             {appMode === 'pulse' && pulse.phase === 'complete' && (
               <PulseView
                 topicName={pulse.topicName}
+                isTextMatch={pulse.isTextMatch}
                 mostCited={pulse.mostCited}
                 topAuthors={pulse.topAuthors}
                 mostInfluential={pulse.mostInfluential}
