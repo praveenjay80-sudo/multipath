@@ -172,19 +172,30 @@ Plain text only — no markdown bold/italic (**...**, *...*), no headers (#), no
 // genuine before the UI accepts that nothing exists. Still not allowed to
 // invent: broadening to adjacent/less-famous-but-real work is fine, making
 // something up is not.
-async function retryEmptyStage(topicName, subfieldName, stage) {
+async function retryEmptyStage(topicName, subfieldName, stage, alreadyListedTitles) {
   const apiKey = resolveApiKey();
   if (!apiKey) return [];
 
   const topicLine = subfieldName
     ? `Topic: "${topicName}", specifically within the "${subfieldName}" subfield`
     : `Topic: "${topicName}"`;
+  // Without visibility into what's already been placed, an isolated retry can
+  // reflexively answer NONE because it feels "everything relevant is already
+  // covered" — confirmed: a broad topic ("Advanced Topology and Set Theory")
+  // had Mathematical Rigor come up empty because rigor-caliber works (Jech,
+  // Engelking) got consolidated into Advanced Concepts on the main pass, and
+  // the isolated retry couldn't tell it needed to find something *additional*
+  // rather than agreeing the gap was real. Listing what's taken reframes the
+  // ask as "find something distinct", not "does anything exist at all".
+  const alreadyListedBlock = alreadyListedTitles.length
+    ? `\n\nAlready placed in other stages (for context only — do not repeat these; do not treat "this is already covered elsewhere" as a reason to say none exist for THIS stage, find something that specifically and distinctly belongs here instead):\n${alreadyListedTitles.map(t => `- ${t}`).join('\n')}`
+    : '';
   const system = `You recall real, verifiable academic works for a specific reading-list stage. A first attempt found nothing for this stage — think harder before agreeing that's correct. Only name works you are confident actually exist, with accurate author and year. Never invent one — if truly nothing exists after genuinely reconsidering, say so.`;
   const user = `${topicLine}
 
 Stage: ${stage} (${STAGE_DEFINITIONS[stage]})
 
-An earlier pass found no work for this stage. Think again, specifically: classic or standard references you might not have considered first time, less-famous but genuine works, or works from a slightly broader/adjacent angle that still genuinely fit this stage for this topic.
+An earlier pass found no work for this stage. Think again, specifically: classic or standard references you might not have considered first time, less-famous but genuine works, or works from a slightly broader/adjacent angle that still genuinely fit this stage for this topic.${alreadyListedBlock}
 
 If you can now think of genuine work, list it:
 - Title by Author (Year) — one-sentence rationale for why it fits this specific stage
@@ -500,8 +511,9 @@ export function usePulse() {
     // accepting the gap.
     const emptyStages = READING_STAGES.filter(s => (groups[s] || []).length === 0);
     if (emptyStages.length) {
+      const alreadyListedTitles = READING_STAGES.flatMap(s => (groups[s] || []).map(w => w.title));
       const retries = await Promise.all(
-        emptyStages.map(stage => retryEmptyStage(topicName, subfieldName, stage))
+        emptyStages.map(stage => retryEmptyStage(topicName, subfieldName, stage, alreadyListedTitles))
       );
       emptyStages.forEach((stage, i) => { groups[stage] = retries[i]; });
     }
