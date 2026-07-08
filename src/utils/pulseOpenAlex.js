@@ -121,6 +121,45 @@ export async function fetchTopicWorks(topicId, limit = 30) {
 
 const STOPWORDS = new Set(['a', 'an', 'and', 'of', 'the', 'in', 'on', 'for', 'with', 'to', 'at', 'by', 'or', 'vs', 'via', 'as']);
 
+function significantWords(name) {
+  return new Set((name || '').toLowerCase().replace(/[^a-z0-9\s-]/g, '').split(/\s+/).filter(w => w && !STOPWORDS.has(w)));
+}
+
+function jaccard(a, b) {
+  const inter = [...a].filter(x => b.has(x)).length;
+  const union = new Set([...a, ...b]).size;
+  return union ? inter / union : 0;
+}
+
+// A Claude-suggested topic was explicitly prompted to be phrased "the way it
+// would appear as an actual research topic" — so it often already matches a
+// real OpenAlex topic almost exactly. Checking here first and using its real
+// id gives the same topics.id precision as a native dropdown pick, instead of
+// falling straight to word-overlap text search (which let subfield filtering
+// alone still misclassify things — e.g. Lions' calculus-of-variations paper
+// carries "Mathematical Physics" as one of its OpenAlex subfields and happens
+// to mention "topological"/"quantum field theory" in passing, so it passed
+// both the AND query and the subfield filter for "Topological Quantum Field
+// Theory" despite not being about it). Returns null if nothing matches closely.
+export async function resolveOpenAlexTopicId(name) {
+  const url = `https://api.openalex.org/topics?search=${encodeURIComponent(name)}&per_page=5&select=id,display_name&${MAILTO}${openAlexAuth()}`;
+  try {
+    const res = await fetchWithTimeout(url);
+    if (!res.ok) return null;
+    const json = await res.json();
+    const nameWords = significantWords(name);
+    let best = null;
+    let bestScore = 0;
+    for (const t of json.results || []) {
+      const score = jaccard(nameWords, significantWords(t.display_name));
+      if (score > bestScore) { bestScore = score; best = t; }
+    }
+    return bestScore >= 0.6 ? best.id : null;
+  } catch {
+    return null;
+  }
+}
+
 // OpenAlex's `search` enables its own boolean mode when it sees the literal
 // uppercase word AND/OR/NOT — joining the topic's significant words with AND
 // requires every one of them to appear (anywhere, not necessarily adjacent),

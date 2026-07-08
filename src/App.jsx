@@ -999,6 +999,7 @@ export default function App() {
               <PulseView
                 topicName={pulse.topicName}
                 isTextMatch={pulse.isTextMatch}
+                wasClaudeValidated={pulse.wasClaudeValidated}
                 mostCited={pulse.mostCited}
                 topAuthors={pulse.topAuthors}
                 mostInfluential={pulse.mostInfluential}

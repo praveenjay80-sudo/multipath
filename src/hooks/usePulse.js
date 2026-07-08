@@ -1,7 +1,60 @@
 import { useState, useCallback, useRef } from 'react';
-import { fetchTopicWorks, fetchTopicWorksByText, aggregateTopAuthors, fetchAuthorStats } from '../utils/pulseOpenAlex';
+import { fetchTopicWorks, fetchTopicWorksByText, resolveOpenAlexTopicId, aggregateTopAuthors, fetchAuthorStats } from '../utils/pulseOpenAlex';
 
 const WORKER_BASE = 'https://canon-enrichment.canonworks.workers.dev';
+
+function resolveApiKey() {
+  return import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('canon_api_key') || '';
+}
+
+// Last line of defense for the text-search fallback path: even with a
+// subfield filter and a boolean-AND query, word overlap can still let through
+// a work that's genuinely unrelated (confirmed: Lions' calculus-of-variations
+// paper matched "Topological Quantum Field Theory" because it carries
+// "Mathematical Physics" as one of its OpenAlex subfields and mentions
+// "quantum field theory" in passing). Asks Claude to keep only works that are
+// actually about the topic. Fails soft to the unfiltered list on any error —
+// showing possibly-noisy results beats a blank panel from a transient failure.
+async function claudeValidateWorks(topicName, works) {
+  const apiKey = resolveApiKey();
+  if (!apiKey || !works.length) return works;
+
+  const list = works.map((w, i) => `${i}. ${w.title}${w.authors ? ` — ${w.authors}` : ''}${w.year ? ` (${w.year})` : ''}`).join('\n');
+  const system = `You check whether academic works genuinely belong to a specific research topic. Be strict: a work that merely shares a word with the topic name, or is from a different subfield that happens to mention it in passing, does not count.`;
+  const user = `Topic: "${topicName}"
+
+Works:
+${list}
+
+List only the numbers of works that are genuinely, substantively about this topic. One number per line, nothing else. If none qualify, respond with exactly: NONE`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        system,
+        messages: [{ role: 'user', content: user }],
+      }),
+    });
+    if (!res.ok) return works;
+    const data = await res.json();
+    const text = (data.content?.[0]?.text || '').trim();
+    if (/^NONE$/i.test(text)) return [];
+    const keep = new Set(text.split('\n').map(l => parseInt(l.trim(), 10)).filter(n => !Number.isNaN(n)));
+    if (!keep.size) return works;
+    return works.filter((_, i) => keep.has(i));
+  } catch {
+    return works;
+  }
+}
 
 // Google Scholar has no public API, and SerpAPI (the paid proxy for it) does not
 // send CORS headers and shouldn't have its key exposed client-side anyway — so
@@ -65,6 +118,7 @@ export function usePulse() {
   const [error, setError] = useState(null);
   const [topicName, setTopicName] = useState('');
   const [isTextMatch, setIsTextMatch] = useState(false);
+  const [wasClaudeValidated, setWasClaudeValidated] = useState(false);
   const [mostCited, setMostCited] = useState([]);
   const [topAuthors, setTopAuthors] = useState([]);
   const [mostInfluential, setMostInfluential] = useState([]);
@@ -83,21 +137,42 @@ export function usePulse() {
     setPhase('loading');
     setError(null);
     setTopicName(name);
-    setIsTextMatch(!topicId);
     setMostCited([]);
     setTopAuthors([]);
     setMostInfluential([]);
     setScholar([]);
     setScholarFailed(false);
+    setWasClaudeValidated(false);
 
     const serpKey = localStorage.getItem('canon_serp_key') || '';
 
     try {
-      const [works, scholarOutcome] = await Promise.all([
-        topicId ? fetchTopicWorks(topicId, 30) : fetchTopicWorksByText(name, 30, subfieldId),
+      // A Claude-suggested topic often matches a real OpenAlex topic almost
+      // exactly (it was prompted to be phrased that way) — resolving to that
+      // topic's real id gives exact topics.id filtering instead of falling
+      // straight to word-overlap text search, which let unrelated papers
+      // through even with the subfield constrained (confirmed: a calculus-of-
+      // variations paper that happens to carry "Mathematical Physics" as one
+      // of its OpenAlex subfields and mentions "quantum field theory" in
+      // passing still matched "Topological Quantum Field Theory").
+      const resolvedId = topicId || await resolveOpenAlexTopicId(name);
+      if (token.aborted) return;
+      setIsTextMatch(!resolvedId);
+
+      let [works, scholarOutcome] = await Promise.all([
+        resolvedId ? fetchTopicWorks(resolvedId, 30) : fetchTopicWorksByText(name, 30, subfieldId),
         serpScholarSearch(name, serpKey, 20),
       ]);
       if (token.aborted) return;
+
+      // Only the text-search fallback needs this — an exact topics.id match
+      // (native or resolved) is already precise, and skipping this keeps the
+      // common case free of an extra Claude round-trip.
+      if (!resolvedId) {
+        works = await claudeValidateWorks(name, works);
+        if (token.aborted) return;
+        setWasClaudeValidated(true);
+      }
 
       setMostCited(works);
       setScholar(scholarOutcome.results);
@@ -142,6 +217,7 @@ export function usePulse() {
     setError(null);
     setTopicName('');
     setIsTextMatch(false);
+    setWasClaudeValidated(false);
     setMostCited([]);
     setTopAuthors([]);
     setMostInfluential([]);
@@ -150,7 +226,7 @@ export function usePulse() {
   }, []);
 
   return {
-    phase, error, topicName, isTextMatch, mostCited, topAuthors, mostInfluential, scholar, scholarFailed, scholarLoading,
+    phase, error, topicName, isTextMatch, wasClaudeValidated, mostCited, topAuthors, mostInfluential, scholar, scholarFailed, scholarLoading,
     hasScholarKey, select, reset, refreshScholar,
   };
 }

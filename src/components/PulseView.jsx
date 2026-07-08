@@ -225,8 +225,15 @@ function Panel({ title, subtitle, items, renderMetric, renderLink, renderSeconda
   );
 }
 
+function worksSubtitle(isTextMatch, wasClaudeValidated) {
+  if (!isTextMatch) return 'OpenAlex, filtered to this exact topic';
+  return wasClaudeValidated
+    ? 'OpenAlex, text-matched to this Claude-suggested topic — then Claude-checked to drop any that turned out unrelated'
+    : 'OpenAlex — text-matched to this Claude-suggested topic, not ID-filtered';
+}
+
 export default function PulseView({
-  topicName, isTextMatch, mostCited, topAuthors, mostInfluential, scholar, scholarLoading, scholarFailed, onScholarKeySaved,
+  topicName, isTextMatch, wasClaudeValidated, mostCited, topAuthors, mostInfluential, scholar, scholarLoading, scholarFailed, onScholarKeySaved,
 }) {
   const asOf = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   const [workSort, setWorkSort] = useState('citations');
@@ -259,12 +266,13 @@ export default function PulseView({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Panel
             title="Most Cited Works"
-            subtitle={isTextMatch ? 'OpenAlex — text-matched to this Claude-suggested topic, not ID-filtered' : 'OpenAlex, filtered to this exact topic'}
+            subtitle={worksSubtitle(isTextMatch, wasClaudeValidated)}
             items={sortedWorks}
             renderMetric={WORK_SORTS[workSort].metric}
             renderLink={w => w.oaUrl || (w.doi ? w.doi : null)}
             renderBadges={workBadges}
             headerRight={<SortSelect value={workSort} onChange={setWorkSort} options={WORK_SORTS} />}
+            emptyText={wasClaudeValidated ? "OpenAlex found text matches, but Claude didn't judge any of them to be genuinely about this topic." : undefined}
           />
           <Panel
             title="Most Cited Researchers"
