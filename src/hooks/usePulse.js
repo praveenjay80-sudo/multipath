@@ -162,6 +162,73 @@ Plain text only — no markdown bold/italic (**...**, *...*), no headers (#), no
   }
 }
 
+// A first-pass "None known" is often an incomplete recall, not an honest
+// answer — confirmed: the main call missed Sklar's "Physics and Chance,"
+// Albert's "Time and Chance," and Hemmo & Shenker's "The Road to Maxwell's
+// Demon" for Philosophical Frameworks under statistical mechanics, despite
+// all three being standard references in that exact area. One focused
+// follow-up per empty stage — considering just that stage instead of all
+// six at once — gives Claude a real second chance to recall something
+// genuine before the UI accepts that nothing exists. Still not allowed to
+// invent: broadening to adjacent/less-famous-but-real work is fine, making
+// something up is not.
+async function retryEmptyStage(topicName, subfieldName, stage) {
+  const apiKey = resolveApiKey();
+  if (!apiKey) return [];
+
+  const topicLine = subfieldName
+    ? `Topic: "${topicName}", specifically within the "${subfieldName}" subfield`
+    : `Topic: "${topicName}"`;
+  const system = `You recall real, verifiable academic works for a specific reading-list stage. A first attempt found nothing for this stage — think harder before agreeing that's correct. Only name works you are confident actually exist, with accurate author and year. Never invent one — if truly nothing exists after genuinely reconsidering, say so.`;
+  const user = `${topicLine}
+
+Stage: ${stage} (${STAGE_DEFINITIONS[stage]})
+
+An earlier pass found no work for this stage. Think again, specifically: classic or standard references you might not have considered first time, less-famous but genuine works, or works from a slightly broader/adjacent angle that still genuinely fit this stage for this topic.
+
+If you can now think of genuine work, list it:
+- Title by Author (Year) — one-sentence rationale for why it fits this specific stage
+
+If you are still confident nothing genuine exists for this stage even after reconsidering, respond with exactly: NONE
+
+Plain text only — no markdown, no headers, no numbered lists.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-5',
+        max_tokens: 1000,
+        system,
+        messages: [{ role: 'user', content: user }],
+      }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const text = stripLineMarkdown(extractText(data).trim());
+    if (/^NONE$/i.test(text)) return [];
+    const entries = [];
+    for (const raw of text.split('\n')) {
+      const line = stripLineMarkdown(raw);
+      const bulletMatch = line.match(/^(?:[-*•]|\d+[.)])\s*(.+)$/);
+      if (!bulletMatch) continue;
+      const entryText = bulletMatch[1].trim();
+      if (/^none known$/i.test(entryText) || /^none$/i.test(entryText)) continue;
+      const entry = parseReadingOrderEntry(entryText);
+      if (entry) entries.push(entry);
+    }
+    return entries;
+  } catch {
+    return [];
+  }
+}
+
 // "Title by Author (Year) — rationale" mirrors the citation format used
 // throughout the rest of the app's Claude-generated reading lists.
 function parseReadingOrderEntry(line) {
@@ -412,15 +479,34 @@ export function usePulse() {
     if (readingStageGroups || readingStagesLoading || !topicName) return;
     setReadingStagesLoading(true);
     setReadingStagesFailed(false);
-    const groups = await generateReadingOrder(topicName, subfieldNameRef.current);
+    const subfieldName = subfieldNameRef.current;
+    const groups = await generateReadingOrder(topicName, subfieldName);
     // Every stage coming back empty is essentially always a parsing failure,
     // not Claude genuinely knowing nothing — confirmed twice on mainstream
     // topics ("Stochastic processes and statistical mechanics", "Quantum
     // chaos and semiclassical analysis"). Surface it as a retryable failure
     // instead of silently claiming no genuine work exists for any stage.
     const hasAnyWork = groups && READING_STAGES.some(s => (groups[s] || []).length > 0);
-    if (hasAnyWork) setReadingStageGroups(groups);
-    else setReadingStagesFailed(true);
+    if (!hasAnyWork) {
+      setReadingStagesFailed(true);
+      setReadingStagesLoading(false);
+      return;
+    }
+
+    // A first pass missing a stage is often incomplete recall, not an honest
+    // "nothing exists" (confirmed: the first pass skipped Sklar's "Physics
+    // and Chance," a standard reference, for Philosophical Frameworks under
+    // statistical mechanics). One focused retry per still-empty stage before
+    // accepting the gap.
+    const emptyStages = READING_STAGES.filter(s => (groups[s] || []).length === 0);
+    if (emptyStages.length) {
+      const retries = await Promise.all(
+        emptyStages.map(stage => retryEmptyStage(topicName, subfieldName, stage))
+      );
+      emptyStages.forEach((stage, i) => { groups[stage] = retries[i]; });
+    }
+
+    setReadingStageGroups(groups);
     setReadingStagesLoading(false);
   }, [topicName, readingStageGroups, readingStagesLoading]);
 
