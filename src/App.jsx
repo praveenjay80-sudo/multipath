@@ -19,6 +19,7 @@ import { useCanonDrift } from './hooks/useCanonDrift';
 import { useConsilience } from './hooks/useConsilience';
 import { useInquiry } from './hooks/useInquiry';
 import { useSpectrum } from './hooks/useSpectrum';
+import { usePulse } from './hooks/usePulse';
 import { useFieldIntelligence } from './hooks/useFieldIntelligence';
 import { parseCanon } from './utils/parseCanon';
 import { copyMarkdown } from './utils/exportMarkdown';
@@ -38,6 +39,8 @@ import InquiryView from './components/InquiryView';
 import SpectrumInput from './components/SpectrumInput';
 import SpectrumQuestionsView from './components/SpectrumQuestionsView';
 import SpectrumView from './components/SpectrumView';
+import PulseInput from './components/PulseInput';
+import PulseView from './components/PulseView';
 import FieldIntelligenceInput from './components/FieldIntelligenceInput';
 import FieldIntelligenceView from './components/FieldIntelligenceView';
 import MathExplorerView from './components/MathExplorerView';
@@ -157,12 +160,13 @@ export default function App() {
   const consilience = useConsilience();
   const inquiry = useInquiry();
   const spectrum = useSpectrum();
+  const pulse = usePulse();
   const fieldIntel = useFieldIntelligence();
   const [inputTopic, setInputTopic] = useState('');
   const [shake, setShake] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [view, setView] = useState('canon');
-  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'spectrum' | 'intelligence' | 'math'
+  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'spectrum' | 'pulse' | 'intelligence' | 'math'
 
   const parsed = useMemo(() => parseCanon(gen.content), [gen.content]);
 
@@ -379,6 +383,16 @@ export default function App() {
                 >
                   Spectrum
                 </button>
+                <button
+                  onClick={() => setAppMode('pulse')}
+                  className={`px-4 py-2.5 text-sm font-mono -mb-px transition-colors ${
+                    appMode === 'pulse'
+                      ? 'border-b-2 border-lime-600 text-lime-700 font-semibold'
+                      : 'border-b-2 border-transparent text-stone-400 hover:text-lime-600'
+                  }`}
+                >
+                  Pulse
+                </button>
 
                 <button
                   onClick={() => setAppMode('intelligence')}
@@ -421,6 +435,8 @@ export default function App() {
                   ? 'Enter any field or topic and get the open questions at its frontier — precisely formulated, with what makes each hard, what has been tried, who is working on it, and the best entry point.'
                   : appMode === 'spectrum'
                   ? 'Enter a topic and get real-life questions whose complete answer genuinely spans multiple disciplines — or type your own. Get a plain-language concept breakdown and a staged reading list grounded in real literature.'
+                  : appMode === 'pulse'
+                  ? 'Pick a field, subfield, and topic — see live citation counts, citation velocity, syllabus assignment, and Google Scholar results right now. No AI, just the raw numbers from OpenAlex, Semantic Scholar, Open Syllabus, and Google Scholar.'
                   : appMode === 'intelligence'
                   ? 'Map any field\'s complete intellectual landscape — all schools of thought, key interlocutors, and the central argument structure. Then audit its hidden assumptions and paradigm status.'
                   : appMode === 'knowledge'
@@ -492,6 +508,13 @@ export default function App() {
                 onGenerateQuestions={spectrum.generateQuestions}
                 onSubmitDirect={spectrum.submitDirectQuestion}
                 disabled={['listing', 'harvesting', 'generating'].includes(spectrum.phase)}
+              />
+            )}
+
+            {appMode === 'pulse' && (
+              <PulseInput
+                onSelect={pulse.select}
+                disabled={pulse.phase === 'loading'}
               />
             )}
 
@@ -951,6 +974,45 @@ export default function App() {
                   className="px-4 py-2 text-sm bg-stone-900 text-white hover:bg-stone-700 transition-colors"
                 >
                   New Question
+                </button>
+              </div>
+            )}
+
+            {/* Pulse mode */}
+            {appMode === 'pulse' && pulse.phase === 'loading' && (
+              <div className="mt-8 border border-stone-200 bg-white px-6 py-5">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex gap-0.5">
+                    <span className="loading-dot" /><span className="loading-dot" /><span className="loading-dot" />
+                  </span>
+                  <span className="text-sm text-stone-500">Fetching live data...</span>
+                </div>
+              </div>
+            )}
+            {appMode === 'pulse' && pulse.phase === 'error' && (
+              <div className="mt-8 p-5 bg-red-50 border border-red-200">
+                <p className="font-medium text-red-900 text-sm">Failed</p>
+                <p className="text-sm text-red-700 mt-1">{pulse.error}</p>
+              </div>
+            )}
+            {appMode === 'pulse' && pulse.phase === 'complete' && (
+              <PulseView
+                topicName={pulse.topicName}
+                mostCited={pulse.mostCited}
+                rising={pulse.rising}
+                mostAssigned={pulse.mostAssigned}
+                mostInfluential={pulse.mostInfluential}
+                scholar={pulse.scholar}
+                hasScholarKey={pulse.hasScholarKey}
+              />
+            )}
+            {appMode === 'pulse' && pulse.phase === 'complete' && (
+              <div className="mt-8 pt-6 border-t border-stone-200 flex gap-2">
+                <button
+                  onClick={pulse.reset}
+                  className="px-4 py-2 text-sm bg-stone-900 text-white hover:bg-stone-700 transition-colors"
+                >
+                  New Topic
                 </button>
               </div>
             )}

@@ -140,6 +140,15 @@ export default function ApiKeyInput() {
               linkHref="https://console.anthropic.com/settings/keys"
             />
           )}
+          <KeyField
+            storageKey="canon_serp_key"
+            label="SerpAPI Key"
+            placeholder="serpapi key..."
+            description="Used for Google Scholar results in Pulse and canon cross-validation. Stored in this browser only."
+            linkText="serpapi.com"
+            linkHref="https://serpapi.com/manage-api-key"
+            optional
+          />
         </div>
       )}
     </div>

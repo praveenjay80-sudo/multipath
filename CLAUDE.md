@@ -26,9 +26,10 @@ Deploy command: `railway up`
 6. **Consilience** (`appMode === 'consilience'`) — cross-disciplinary synthesis: each field's lens, answer, convergences, tensions
 7. **The Inquiry** (`appMode === 'inquiry'`) — open frontier questions: formulated, why hard, what's been tried, entry point
 8. **Spectrum** (`appMode === 'spectrum'`) — real-life questions whose complete answer genuinely spans multiple disciplines (generated from a topic, tagged with discipline + tier, or typed directly); two-stage pipeline: (1) sonnet-5 generates 6 candidate questions with a "why it spans" justification, (2) picking/typing one triggers OSP + Semantic Scholar harvest + sonnet-5 concept breakdown (plain language, comprehensive, uncapped) + staged reading list (uncapped, covers every discipline's perspective, reuses `ReadingOrderView` unmodified) + a 4-6 paragraph synthesized ANSWER that explicitly names concepts and cites works by title
-9. **Field Intelligence** (`appMode === 'intelligence'`) — 3-tab deep analysis: Landscape (all schools of thought), Audit (hidden assumptions + paradigm), Bibliography (exhaustive annotated bibliography with reading order + click-to-expand synopsis)
-10. **Math Universe** (`appMode === 'math'`) — browse 15 math domains → subfields → topic chips → ordered reading sequence + beginner explanations
-11. **Concept Map** (`appMode === 'concepts'`) — 4-tier static hierarchy of 2,575 concepts across 170 groups covering all of human knowledge (science, mathematics, medicine, law, humanities, business); loaded instantly from `public/data/concept-map.json` (no API calls for hierarchy); two-column layout: chips left, sticky 348px side panel right; side panel shows reading path OR explanation with PATH/EXPLAIN tabs when both are active
+9. **Pulse** (`appMode === 'pulse'`) — the one Claude-free mode: live citation and syllabus data, no LLM synthesis at all. Input is 3 cascading dropdowns (Field → Subfield → Topic) via `fetchOpenAlexTaxonomy()`, not free text — selecting a leaf Topic (real OpenAlex topic ID) fires 4 parallel live fetches: OpenAlex works filtered by exact topic ID (Most Cited + Rising, the latter re-sorted client-side by 2-year citation velocity from `counts_by_year`), Semantic Scholar cross-referenced by the DOIs of those same OpenAlex works via a batch lookup (Most Influential Papers — precise, not a separate fuzzy search), Open Syllabus Project text-matched by topic name (Most Assigned — labeled as approximate since OSP has no ID filter), and optionally Google Scholar via SerpAPI if a `canon_serp_key` is set (also text-matched). All 5 panels are plain ranked lists — title/authors/year + a mono metric chip, no prose
+10. **Field Intelligence** (`appMode === 'intelligence'`) — 3-tab deep analysis: Landscape (all schools of thought), Audit (hidden assumptions + paradigm), Bibliography (exhaustive annotated bibliography with reading order + click-to-expand synopsis)
+11. **Math Universe** (`appMode === 'math'`) — browse 15 math domains → subfields → topic chips → ordered reading sequence + beginner explanations
+12. **Concept Map** (`appMode === 'concepts'`) — 4-tier static hierarchy of 2,575 concepts across 170 groups covering all of human knowledge (science, mathematics, medicine, law, humanities, business); loaded instantly from `public/data/concept-map.json` (no API calls for hierarchy); two-column layout: chips left, sticky 348px side panel right; side panel shows reading path OR explanation with PATH/EXPLAIN tabs when both are active
 
 ## File Structure
 
@@ -43,6 +44,7 @@ Deploy command: `railway up`
 - `src/hooks/useReverseMode.js` — Claude Sonnet 5: maps prerequisites + postrequisites for any paper/book
 - `src/hooks/useCurriculumMode.js` — two-phase: (1) harvest OSP, (2) Claude Sonnet 5 builds curriculum
 - `src/hooks/useSpectrum.js` — two-stage: (1) Claude Sonnet 5 generates 6 candidate real-life transdisciplinary questions (no harvest), (2) selecting/typing a question triggers OSP + Semantic Scholar harvest then one streamed Claude Sonnet 5 call producing concept breakdown (uncapped) + staged reading list (uncapped) + a synthesized ANSWER section; local `streamClaude()` helper shared between both stages
+- `src/hooks/usePulse.js` — no Claude call. On topic selection: OpenAlex works filtered by exact topic id (`pulseOpenAlex.js`) in parallel with OSP `syllabusSearch()` and (if `canon_serp_key` is set) a Google Scholar SerpAPI search; then a Semantic Scholar batch DOI lookup against the OpenAlex results' DOIs for the "Most Influential" cross-reference. Phases `idle → loading → complete/error`, no "harvesting"/"generating" split since there's no LLM stage
 
 ### Utils
 - `src/utils/parseCanon.js` — markdown → structured canon (sections, works)
@@ -52,7 +54,9 @@ Deploy command: `railway up`
 - `src/utils/parseSpectrumConcepts.js` — QUESTION/CONCEPT/DISCIPLINE/TIER/EXPLANATION/RELEVANCE format parser; stops at `READING LIST:`; also exports `extractReadingListSection()` (slices the raw PHASE N text between `READING LIST:` and `ANSWER:`, handed to `ReadingOrderView`) and `extractAnswerParagraphs()` (splits the text after `ANSWER:` into paragraphs)
 - `src/utils/scoreWorks.js` — composite scoring: papers (citation-heavy) vs books (teaching score + editions)
 - `src/utils/harvestData.js` — 8-source parallel harvest (OpenAlex ×3, Semantic Scholar ×2, Google Books, Open Library, Open Syllabus)
-- `src/utils/syllabusHarvest.js` — OSP API: `syllabusSearch(topic, limit)` + `syllabusHarvest(topic)` (4 parallel queries, dedup, top 80)
+- `src/utils/syllabusHarvest.js` — OSP API: `syllabusSearch(topic, limit)` + `syllabusHarvest(topic)` (4 parallel queries, dedup, top 80); also exports `seminalPapersHarvest(topic)` (Semantic Scholar, sorted by `influentialCitationCount`)
+- `src/utils/pulseOpenAlex.js` — `fetchTopicWorks(topicId, limit)`: OpenAlex `/works?filter=topics.id:<id>` (exact topic-id filter, not text search), `select` includes `counts_by_year` (not fetched anywhere else in the app); `recentCitationVelocity(work)` sums the 2 most recent years from `counts_by_year` for the Pulse "Rising" sort
+- `src/utils/openAlexTaxonomy.js` — `fetchOpenAlexTaxonomy()`: live Field → Subfield → Topic tree (19 fields, 252 subfields, 4,516 topics) from OpenAlex, each topic carrying a real topic id; cached 7 days in localStorage (`openalex_taxonomy_v2`); used by the sidebar and by `PulseInput.jsx`'s cascading dropdowns
 - `src/utils/exportMarkdown.js` — clipboard copy
 - `src/utils/enrichCanon.js` — CrossRef + OpenAlex per-work enrichment
 - `src/utils/openAlexEnrich.js` — FWCI, OA status, percentile from OpenAlex
@@ -73,8 +77,10 @@ Deploy command: `railway up`
 - `src/components/SpectrumInput.jsx` — topic textbox (generate candidate questions) with a toggle to type a question directly instead
 - `src/components/SpectrumQuestionsView.jsx` — candidate question cards with discipline+tier chips and "why it spans" line; click to select and trigger the answer pipeline
 - `src/components/SpectrumView.jsx` — two-column result: concept cards (plain explanation + relevance) left, `ReadingOrderView` (reused unmodified) right
+- `src/components/PulseInput.jsx` — 3 cascading dropdowns (Field → Subfield → Topic) via `fetchOpenAlexTaxonomy()`; selecting a leaf topic fires the fetch immediately, no button
+- `src/components/PulseView.jsx` — 5 plain ranked-list panels (Most Cited, Rising, Most Influential Papers, Most Assigned, Google Scholar), shared `Panel` renderer, mono metric chips, no prose
 - `src/components/Sidebar.jsx` — 3-level field nav + history
-- `src/components/ApiKeyInput.jsx` — Anthropic key input (localStorage `canon_api_key`)
+- `src/components/ApiKeyInput.jsx` — Anthropic key input (localStorage `canon_api_key`) + optional SerpAPI key (localStorage `canon_serp_key`, used by Pulse's Google Scholar panel and `useCanonValidator.js`)
 - `src/components/ActionBar.jsx` — copy/save/regenerate/new
 - `src/components/LoadingState.jsx` — phase-aware loading display
 - `src/components/CandidatePreview.jsx` — live candidate list during harvest/scoring
