@@ -999,7 +999,6 @@ export default function App() {
               <PulseView
                 topicName={pulse.topicName}
                 mostCited={pulse.mostCited}
-                rising={pulse.rising}
                 topAuthors={pulse.topAuthors}
                 mostInfluential={pulse.mostInfluential}
                 scholar={pulse.scholar}

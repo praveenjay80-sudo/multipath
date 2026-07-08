@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { fetchTopicWorks, recentCitationVelocity, aggregateTopAuthors } from '../utils/pulseOpenAlex';
+import { fetchTopicWorks, aggregateTopAuthors, fetchAuthorStats } from '../utils/pulseOpenAlex';
 
 const WORKER_BASE = 'https://canon-enrichment.canonworks.workers.dev';
 
@@ -60,7 +60,6 @@ export function usePulse() {
   const [error, setError] = useState(null);
   const [topicName, setTopicName] = useState('');
   const [mostCited, setMostCited] = useState([]);
-  const [rising, setRising] = useState([]);
   const [topAuthors, setTopAuthors] = useState([]);
   const [mostInfluential, setMostInfluential] = useState([]);
   const [scholar, setScholar] = useState([]);
@@ -79,7 +78,6 @@ export function usePulse() {
     setError(null);
     setTopicName(name);
     setMostCited([]);
-    setRising([]);
     setTopAuthors([]);
     setMostInfluential([]);
     setScholar([]);
@@ -95,15 +93,20 @@ export function usePulse() {
       if (token.aborted) return;
 
       setMostCited(works);
-      setRising([...works].sort((a, b) => recentCitationVelocity(b) - recentCitationVelocity(a)));
-      setTopAuthors(aggregateTopAuthors(works));
       setScholar(scholarOutcome.results);
       setScholarFailed(!scholarOutcome.ok);
 
+      const authors = aggregateTopAuthors(works);
       const dois = works.map(w => w.doi).filter(Boolean).slice(0, 30);
-      const influential = await fetchInfluentialByDoi(dois);
+      // H-index/i10-index are career-wide (not scoped to this topic), so they
+      // need their own batched authors call — capped at 50 ids per request.
+      const [influential, authorStats] = await Promise.all([
+        fetchInfluentialByDoi(dois),
+        fetchAuthorStats(authors.slice(0, 50).map(a => a.id)),
+      ]);
       if (token.aborted) return;
       setMostInfluential(influential);
+      setTopAuthors(authors.map(a => ({ ...a, hIndex: authorStats[a.id]?.hIndex ?? null })));
 
       setPhase('complete');
     } catch (err) {
@@ -132,7 +135,6 @@ export function usePulse() {
     setError(null);
     setTopicName('');
     setMostCited([]);
-    setRising([]);
     setTopAuthors([]);
     setMostInfluential([]);
     setScholar([]);
@@ -140,7 +142,7 @@ export function usePulse() {
   }, []);
 
   return {
-    phase, error, topicName, mostCited, rising, topAuthors, mostInfluential, scholar, scholarFailed, scholarLoading,
+    phase, error, topicName, mostCited, topAuthors, mostInfluential, scholar, scholarFailed, scholarLoading,
     hasScholarKey, select, reset, refreshScholar,
   };
 }

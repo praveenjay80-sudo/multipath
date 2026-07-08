@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { recentCitationVelocity } from '../utils/pulseOpenAlex';
 
 function ScholarKeyPrompt({ onSaved }) {
@@ -105,12 +105,75 @@ function workBadges(w) {
   return badges.length ? badges : null;
 }
 
-function Panel({ title, subtitle, items, renderMetric, renderLink, renderSecondary, renderBadges, emptyText, emptyContent, loading }) {
+// Every metric a work carries — total citations, FWCI, same-year percentile,
+// recent (2yr) velocity. Picking one re-sorts and re-labels the primary metric;
+// the badge row below always shows all of them regardless of sort.
+const WORK_SORTS = {
+  citations: {
+    label: 'Total citations',
+    compare: (a, b) => b.citationCount - a.citationCount,
+    metric: w => `${w.citationCount.toLocaleString()} cit.`,
+  },
+  fwci: {
+    label: 'FWCI',
+    compare: (a, b) => (b.fwci ?? -1) - (a.fwci ?? -1),
+    metric: w => (w.fwci != null ? w.fwci.toFixed(2) : '—'),
+  },
+  percentile: {
+    label: 'Percentile (same year)',
+    compare: (a, b) => (b.percentile ?? -1) - (a.percentile ?? -1),
+    metric: w => (w.percentile != null ? `${w.percentile}th pct.` : '—'),
+  },
+  velocity: {
+    label: 'Recent velocity (2yr)',
+    compare: (a, b) => recentCitationVelocity(b) - recentCitationVelocity(a),
+    metric: w => `${recentCitationVelocity(w).toLocaleString()} cit. / 2yr`,
+  },
+};
+
+// H-index/i10-index are career-wide (from the author's own OpenAlex profile),
+// while citations/work-count here are scoped to just the works in this set.
+const AUTHOR_SORTS = {
+  citations: {
+    label: 'Total citations (this set)',
+    compare: (a, b) => b.citationCount - a.citationCount,
+    metric: a => `${a.citationCount.toLocaleString()} cit.`,
+  },
+  hindex: {
+    label: 'H-index (career)',
+    compare: (a, b) => (b.hIndex ?? -1) - (a.hIndex ?? -1),
+    metric: a => (a.hIndex != null ? `H-${a.hIndex}` : '—'),
+  },
+  works: {
+    label: 'Works in this set',
+    compare: (a, b) => b.workCount - a.workCount,
+    metric: a => `${a.workCount} work${a.workCount === 1 ? '' : 's'}`,
+  },
+};
+
+function SortSelect({ value, onChange, options }) {
+  return (
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className="text-[11px] border border-stone-200 bg-white px-2 py-1 text-stone-600 focus:outline-none focus:border-stone-700 transition-colors"
+    >
+      {Object.entries(options).map(([key, o]) => (
+        <option key={key} value={key}>{o.label}</option>
+      ))}
+    </select>
+  );
+}
+
+function Panel({ title, subtitle, items, renderMetric, renderLink, renderSecondary, renderBadges, emptyText, emptyContent, loading, headerRight }) {
   return (
     <div className="border border-stone-200 bg-white">
-      <div className="px-5 py-3 border-b border-stone-200">
-        <h3 className="text-sm font-semibold text-stone-900">{title}</h3>
-        {subtitle && <p className="text-xs text-stone-400 mt-0.5">{subtitle}</p>}
+      <div className="px-5 py-3 border-b border-stone-200 flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-stone-900">{title}</h3>
+          {subtitle && <p className="text-xs text-stone-400 mt-0.5">{subtitle}</p>}
+        </div>
+        {headerRight && <div className="shrink-0">{headerRight}</div>}
       </div>
       {loading ? (
         <div className="px-5 py-6 flex items-center gap-2.5 text-stone-400">
@@ -156,10 +219,20 @@ function Panel({ title, subtitle, items, renderMetric, renderLink, renderSeconda
 }
 
 export default function PulseView({
-  topicName, mostCited, rising, topAuthors, mostInfluential, scholar, scholarLoading, scholarFailed, onScholarKeySaved,
+  topicName, mostCited, topAuthors, mostInfluential, scholar, scholarLoading, scholarFailed, onScholarKeySaved,
 }) {
   const asOf = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-  const authorItems = (topAuthors || []).map(a => ({ ...a, title: a.name }));
+  const [workSort, setWorkSort] = useState('citations');
+  const [authorSort, setAuthorSort] = useState('citations');
+
+  const sortedWorks = useMemo(
+    () => [...mostCited].sort(WORK_SORTS[workSort].compare),
+    [mostCited, workSort]
+  );
+  const sortedAuthors = useMemo(
+    () => (topAuthors || []).map(a => ({ ...a, title: a.name })).sort(AUTHOR_SORTS[authorSort].compare),
+    [topAuthors, authorSort]
+  );
 
   return (
     <div className="mt-10">
@@ -170,30 +243,26 @@ export default function PulseView({
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        <Panel
-          title="Most Cited"
-          subtitle="OpenAlex, ranked by total citations, filtered to this exact topic"
-          items={mostCited}
-          renderMetric={w => `${w.citationCount.toLocaleString()} cit.`}
-          renderLink={w => w.oaUrl || (w.doi ? w.doi : null)}
-          renderBadges={workBadges}
-        />
-        <Panel
-          title="Rising"
-          subtitle="Same works, ranked by citations in the last 2 years"
-          items={rising}
-          renderMetric={w => `${recentCitationVelocity(w).toLocaleString()} cit. / 2yr`}
-          renderLink={w => w.oaUrl || (w.doi ? w.doi : null)}
-          renderBadges={workBadges}
-        />
-        <Panel
-          title="Most Cited Researchers"
-          subtitle="Aggregated citation totals across the works above — attributes each work's citations to every listed coauthor, not a separate author-level lookup"
-          items={authorItems}
-          renderMetric={a => `${a.citationCount.toLocaleString()} cit.`}
-          renderLink={a => a.id || null}
-          renderSecondary={a => `${a.workCount} work${a.workCount === 1 ? '' : 's'} in this set`}
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Panel
+            title="Most Cited Works"
+            subtitle="OpenAlex, filtered to this exact topic"
+            items={sortedWorks}
+            renderMetric={WORK_SORTS[workSort].metric}
+            renderLink={w => w.oaUrl || (w.doi ? w.doi : null)}
+            renderBadges={workBadges}
+            headerRight={<SortSelect value={workSort} onChange={setWorkSort} options={WORK_SORTS} />}
+          />
+          <Panel
+            title="Most Cited Researchers"
+            subtitle="Aggregated across the works above — every listed coauthor is credited the work's citations"
+            items={sortedAuthors}
+            renderMetric={AUTHOR_SORTS[authorSort].metric}
+            renderLink={a => a.id || null}
+            renderSecondary={a => `${a.workCount} work${a.workCount === 1 ? '' : 's'} in this set${a.hIndex != null ? ` · H-index ${a.hIndex} (career)` : ''}`}
+            headerRight={<SortSelect value={authorSort} onChange={setAuthorSort} options={AUTHOR_SORTS} />}
+          />
+        </div>
         <Panel
           title="Most Influential Papers"
           subtitle="Of the works above, ranked by Semantic Scholar's influential-citation count"

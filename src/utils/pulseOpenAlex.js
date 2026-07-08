@@ -76,6 +76,31 @@ function isNoisyTitle(title) {
   return NOISE_TITLE_RE.test(t) || NOISE_CONTAINER_RE.test(t);
 }
 
+// Batched by OpenAlex id (the `openalex:` filter takes up to 100 pipe-separated
+// ids in one request) — h-index/i10-index are career-wide stats from each
+// author's own profile, not scoped to this topic, so this is a separate call
+// from fetchTopicWorks rather than something derivable from the works we have.
+export async function fetchAuthorStats(authorIds) {
+  const ids = authorIds.filter(Boolean).map(bareId);
+  if (!ids.length) return {};
+  const url = `https://api.openalex.org/authors?filter=openalex:${ids.join('|')}&select=id,summary_stats&per_page=${ids.length}&${MAILTO}${openAlexAuth()}`;
+  try {
+    const res = await fetchWithTimeout(url);
+    if (!res.ok) return {};
+    const json = await res.json();
+    const map = {};
+    for (const a of json.results || []) {
+      map[a.id] = {
+        hIndex: a.summary_stats?.h_index ?? null,
+        i10Index: a.summary_stats?.i10_index ?? null,
+      };
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 export async function fetchTopicWorks(topicId, limit = 30) {
   const fetchLimit = Math.min(limit * 3, 100);
   const url = `https://api.openalex.org/works?filter=topics.id:${encodeURIComponent(bareId(topicId))},type:article|book&select=title,authorships,publication_year,cited_by_count,fwci,cited_by_percentile_year,type,open_access,primary_location,doi,counts_by_year&sort=cited_by_count:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
