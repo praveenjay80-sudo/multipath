@@ -16,9 +16,13 @@ function oaWork(w) {
   return {
     title: w.title,
     authors: extractAuthors(w.authorships),
+    authorList: (w.authorships || [])
+      .map(a => ({ id: a.author?.id, name: a.author?.display_name }))
+      .filter(a => a.id && a.name),
     year: w.publication_year,
     citationCount: w.cited_by_count || 0,
     fwci: w.fwci ?? null,
+    percentile: w.cited_by_percentile_year?.min ?? null,
     type: w.type,
     isOA: w.open_access?.is_oa || false,
     oaUrl: w.open_access?.oa_url || null,
@@ -32,6 +36,23 @@ export function recentCitationVelocity(work) {
   const counts = work.countsByYear || [];
   const sorted = [...counts].sort((a, b) => b.year - a.year);
   return sorted.slice(0, 2).reduce((sum, c) => sum + (c.cited_by_count || 0), 0);
+}
+
+// Derived from the same fetched works — not a separate author-level API call
+// (OpenAlex's Authors endpoint has no reliable topic filter, and this avoids
+// burning extra credit budget). Attributes each work's citation count to
+// every listed coauthor and ranks by the running total.
+export function aggregateTopAuthors(works) {
+  const byId = new Map();
+  for (const w of works) {
+    for (const a of w.authorList || []) {
+      const cur = byId.get(a.id) || { id: a.id, name: a.name, citationCount: 0, workCount: 0 };
+      cur.citationCount += w.citationCount || 0;
+      cur.workCount += 1;
+      byId.set(a.id, cur);
+    }
+  }
+  return [...byId.values()].sort((a, b) => b.citationCount - a.citationCount);
 }
 
 // Topic ids from fetchOpenAlexTaxonomy() are full URLs (https://openalex.org/T10883);
@@ -57,7 +78,7 @@ function isNoisyTitle(title) {
 
 export async function fetchTopicWorks(topicId, limit = 30) {
   const fetchLimit = Math.min(limit * 3, 100);
-  const url = `https://api.openalex.org/works?filter=topics.id:${encodeURIComponent(bareId(topicId))},type:article|book&select=title,authorships,publication_year,cited_by_count,fwci,type,open_access,primary_location,doi,counts_by_year&sort=cited_by_count:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
+  const url = `https://api.openalex.org/works?filter=topics.id:${encodeURIComponent(bareId(topicId))},type:article|book&select=title,authorships,publication_year,cited_by_count,fwci,cited_by_percentile_year,type,open_access,primary_location,doi,counts_by_year&sort=cited_by_count:desc&per_page=${fetchLimit}&${MAILTO}${openAlexAuth()}`;
   const res = await fetchWithTimeout(url);
   if (!res.ok) throw new Error(`OpenAlex fetch failed: ${res.status}`);
   const json = await res.json();

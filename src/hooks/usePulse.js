@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { fetchTopicWorks, recentCitationVelocity } from '../utils/pulseOpenAlex';
+import { fetchTopicWorks, recentCitationVelocity, aggregateTopAuthors } from '../utils/pulseOpenAlex';
 
 const WORKER_BASE = 'https://canon-enrichment.canonworks.workers.dev';
 
@@ -61,6 +61,7 @@ export function usePulse() {
   const [topicName, setTopicName] = useState('');
   const [mostCited, setMostCited] = useState([]);
   const [rising, setRising] = useState([]);
+  const [topAuthors, setTopAuthors] = useState([]);
   const [mostInfluential, setMostInfluential] = useState([]);
   const [scholar, setScholar] = useState([]);
   const [scholarFailed, setScholarFailed] = useState(false);
@@ -79,6 +80,7 @@ export function usePulse() {
     setTopicName(name);
     setMostCited([]);
     setRising([]);
+    setTopAuthors([]);
     setMostInfluential([]);
     setScholar([]);
     setScholarFailed(false);
@@ -94,6 +96,7 @@ export function usePulse() {
 
       setMostCited(works);
       setRising([...works].sort((a, b) => recentCitationVelocity(b) - recentCitationVelocity(a)));
+      setTopAuthors(aggregateTopAuthors(works));
       setScholar(scholarOutcome.results);
       setScholarFailed(!scholarOutcome.ok);
 
@@ -130,13 +133,14 @@ export function usePulse() {
     setTopicName('');
     setMostCited([]);
     setRising([]);
+    setTopAuthors([]);
     setMostInfluential([]);
     setScholar([]);
     setScholarFailed(false);
   }, []);
 
   return {
-    phase, error, topicName, mostCited, rising, mostInfluential, scholar, scholarFailed, scholarLoading,
+    phase, error, topicName, mostCited, rising, topAuthors, mostInfluential, scholar, scholarFailed, scholarLoading,
     hasScholarKey, select, reset, refreshScholar,
   };
 }

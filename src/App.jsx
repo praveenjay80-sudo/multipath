@@ -292,8 +292,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen" style={{ background: '#FAFAF9' }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex gap-12">
+      <div className="lg:pr-80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex-1 min-w-0 py-12">
             <header className="mb-10">
               <h1 className="text-6xl font-bold tracking-tight text-stone-900">Multipath</h1>
@@ -1000,6 +1000,7 @@ export default function App() {
                 topicName={pulse.topicName}
                 mostCited={pulse.mostCited}
                 rising={pulse.rising}
+                topAuthors={pulse.topAuthors}
                 mostInfluential={pulse.mostInfluential}
                 scholar={pulse.scholar}
                 scholarLoading={pulse.scholarLoading}
@@ -1077,34 +1078,33 @@ export default function App() {
               />
             )}
           </div>
-
-          <div className="hidden lg:block w-80 shrink-0 py-12">
-            <div className="sticky top-12">
-              <Sidebar
-                history={hist.history}
-                onLoad={handleLoad}
-                onDelete={hist.deleteCanon}
-                onClearAll={hist.clearAll}
-                activeCanonTopic={gen.topic}
-                onClickTopLevel={handleClickTopLevel}
-                onClickSubfield={handleClickSubfield}
-                onClickSubSubfield={handleClickSubSubfield}
-                isFieldExpanded={fieldNav.isFieldExpanded}
-                isSubfieldExpanded={fieldNav.isSubfieldExpanded}
-                getSubfields={fieldNav.getSubfields}
-                getSubSubfields={fieldNav.getSubSubfields}
-                getFieldUrl={fieldNav.getFieldUrl}
-                getSubfieldUrl={fieldNav.getSubfieldUrl}
-                getTopicUrl={fieldNav.getTopicUrl}
-                fieldNames={fieldNav.fieldNames}
-                taxonomyLoading={fieldNav.taxonomyLoading}
-                topicCount={fieldNav.topicCount}
-                onSelectConcept={handleSelectTopic}
-                disabled={isGenerating || isRefining}
-              />
-            </div>
-          </div>
         </div>
+      </div>
+
+      {/* Sidebar pinned to the true right edge of the viewport, independent of the centered content column */}
+      <div className="hidden lg:block fixed top-0 right-0 h-screen w-80 overflow-y-auto border-l border-stone-200 px-6 py-12" style={{ background: '#FAFAF9' }}>
+        <Sidebar
+          history={hist.history}
+          onLoad={handleLoad}
+          onDelete={hist.deleteCanon}
+          onClearAll={hist.clearAll}
+          activeCanonTopic={gen.topic}
+          onClickTopLevel={handleClickTopLevel}
+          onClickSubfield={handleClickSubfield}
+          onClickSubSubfield={handleClickSubSubfield}
+          isFieldExpanded={fieldNav.isFieldExpanded}
+          isSubfieldExpanded={fieldNav.isSubfieldExpanded}
+          getSubfields={fieldNav.getSubfields}
+          getSubSubfields={fieldNav.getSubSubfields}
+          getFieldUrl={fieldNav.getFieldUrl}
+          getSubfieldUrl={fieldNav.getSubfieldUrl}
+          getTopicUrl={fieldNav.getTopicUrl}
+          fieldNames={fieldNav.fieldNames}
+          taxonomyLoading={fieldNav.taxonomyLoading}
+          topicCount={fieldNav.topicCount}
+          onSelectConcept={handleSelectTopic}
+          disabled={isGenerating || isRefining}
+        />
       </div>
 
       <button
