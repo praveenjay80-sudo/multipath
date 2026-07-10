@@ -1,3 +1,5 @@
+import WorkSourceLink from './WorkSourceLink';
+
 const COURSE_COLORS = [
   { bg: 'bg-sky-50',     border: 'border-sky-200',     badge: 'bg-sky-100 text-sky-700',         num: 'text-sky-400',     paperBg: 'bg-sky-100/60' },
   { bg: 'bg-indigo-50',  border: 'border-indigo-200',  badge: 'bg-indigo-100 text-indigo-700',   num: 'text-indigo-400',  paperBg: 'bg-indigo-100/60' },
@@ -143,6 +145,7 @@ export default function CurriculumView({ parsed, isStreaming, ospCount, seminalC
                         <div className="flex-1">
                           <div className="flex flex-wrap items-baseline gap-2">
                             <span className="text-sm font-medium text-stone-800">{work.ref}</span>
+                            <WorkSourceLink title={work.ref} isPaper={false} />
                             {work.syllabusCount != null && (
                               <span className="text-xs font-mono text-stone-400 bg-white/70 px-1.5 py-0.5 border border-stone-100">
                                 {work.syllabusCount.toLocaleString()} courses
@@ -175,6 +178,7 @@ export default function CurriculumView({ parsed, isStreaming, ospCount, seminalC
                         <span className="text-xs font-mono text-stone-300 shrink-0 mt-0.5">—</span>
                         <div className="flex-1">
                           <span className="text-sm text-stone-700 italic">{paper.ref}</span>
+                          <WorkSourceLink title={paper.ref} isPaper={true} />
                           {paper.rationale && (
                             <p className="text-xs text-stone-500 mt-0.5 leading-relaxed">{paper.rationale}</p>
                           )}

@@ -1,3 +1,5 @@
+import WorkSourceLink from './WorkSourceLink';
+
 const TIER_STYLES = [
   { bg: 'bg-stone-50',   border: 'border-stone-200',   badge: 'bg-stone-200 text-stone-700',     num: 'text-stone-400'    },
   { bg: 'bg-sky-50',     border: 'border-sky-200',     badge: 'bg-sky-100 text-sky-700',         num: 'text-sky-400'      },
@@ -67,6 +69,7 @@ export default function DissertationView({ parsed, isStreaming }) {
                       <span className={`text-xs font-mono mt-0.5 shrink-0 w-4 ${s.num}`}>{j + 1}.</span>
                       <div className="flex-1">
                         <span className="text-sm font-medium text-stone-800">{work.ref}</span>
+                        <WorkSourceLink title={work.ref} isPaper={false} />
                         {work.rationale && (
                           <p className="text-xs text-stone-500 mt-0.5 leading-relaxed">{work.rationale}</p>
                         )}

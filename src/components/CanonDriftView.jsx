@@ -1,3 +1,5 @@
+import WorkSourceLink from './WorkSourceLink';
+
 const ERA_STYLES = [
   { border: 'border-l-stone-400',  badge: 'bg-stone-100 text-stone-600',   label: 'text-stone-500'  },
   { border: 'border-l-sky-400',    badge: 'bg-sky-50 text-sky-700',         label: 'text-sky-600'    },
@@ -81,6 +83,7 @@ export default function CanonDriftView({ parsed, isStreaming }) {
                     <TrajectoryBadge trajectory={work.trajectory} />
                     <div className="flex-1">
                       <span className="text-sm font-medium text-stone-800">{work.ref}</span>
+                      <WorkSourceLink title={work.ref} isPaper={false} />
                       {work.citations != null && (
                         <span className="ml-2 text-xs font-mono text-stone-400">{work.citations.toLocaleString()} citations</span>
                       )}

@@ -491,7 +491,7 @@ export default function App() {
                   : appMode === 'doctoral'
                   ? 'Browse PhD research topics across every academic field — sourced live from phd.nthrys.com. Click any topic to generate its canon.'
                   : appMode === 'udc'
-                  ? 'Browse the Universal Decimal Classification — 9,000+ subject nodes across 9 main classes. Select a mode, click any node to generate. Check for new codes added by ETH Zurich.'
+                  ? 'Universal Decimal Classification — 9,000+ subject codes from ETH Zurich\'s library across 9 main classes. Select a mode, click any code to generate. Check for newly added codes.'
                   : ''}
               </p>
             </header>

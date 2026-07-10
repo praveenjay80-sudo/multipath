@@ -1,3 +1,5 @@
+import WorkSourceLink from './WorkSourceLink';
+
 const FIELD_COLORS = [
   { bg: 'bg-stone-50',   border: 'border-stone-200',   badge: 'bg-stone-200 text-stone-700'     },
   { bg: 'bg-sky-50',     border: 'border-sky-200',     badge: 'bg-sky-100 text-sky-700'         },
@@ -100,7 +102,10 @@ export default function ConsilienceView({ parsed, isStreaming }) {
               <p className="text-xs font-mono text-stone-400 mb-2">Cross-Disciplinary Reading</p>
               <ul className="space-y-1">
                 {parsed.crossReading.split(/[;]/).map(s => s.trim()).filter(Boolean).map((w, i) => (
-                  <li key={i} className="text-sm text-stone-700 leading-relaxed">— {w}</li>
+                  <li key={i} className="text-sm text-stone-700 leading-relaxed flex items-baseline gap-2 flex-wrap">
+                    <span>— {w}</span>
+                    <WorkSourceLink title={w} isPaper={false} />
+                  </li>
                 ))}
               </ul>
             </div>
