@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useReadingPath } from '../hooks/useReadingPath';
 import ReadingOrderView from './ReadingOrderView';
 
@@ -7,13 +7,14 @@ const MODES = [
   { key: 'canon',        label: 'Canon' },
   { key: 'curriculum',   label: 'Curriculum' },
   { key: 'dissertation', label: 'Dissertation' },
-  { key: 'drift',        label: 'Drift' },
+  { key: 'drift',        label: 'Canon Drift' },
   { key: 'consilience',  label: 'Consilience' },
   { key: 'inquiry',      label: 'Inquiry' },
   { key: 'reverse',      label: 'Prerequisites' },
+  { key: 'spectrum',     label: 'Spectrum' },
+  { key: 'intelligence', label: 'Field Intel' },
 ];
 
-// UDC main class colors
 const CLASS_COLORS = {
   '0': 'bg-stone-600',
   '1': 'bg-violet-600',
@@ -26,19 +27,47 @@ const CLASS_COLORS = {
   '9': 'bg-orange-600',
 };
 
+const PATCHES_KEY = 'udc_new_codes';
+const CHECKED_KEY = 'udc_last_checked';
+
+function loadPatches() {
+  try { return JSON.parse(localStorage.getItem(PATCHES_KEY) || '[]'); } catch { return []; }
+}
+function savePatches(p) {
+  try { localStorage.setItem(PATCHES_KEY, JSON.stringify(p)); } catch {}
+}
+
 function titleCase(str) {
   return str.split(' ').map(w =>
     w.length > 3 ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase()
   ).join(' ');
 }
 
-function NodeRow({ node, depth, openSet, onToggle, onGenerate, modeLabel, activeTopic, activeStatus }) {
+function timeAgo(ts) {
+  if (!ts) return null;
+  const mins = Math.floor((Date.now() - ts) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function CodeBadge({ code }) {
+  const color = CLASS_COLORS[code[0]] || 'bg-stone-500';
+  return (
+    <span className={`shrink-0 text-[8px] font-mono px-1 py-0.5 text-white ${color}`}>
+      {code}
+    </span>
+  );
+}
+
+function NodeRow({ node, depth, openSet, onToggle, onGenerate, selectedMode, activeTopic, activeStatus }) {
   const hasChildren = node.children?.length > 0;
   const isOpen = openSet.has(node.code);
   const pl = 8 + depth * 20;
-  const mainClass = node.code[0];
-  const colorClass = CLASS_COLORS[mainClass] || 'bg-stone-500';
-  const isActive = activeTopic?.includes(`(UDC ${node.code})`);
+  const topic = `${titleCase(node.name)} (UDC ${node.code})`;
+  const isActive = activeTopic === topic && selectedMode === 'path';
 
   return (
     <>
@@ -59,12 +88,10 @@ function NodeRow({ node, depth, openSet, onToggle, onGenerate, modeLabel, active
         </button>
 
         <button
-          onClick={() => onGenerate(`${titleCase(node.name)} (UDC ${node.code})`, 'path')}
+          onClick={() => onGenerate(topic, selectedMode)}
           className="flex-1 min-w-0 flex items-baseline gap-2 text-left hover:underline decoration-stone-300"
         >
-          <span className={`shrink-0 text-[8px] font-mono px-1 py-0.5 text-white ${colorClass}`}>
-            {node.code}
-          </span>
+          <CodeBadge code={node.code} />
           <span className={`leading-snug ${
             depth === 0 ? 'font-semibold text-stone-900 text-sm'
             : depth === 1 ? 'font-medium text-stone-800 text-sm'
@@ -78,7 +105,7 @@ function NodeRow({ node, depth, openSet, onToggle, onGenerate, modeLabel, active
         </button>
 
         {isActive && (
-          <span className={`shrink-0 text-[9px] font-mono mt-0.5 ${activeStatus === 'loading' ? 'text-stone-400' : 'text-stone-700'}`}>
+          <span className={`shrink-0 text-[9px] font-mono mt-0.5 ${activeStatus === 'loading' ? 'text-stone-400 animate-pulse' : 'text-stone-700'}`}>
             {activeStatus === 'loading' ? '···' : '◆'}
           </span>
         )}
@@ -94,19 +121,17 @@ function NodeRow({ node, depth, openSet, onToggle, onGenerate, modeLabel, active
         </a>
       </div>
 
-      {isOpen && hasChildren && (
-        node.children.map(child => (
-          <NodeRow key={child.code} node={child} depth={depth + 1}
-            openSet={openSet} onToggle={onToggle} onGenerate={onGenerate} modeLabel={modeLabel}
-            activeTopic={activeTopic} activeStatus={activeStatus} />
-        ))
-      )}
+      {isOpen && hasChildren && node.children.map(child => (
+        <NodeRow key={child.code} node={child} depth={depth + 1}
+          openSet={openSet} onToggle={onToggle} onGenerate={onGenerate}
+          selectedMode={selectedMode} activeTopic={activeTopic} activeStatus={activeStatus} />
+      ))}
 
       {isOpen && node.terms?.length > 0 && !hasChildren && (
         <div style={{ paddingLeft: pl + 28 }} className="pb-1">
           <div className="flex flex-wrap gap-1 py-1">
             {node.terms.slice(0, 40).map((t, i) => (
-              <button key={i} onClick={() => onGenerate(t, 'path')}
+              <button key={i} onClick={() => onGenerate(t, selectedMode)}
                 className="text-[9px] font-mono px-1.5 py-0.5 border border-stone-200 text-stone-500 hover:bg-stone-900 hover:text-white hover:border-stone-900 transition-colors">
                 {titleCase(t)}
               </button>
@@ -122,12 +147,20 @@ function NodeRow({ node, depth, openSet, onToggle, onGenerate, modeLabel, active
 }
 
 export default function UDCView({ onGenerate }) {
-  const [data,    setData]    = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
-  const [mode,    setMode]    = useState('path');
-  const [openSet, setOpenSet] = useState(new Set());
-  const [search,  setSearch]  = useState('');
+  const [data,        setData]        = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState(null);
+  const [mode,        setMode]        = useState('path');
+  const [openSet,     setOpenSet]     = useState(new Set());
+  const [search,      setSearch]      = useState('');
+  const [newCodes,    setNewCodes]    = useState(() => loadPatches());
+  const [checking,    setChecking]    = useState(false);
+  const [checkError,  setCheckError]  = useState(null);
+  const [newCount,    setNewCount]    = useState(0);
+  const [dismissed,   setDismissed]   = useState(false);
+  const [lastChecked, setLastChecked] = useState(() => {
+    try { return parseInt(localStorage.getItem(CHECKED_KEY), 10) || null; } catch { return null; }
+  });
   const readingPath = useReadingPath();
 
   useEffect(() => {
@@ -137,7 +170,10 @@ export default function UDCView({ onGenerate }) {
       .catch(e => { setError(e.message); setLoading(false); });
   }, []);
 
-  const modeLabel = MODES.find(m => m.key === mode)?.label || 'Reading Path';
+  const handleGenerate = useCallback((topic, m) => {
+    if (m === 'path') readingPath.generate(topic);
+    else onGenerate(topic, m);
+  }, [onGenerate, readingPath]);
 
   const onToggle = code => setOpenSet(prev => {
     const next = new Set(prev);
@@ -145,17 +181,36 @@ export default function UDCView({ onGenerate }) {
     return next;
   });
 
-  const handleGenerate = (topic, m) => {
-    if (m === 'path') readingPath.generate(topic);
-    else onGenerate(topic, m);
+  const checkForNewCodes = async () => {
+    setChecking(true);
+    setCheckError(null);
+    try {
+      const res = await fetch('/api/udc-new-terms');
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const { entries } = await res.json();
+      const existing = new Set(loadPatches().map(e => e.id));
+      const fresh = entries.filter(e => !existing.has(e.id));
+      const all = [...loadPatches(), ...fresh];
+      savePatches(all);
+      const now = Date.now();
+      try { localStorage.setItem(CHECKED_KEY, now.toString()); } catch {}
+      setNewCodes(all);
+      setNewCount(fresh.length);
+      setLastChecked(now);
+      setDismissed(false);
+    } catch (e) {
+      setCheckError(e.message);
+    } finally {
+      setChecking(false);
+    }
   };
 
-  // Flatten for search (only up to 3 levels for performance)
+  // Flatten hierarchy for search (depth ≤ 4)
   const allNodes = useMemo(() => {
     if (!data) return [];
     const flat = [];
     function walk(nodes, depth) {
-      if (depth > 3) return;
+      if (depth > 4) return;
       for (const n of nodes) {
         flat.push({ code: n.code, name: titleCase(n.name) });
         if (n.children?.length) walk(n.children, depth + 1);
@@ -168,8 +223,17 @@ export default function UDCView({ onGenerate }) {
   const searchResults = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return [];
-    return allNodes.filter(n => n.name.toLowerCase().includes(q) || n.code.includes(q)).slice(0, 50);
-  }, [search, allNodes]);
+    const treeMatches = allNodes
+      .filter(n => n.name.toLowerCase().includes(q) || n.code.toLowerCase().includes(q))
+      .map(n => ({ ...n }));
+    const newMatches = newCodes
+      .filter(e => titleCase(e.label).toLowerCase().includes(q) || e.code.toLowerCase().includes(q))
+      .map(e => ({ code: e.code, name: titleCase(e.label), isNew: true }));
+    // Merge, tree first, dedup by code
+    const seen = new Set(treeMatches.map(n => n.code));
+    const merged = [...treeMatches, ...newMatches.filter(n => !seen.has(n.code))];
+    return merged.slice(0, 60);
+  }, [search, allNodes, newCodes]);
 
   if (loading) return <div className="mt-8 text-sm font-mono text-stone-400">Loading UDC…</div>;
   if (error)   return <div className="mt-8 text-sm font-mono text-red-500">Error: {error}</div>;
@@ -178,18 +242,54 @@ export default function UDCView({ onGenerate }) {
   function countTree(n) { totalNodes++; totalTerms += n.terms?.length || 0; n.children?.forEach(countTree); }
   data.forEach(countTree);
 
+  // Group new codes by date for display
+  const newByDate = {};
+  for (const e of newCodes) {
+    const d = e.addedDate || 'Unknown date';
+    if (!newByDate[d]) newByDate[d] = [];
+    newByDate[d].push(e);
+  }
+
   return (
     <div className="mt-8 space-y-5">
+
       {/* Header */}
       <div className="border-b border-stone-200 pb-4">
-        <div className="flex items-baseline gap-3 mb-1">
+        <div className="flex items-baseline gap-3 mb-2">
           <h2 className="text-2xl font-bold tracking-tight text-stone-900">Universal Decimal Classification</h2>
-          <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-stone-800 text-white">ETH-UDK Full</span>
+          <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-stone-800 text-white">ETH-UDK</span>
+          {newCodes.length > 0 && (
+            <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-emerald-700 text-white">
+              {newCodes.length} new
+            </span>
+          )}
         </div>
-        <p className="text-sm text-stone-500 max-w-2xl">
-          {totalNodes.toLocaleString()} nodes · {totalTerms.toLocaleString()} terms across 9 UDC main classes.
-          Expand any branch, search, click → to generate a reading path.
-        </p>
+        <div className="flex items-center gap-4 flex-wrap">
+          <p className="text-sm text-stone-500">
+            {totalNodes.toLocaleString()} nodes · {totalTerms.toLocaleString()} terms · 9 main classes.
+            Select a mode, then click any entry to generate.
+          </p>
+          <button
+            onClick={checkForNewCodes}
+            disabled={checking}
+            className="shrink-0 text-[9px] font-mono px-2.5 py-1 border border-stone-300 text-stone-600 hover:bg-stone-900 hover:text-white hover:border-stone-900 transition-all disabled:opacity-40"
+          >
+            {checking ? '···' : '↻ Check for New Codes'}
+          </button>
+          {lastChecked && (
+            <span className="text-[9px] font-mono text-stone-400">Last checked {timeAgo(lastChecked)}</span>
+          )}
+        </div>
+        {checkError && (
+          <p className="text-xs text-red-600 mt-1.5 font-mono">{checkError}</p>
+        )}
+        {!dismissed && newCount > 0 && (
+          <div className="mt-2 flex items-center gap-2 text-xs font-mono bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-emerald-800">
+            <span className="font-bold">{newCount} new code{newCount !== 1 ? 's' : ''} found</span>
+            <span className="text-emerald-500 ml-1">— see New Codes section below</span>
+            <button onClick={() => setDismissed(true)} className="ml-auto text-stone-400 hover:text-stone-700">✕</button>
+          </div>
+        )}
       </div>
 
       {/* Mode selector */}
@@ -198,10 +298,11 @@ export default function UDCView({ onGenerate }) {
         <div className="flex flex-wrap gap-1.5">
           {MODES.map(m => (
             <button key={m.key} onClick={() => setMode(m.key)}
-              className={`px-3 py-1.5 text-xs font-mono border transition-all
-                ${mode === m.key
+              className={`px-3 py-1.5 text-xs font-mono border transition-all ${
+                mode === m.key
                   ? 'bg-stone-900 text-white border-stone-900'
-                  : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400 hover:text-stone-800'}`}>
+                  : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400 hover:text-stone-800'
+              }`}>
               {m.label}
             </button>
           ))}
@@ -209,58 +310,108 @@ export default function UDCView({ onGenerate }) {
       </div>
 
       {/* Search */}
-      <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+      <input
+        type="text"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
         placeholder="Search UDC nodes…"
         className="w-full max-w-sm px-3 py-1.5 text-sm border border-stone-300 font-mono focus:outline-none focus:border-stone-500"
       />
 
       {search.trim() ? (
+        /* Search results */
         <div className="border border-stone-200 bg-white">
           {searchResults.length === 0
             ? <div className="p-4 text-sm text-stone-400 font-mono">No matches</div>
             : searchResults.map((n, i) => (
               <div key={i} className="group flex items-center gap-3 px-3 py-2 border-b border-stone-50 hover:bg-stone-50 transition-colors">
-                <button onClick={() => handleGenerate(`${n.name} (UDC ${n.code})`, mode)}
-                  className="flex-1 flex items-center gap-3 text-left">
-                  <span className={`text-[8px] font-mono px-1 py-0.5 text-white shrink-0 ${CLASS_COLORS[n.code[0]] || 'bg-stone-500'}`}>
-                    {n.code}
-                  </span>
-                  <span className="text-sm text-stone-800 hover:underline decoration-stone-300">{n.name}</span>
+                <button
+                  onClick={() => handleGenerate(`${n.name} (UDC ${n.code})`, mode)}
+                  className="flex-1 flex items-center gap-3 text-left min-w-0"
+                >
+                  <CodeBadge code={n.code} />
+                  <span className="text-sm text-stone-800 hover:underline decoration-stone-300 truncate">{n.name}</span>
+                  {n.isNew && (
+                    <span className="shrink-0 text-[8px] font-mono px-1 py-0.5 bg-emerald-100 text-emerald-700 border border-emerald-200">NEW</span>
+                  )}
                 </button>
                 <a
                   href={`https://www.worldcat.org/search?q=su%3A${encodeURIComponent(n.name)}`}
                   target="_blank" rel="noopener noreferrer"
-                  className="opacity-0 group-hover:opacity-100 text-[9px] font-mono px-1.5 py-0.5 border border-stone-200 text-stone-400 hover:bg-stone-800 hover:text-white hover:border-stone-800 transition-all shrink-0"
+                  className="opacity-0 group-hover:opacity-100 shrink-0 text-[9px] font-mono px-1.5 py-0.5 border border-stone-200 text-stone-400 hover:bg-stone-800 hover:text-white hover:border-stone-800 transition-all"
                 >WorldCat</a>
               </div>
-            ))}
+            ))
+          }
         </div>
       ) : (
-        <div className="border border-stone-200 bg-white">
-          {data.map(root => (
-            <NodeRow key={root.code} node={root} depth={0}
-              openSet={openSet} onToggle={onToggle}
-              onGenerate={handleGenerate} modeLabel={modeLabel}
-              activeTopic={readingPath.topic} activeStatus={readingPath.status} />
-          ))}
-        </div>
+        <>
+          {/* Main UDC hierarchy tree */}
+          <div className="border border-stone-200 bg-white">
+            {data.map(root => (
+              <NodeRow key={root.code} node={root} depth={0}
+                openSet={openSet} onToggle={onToggle}
+                onGenerate={handleGenerate} selectedMode={mode}
+                activeTopic={readingPath.topic} activeStatus={readingPath.status} />
+            ))}
+          </div>
+
+          {/* New codes section */}
+          {newCodes.length > 0 && (
+            <div className="border border-emerald-200 bg-white">
+              <div className="px-4 py-2.5 bg-emerald-50 border-b border-emerald-200 flex items-center gap-3">
+                <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-emerald-700">
+                  New Codes
+                </span>
+                <span className="text-[8px] font-mono text-emerald-500">{newCodes.length} entries</span>
+              </div>
+              {Object.entries(newByDate).map(([date, entries]) => (
+                <div key={date}>
+                  <div className="px-4 py-1.5 bg-stone-50 border-b border-stone-100">
+                    <span className="text-[8px] font-mono text-stone-400 uppercase tracking-wide">{date}</span>
+                  </div>
+                  {entries.map((e, i) => (
+                    <div key={i} className="group flex items-center gap-3 px-4 py-2 border-b border-stone-50 hover:bg-stone-50 transition-colors">
+                      <button
+                        onClick={() => handleGenerate(`${titleCase(e.label)} (UDC ${e.code})`, mode)}
+                        className="flex-1 flex items-center gap-2 text-left min-w-0"
+                      >
+                        <CodeBadge code={e.code} />
+                        <span className="text-sm text-stone-800 hover:underline decoration-stone-300 truncate">
+                          {titleCase(e.label)}
+                        </span>
+                      </button>
+                      <a
+                        href={`https://www.worldcat.org/search?q=su%3A${encodeURIComponent(titleCase(e.label))}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="opacity-0 group-hover:opacity-100 shrink-0 text-[9px] font-mono px-1.5 py-0.5 border border-stone-200 text-stone-400 hover:bg-stone-800 hover:text-white hover:border-stone-800 transition-all"
+                      >WorldCat</a>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
-      {/* Inline Reading Path */}
+      {/* Inline reading path result (mode === 'path') */}
       {readingPath.status !== 'idle' && (
         <div className="border border-stone-200 bg-white">
           <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200 bg-stone-50">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-mono font-bold text-stone-700">Reading Path</span>
-              <span className="text-sm text-stone-500">{readingPath.topic}</span>
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-xs font-mono font-bold text-stone-700 shrink-0">Reading Path</span>
+              <span className="text-sm text-stone-500 truncate">{readingPath.topic}</span>
               {readingPath.status === 'loading' && (
-                <span className="flex gap-0.5">
+                <span className="flex gap-0.5 shrink-0">
                   <span className="loading-dot" /><span className="loading-dot" /><span className="loading-dot" />
                 </span>
               )}
             </div>
-            <button onClick={readingPath.clear}
-              className="text-[9px] font-mono text-stone-400 hover:text-stone-700 px-2 py-0.5 border border-stone-200 hover:border-stone-400 transition-colors">
+            <button
+              onClick={readingPath.clear}
+              className="shrink-0 text-[9px] font-mono text-stone-400 hover:text-stone-700 px-2 py-0.5 border border-stone-200 hover:border-stone-400 transition-colors"
+            >
               ✕ close
             </button>
           </div>
@@ -269,6 +420,7 @@ export default function UDCView({ onGenerate }) {
           </div>
         </div>
       )}
+
     </div>
   );
 }

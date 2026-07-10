@@ -202,6 +202,57 @@ app.get('/api/sparql', async (req, res) => {
   }
 });
 
+// ── UDC New Terms proxy (eth-udk.library.ethz.ch) ────────────────────────────
+
+function parseUdcNewTerms(html) {
+  const allMatches = [];
+
+  const dateRe = /Added ([^\n<]+)/g;
+  let dm;
+  while ((dm = dateRe.exec(html)) !== null) {
+    allMatches.push({ pos: dm.index, type: 'date', value: dm[1].trim() });
+  }
+
+  const linkRe = /href="https:\/\/eth-udk\.library\.ethz\.ch\/terms\/(\d+)\/eng"/g;
+  let lm;
+  while ((lm = linkRe.exec(html)) !== null) {
+    const snippet = html.slice(lm.index, lm.index + 500);
+    const labelM = snippet.match(/text-blue-600">([^<]+)<\/div>/);
+    const codeM  = snippet.match(/ml-auto[^>]*>([^<]+)<\/div>/);
+    if (labelM && codeM) {
+      allMatches.push({
+        pos: lm.index, type: 'entry',
+        id: lm[1], label: labelM[1].trim(), code: codeM[1].trim(),
+      });
+    }
+  }
+
+  allMatches.sort((a, b) => a.pos - b.pos);
+  const entries = [];
+  let currentDate = null;
+  for (const m of allMatches) {
+    if (m.type === 'date') currentDate = m.value.replace(/\s+/g, ' ').trim();
+    else if (m.type === 'entry') entries.push({ id: m.id, label: m.label, code: m.code, addedDate: currentDate });
+  }
+  return entries;
+}
+
+app.get('/api/udc-new-terms', async (req, res) => {
+  const { signal, clear } = withTimeout(15000);
+  try {
+    const r = await fetch('https://eth-udk.library.ethz.ch/new-terms/eng', {
+      signal, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Canon/1.0)' },
+    });
+    clear();
+    if (!r.ok) throw new Error(`ETH-UDK HTTP ${r.status}`);
+    const entries = parseUdcNewTerms(await r.text());
+    res.json({ entries, lastFetched: Date.now() });
+  } catch (e) {
+    clear();
+    res.status(502).json({ error: e.message });
+  }
+});
+
 // ── Static ────────────────────────────────────────────────────────────────────
 
 app.use(express.static(path.join(__dirname, 'dist')));
