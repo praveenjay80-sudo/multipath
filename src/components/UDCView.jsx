@@ -212,20 +212,56 @@ export default function UDCView({ onGenerate }) {
     }
   };
 
+  // Augment the hierarchy with flat-data entries that aren't already in the tree
+  const augmentedData = useMemo(() => {
+    if (!data) return null;
+    if (!flatData) return data;
+
+    const hierarchyCodes = new Set();
+    function collectCodes(nodes) {
+      for (const n of nodes) { hierarchyCodes.add(n.code); collectCodes(n.children || []); }
+    }
+    collectCodes(data);
+
+    const knownCodes = new Set(hierarchyCodes);
+    const parentToKids = {};
+
+    // Sort ascending by code length so parents are seen before children
+    const sorted = [...flatData].sort((a, b) => a.code.length - b.code.length);
+    for (const entry of sorted) {
+      if (hierarchyCodes.has(entry.code)) continue;
+      let parentCode = null;
+      for (let i = entry.code.length - 1; i > 0; i--) {
+        const prefix = entry.code.slice(0, i);
+        if (knownCodes.has(prefix)) { parentCode = prefix; break; }
+      }
+      if (!parentCode) continue;
+      if (!parentToKids[parentCode]) parentToKids[parentCode] = [];
+      parentToKids[parentCode].push({ code: entry.code, name: entry.label, children: [], terms: [] });
+      knownCodes.add(entry.code);
+    }
+
+    function augmentNode(node) {
+      const flatKids = (parentToKids[node.code] || []).map(augmentNode);
+      return { ...node, children: [...(node.children || []).map(augmentNode), ...flatKids] };
+    }
+    return data.map(augmentNode);
+  }, [data, flatData]);
+
   // Flatten hierarchy for search, carrying parent breadcrumb
   const allNodes = useMemo(() => {
-    if (!data) return [];
+    if (!augmentedData) return [];
     const flat = [];
     function walk(nodes, depth, parentName) {
-      if (depth > 4) return;
+      if (depth > 6) return;
       for (const n of nodes) {
         flat.push({ code: n.code, name: titleCase(n.name), parent: parentName });
         if (n.children?.length) walk(n.children, depth + 1, titleCase(n.name));
       }
     }
-    walk(data, 0, null);
+    walk(augmentedData, 0, null);
     return flat;
-  }, [data]);
+  }, [augmentedData]);
 
   // Code → name lookup for deriving parent context from flat codes
   const codeToName = useMemo(() => {
@@ -261,6 +297,8 @@ export default function UDCView({ onGenerate }) {
 
   if (loading) return <div className="mt-8 text-sm font-mono text-stone-400">Loading UDC…</div>;
   if (error)   return <div className="mt-8 text-sm font-mono text-red-500">Error: {error}</div>;
+
+  const tree = augmentedData || data;
 
   let totalNodes = 0, totalTerms = 0;
   function countTree(n) { totalNodes++; totalTerms += n.terms?.length || 0; n.children?.forEach(countTree); }
@@ -391,7 +429,7 @@ export default function UDCView({ onGenerate }) {
         <>
           {/* Main UDC hierarchy tree */}
           <div className="border border-stone-200 bg-white">
-            {data.map(root => (
+            {tree.map(root => (
               <NodeRow key={root.code} node={root} depth={0}
                 openSet={openSet} onToggle={onToggle}
                 onGenerate={handleGenerate} selectedMode={mode}
