@@ -1175,6 +1175,8 @@ export default function App() {
                 sections={aggregator.sections}
                 completedCount={aggregator.completedCount}
                 generatingCount={aggregator.generatingCount}
+                harvestedPapers={aggregator.harvestedPapers}
+                harvestedTextbooks={aggregator.harvestedTextbooks}
                 onReset={aggregator.reset}
               />
             )}

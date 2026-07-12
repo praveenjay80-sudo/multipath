@@ -56,7 +56,7 @@ export async function seminalPapersHarvest(topic) {
 }
 
 async function seminalPapersSearch(query, limit = 30) {
-  const url = `${S2_BASE}/paper/search?query=${encodeURIComponent(query)}&limit=${limit}&fields=title,authors,year,citationCount,influentialCitationCount`;
+  const url = `${S2_BASE}/paper/search?query=${encodeURIComponent(query)}&limit=${limit}&fields=title,authors,year,citationCount,influentialCitationCount,externalIds,openAccessPdf`;
   try {
     const res = await fetchWithTimeout(url, {}, 12000);
     if (!res.ok) return [];
@@ -67,6 +67,9 @@ async function seminalPapersSearch(query, limit = 30) {
       year: p.year || null,
       citationCount: p.citationCount || 0,
       influentialCitationCount: p.influentialCitationCount || 0,
+      doi: p.externalIds?.DOI || null,
+      arxivId: p.externalIds?.ArXiv || null,
+      oaUrl: p.openAccessPdf?.url || null,
     }));
   } catch { return []; }
 }

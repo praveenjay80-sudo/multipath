@@ -242,6 +242,8 @@ export function useOverallAggregator() {
   const [dataCount, setDataCount] = useState(0);
   const [error, setError] = useState(null);
   const [sections, setSections] = useState(() => ({ ...INIT_SECTIONS }));
+  const [harvestedPapers, setHarvestedPapers] = useState([]);
+  const [harvestedTextbooks, setHarvestedTextbooks] = useState([]);
   const abortRef = useRef(null);
 
   const setSectionState = useCallback((key, update) => {
@@ -262,6 +264,8 @@ export function useOverallAggregator() {
     setDataCount(0);
     setOverallPhase('harvesting');
     setSections({ ...INIT_SECTIONS });
+    setHarvestedPapers([]);
+    setHarvestedTextbooks([]);
 
     const apiKey = resolveApiKey();
     if (!apiKey) {
@@ -275,6 +279,8 @@ export function useOverallAggregator() {
       [textbooks, papers] = await Promise.all([syllabusHarvest(q), seminalPapersHarvest(q)]);
       if (signal.aborted) return;
       setDataCount(textbooks.length + papers.length);
+      setHarvestedPapers(papers);
+      setHarvestedTextbooks(textbooks);
     } catch {}
 
     if (signal.aborted) return;
@@ -317,6 +323,8 @@ export function useOverallAggregator() {
     setDataCount(0);
     setError(null);
     setSections({ ...INIT_SECTIONS });
+    setHarvestedPapers([]);
+    setHarvestedTextbooks([]);
   }, []);
 
   const completedCount = Object.values(sections).filter(s => s.phase === 'complete').length;
@@ -325,6 +333,7 @@ export function useOverallAggregator() {
   return {
     overallPhase, question, dataCount, error,
     sections, completedCount, generatingCount,
+    harvestedPapers, harvestedTextbooks,
     run, reset,
   };
 }
