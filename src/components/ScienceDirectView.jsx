@@ -1,10 +1,11 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 
-// ── Topic description cache + fetcher ─────────────────────────────────────────
-const descCache = new Map();
+// ── Topic info cache + fetcher ────────────────────────────────────────────────
+// Cache stores { desc, subfield, prereqs } objects
+const infoCache = new Map();
 
-async function fetchDescription(topicName) {
-  if (descCache.has(topicName)) return descCache.get(topicName);
+async function fetchTopicInfo(topicName) {
+  if (infoCache.has(topicName)) return infoCache.get(topicName);
   const key = localStorage.getItem('canon_api_key') || import.meta.env?.VITE_ANTHROPIC_API_KEY || '';
   if (!key) return null;
   try {
@@ -18,16 +19,21 @@ async function fetchDescription(topicName) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 80,
-        system: 'You are a scientific encyclopedia. Respond with exactly one sentence (under 25 words) defining the given research topic. No preamble, no punctuation beyond the period.',
-        messages: [{ role: 'user', content: `Define: ${topicName}` }],
+        max_tokens: 200,
+        system: `You are a scientific encyclopedia. For the given research topic respond in exactly this format with no other text:
+DESC: one sentence under 25 words defining the topic.
+SUBFIELD: 1–3 words naming the subfield (e.g. Machine Learning, Organic Chemistry, Fluid Mechanics).
+PREREQS: 3–5 comma-separated prerequisite topics or concepts.`,
+        messages: [{ role: 'user', content: topicName }],
       }),
     });
     if (!res.ok) return null;
     const data = await res.json();
-    const desc = data.content?.[0]?.text?.trim() || null;
-    if (desc) descCache.set(topicName, desc);
-    return desc;
+    const raw = data.content?.[0]?.text?.trim() || '';
+    const get = (tag) => { const m = raw.match(new RegExp(`${tag}:\\s*(.+)`)); return m ? m[1].trim() : null; };
+    const info = { desc: get('DESC'), subfield: get('SUBFIELD'), prereqs: get('PREREQS') };
+    if (info.desc || info.subfield || info.prereqs) infoCache.set(topicName, info);
+    return info;
   } catch { return null; }
 }
 
@@ -76,16 +82,16 @@ function ModePicker({ name, onSelect, onClose }) {
 
 function TopicRow({ topic, subjectSlug, onSelect }) {
   const [open, setOpen] = useState(false);
-  const [desc, setDesc] = useState(descCache.get(topic.n) || null);
-  const [descLoading, setDescLoading] = useState(false);
+  const [info, setInfo] = useState(infoCache.get(topic.n) || null);
+  const [loading, setLoading] = useState(false);
   const fetchedRef = useRef(false);
 
   function handleOpen() {
     setOpen(o => !o);
-    if (!fetchedRef.current && !descCache.has(topic.n)) {
+    if (!fetchedRef.current && !infoCache.has(topic.n)) {
       fetchedRef.current = true;
-      setDescLoading(true);
-      fetchDescription(topic.n).then(d => { setDesc(d); setDescLoading(false); });
+      setLoading(true);
+      fetchTopicInfo(topic.n).then(i => { setInfo(i); setLoading(false); });
     }
   }
 
@@ -112,12 +118,28 @@ function TopicRow({ topic, subjectSlug, onSelect }) {
       </div>
       {open && (
         <>
-          {(descLoading || desc) && (
-            <div className="pl-8 pr-4 pb-1.5 pt-0">
-              {descLoading
-                ? <span className="text-xs text-stone-300 font-mono italic">defining…</span>
-                : <p className="text-xs text-stone-500 leading-relaxed italic">{desc}</p>
-              }
+          {loading && (
+            <div className="pl-8 pr-4 py-1.5">
+              <span className="text-xs text-stone-300 font-mono italic">loading…</span>
+            </div>
+          )}
+          {!loading && info && (
+            <div className="pl-8 pr-4 pb-2 pt-0.5 space-y-1">
+              {info.desc && (
+                <p className="text-xs text-stone-500 leading-relaxed italic">{info.desc}</p>
+              )}
+              {info.subfield && (
+                <p className="text-xs text-stone-400">
+                  <span className="font-semibold text-stone-500 not-italic">Subfield</span>
+                  {' '}{info.subfield}
+                </p>
+              )}
+              {info.prereqs && (
+                <p className="text-xs text-stone-400">
+                  <span className="font-semibold text-stone-500">Prerequisites</span>
+                  {' '}{info.prereqs}
+                </p>
+              )}
             </div>
           )}
           <ModePicker name={topic.n} onSelect={onSelect} onClose={() => setOpen(false)} />
