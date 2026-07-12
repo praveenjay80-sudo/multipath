@@ -50,6 +50,9 @@ import ConceptTiersView from './components/ConceptTiersView';
 import UDCView from './components/UDCView';
 import AcademiaTopicsView from './components/AcademiaTopicsView';
 import { useAcademiaTopics } from './hooks/useAcademiaTopics';
+import OverallAggregatorInput from './components/OverallAggregatorInput';
+import OverallAggregatorView from './components/OverallAggregatorView';
+import { useOverallAggregator } from './hooks/useOverallAggregator';
 
 function WorkRow({ w }) {
   return (
@@ -168,11 +171,12 @@ export default function App() {
   const spectrum = useSpectrum();
   const pulse = usePulse();
   const fieldIntel = useFieldIntelligence();
+  const aggregator = useOverallAggregator();
   const [inputTopic, setInputTopic] = useState('');
   const [shake, setShake] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [view, setView] = useState('canon');
-  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'doctoral' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'spectrum' | 'pulse' | 'intelligence' | 'math' | 'concepts' | 'udc' | 'academia'
+  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'doctoral' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'spectrum' | 'deepdive' | 'pulse' | 'intelligence' | 'math' | 'concepts' | 'udc' | 'academia' | 'overall'
 
   const parsed = useMemo(() => parseCanon(gen.content), [gen.content]);
 
@@ -472,6 +476,16 @@ export default function App() {
                 >
                   Academia
                 </button>
+                <button
+                  onClick={() => setAppMode('overall')}
+                  className={`ml-4 px-5 py-2 text-sm font-mono font-bold -mb-px transition-all ${
+                    appMode === 'overall'
+                      ? 'bg-stone-900 text-white border-b-2 border-stone-900'
+                      : 'border border-stone-400 border-b-2 border-b-transparent text-stone-800 hover:bg-stone-100'
+                  }`}
+                >
+                  OVERALL AGGREGATOR
+                </button>
               </div>
 
               {/* Tab description */}
@@ -506,6 +520,8 @@ export default function App() {
                   ? 'Universal Decimal Classification — 9,000+ subject codes from ETH Zurich\'s library across 9 main classes. Select a mode, click any code to generate. Check for newly added codes.'
                   : appMode === 'academia'
                   ? 'Academia.edu topic hierarchy — 25 disciplines, 661 subtopics, and 200,000+ research interest tags across all fields of scholarship. 3 levels deep, fully searchable.'
+                  : appMode === 'overall'
+                  ? 'One question. Nine sections generated in parallel — orientation, historical development, intellectual landscape, hidden assumptions, every discipline\'s answer, essential works, what you need first, the open frontier, and the path to mastery.'
                   : ''}
               </p>
             </header>
@@ -1141,6 +1157,26 @@ export default function App() {
             {/* UDC */}
             {appMode === 'udc' && (
               <UDCView onGenerate={handleDoctoralTopicClick} />
+            )}
+
+            {/* Overall Aggregator */}
+            {appMode === 'overall' && aggregator.overallPhase === 'idle' && (
+              <OverallAggregatorInput
+                onRun={aggregator.run}
+                disabled={false}
+              />
+            )}
+            {appMode === 'overall' && aggregator.overallPhase !== 'idle' && (
+              <OverallAggregatorView
+                question={aggregator.question}
+                overallPhase={aggregator.overallPhase}
+                dataCount={aggregator.dataCount}
+                error={aggregator.error}
+                sections={aggregator.sections}
+                completedCount={aggregator.completedCount}
+                generatingCount={aggregator.generatingCount}
+                onReset={aggregator.reset}
+              />
             )}
 
             {/* Academia.edu Topics */}
