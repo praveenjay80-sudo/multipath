@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react';
 
 const SITEMAP_COUNT = 13;
 const BASE = 'https://phd.nthrys.com';
-const PROXY = 'https://corsproxy.io/?url=';
 const PATCHES_KEY = 'doctoral_topics_patches';
 const CHECKED_KEY = 'doctoral_topics_checked';
 
@@ -31,8 +30,8 @@ function applyPatches(subjects, topicsBySubject, totalTopics, patches) {
 }
 
 async function fetchSitemapViaProxy(n) {
-  const url = `${PROXY}${encodeURIComponent(`${BASE}/sitemap/${String(n).padStart(4, '0')}.xml`)}`;
-  const res = await fetch(url);
+  const target = encodeURIComponent(`${BASE}/sitemap/${String(n).padStart(4, '0')}.xml`);
+  const res = await fetch(`/api/html-proxy?url=${target}`);
   if (!res.ok) throw new Error(`Sitemap ${n} failed: ${res.status}`);
   return res.text();
 }

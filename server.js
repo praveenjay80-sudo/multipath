@@ -253,6 +253,30 @@ app.get('/api/udc-new-terms', async (req, res) => {
   }
 });
 
+// ── Generic HTML proxy (scan-for-updates in OntologicalAtlas, Academia, ScienceDirect) ──
+
+app.get('/api/html-proxy', async (req, res) => {
+  const target = req.query.url;
+  if (!target || !target.startsWith('https://')) {
+    return res.status(400).json({ error: 'Missing or invalid url param' });
+  }
+  const { signal, clear } = withTimeout(20000);
+  try {
+    const r = await fetch(target, {
+      signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+    });
+    clear();
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const html = await r.text();
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  } catch (e) {
+    clear();
+    res.status(502).json({ error: e.message });
+  }
+});
+
 // ── Static ────────────────────────────────────────────────────────────────────
 
 app.use(express.static(path.join(__dirname, 'dist')));

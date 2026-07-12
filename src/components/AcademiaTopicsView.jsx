@@ -380,7 +380,7 @@ export default function AcademiaTopicsView({
           <span className="text-emerald-600">Up to date</span>
         )}
         {scanStatus === 'error' && (
-          <span className="text-amber-500">Can't check from browser — run: node scripts/crawl-academia-topics.mjs</span>
+          <span className="text-amber-500">Scan failed — academia.edu may be unreachable from the server. Try again shortly.</span>
         )}
       </div>
 

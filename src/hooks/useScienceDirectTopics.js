@@ -31,10 +31,7 @@ export function useScienceDirectTopics() {
     setScanStatus('scanning');
     setNewTopics([]);
     try {
-      const res = await fetch('https://www.sciencedirect.com/topics', {
-        headers: { 'Accept': 'text/html' },
-        signal: AbortSignal.timeout(15000),
-      });
+      const res = await fetch('/api/html-proxy?url=' + encodeURIComponent('https://www.sciencedirect.com/topics'));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const html = await res.text();
 
@@ -64,7 +61,7 @@ export function useScienceDirectTopics() {
       setScanStatus('done');
     } catch (e) {
       setScanStatus('error');
-      setError(`Scan failed: ${e.message}. ScienceDirect may block cross-origin requests from localhost. Run the crawl script directly on sciencedirect.com instead.`);
+      setError(`Scan failed: ${e.message}. ScienceDirect may block server-side requests. Try again shortly.`);
     }
   }, []);
 

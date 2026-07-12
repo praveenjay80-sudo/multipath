@@ -33,11 +33,7 @@ export function useAcademiaTopics() {
     setScanStatus('scanning');
     setNewTopics([]);
     try {
-      // Fetch the live topics page and compare L2 counts per discipline
-      const res = await fetch('https://www.academia.edu/topics', {
-        headers: { 'Accept': 'text/html' },
-        signal: AbortSignal.timeout(15000),
-      });
+      const res = await fetch('/api/html-proxy?url=' + encodeURIComponent('https://www.academia.edu/topics'));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const html = await res.text();
 

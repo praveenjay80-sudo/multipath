@@ -345,11 +345,10 @@ export default function OntologicalAtlasView({
   async function scanForNew() {
     setScanStatus('scanning');
     setScanResult(null);
-    const PROXY = 'https://corsproxy.io/?url=';
     try {
       const fetchCount = async (path, pattern) => {
         const url = encodeURIComponent(`https://ontologicalatlas.com${path}`);
-        const res = await fetch(`${PROXY}${url}`, { signal: AbortSignal.timeout(20000) });
+        const res = await fetch(`/api/html-proxy?url=${url}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const html = await res.text();
         const m = html.match(pattern);
@@ -476,7 +475,7 @@ export default function OntologicalAtlasView({
         )}
         {scanStatus === 'error' && (
           <div className="mt-3 border border-amber-200 bg-amber-50 rounded p-3 text-xs text-amber-700 font-mono">
-            Scan failed — corsproxy.io may be unavailable. Try again shortly, or run the crawl script at ontologicalatlas.com directly.
+            Scan failed — ontologicalatlas.com may be unreachable from the server. Try again shortly.
           </div>
         )}
       </div>
