@@ -53,6 +53,8 @@ import { useAcademiaTopics } from './hooks/useAcademiaTopics';
 import OverallAggregatorInput from './components/OverallAggregatorInput';
 import OverallAggregatorView from './components/OverallAggregatorView';
 import { useOverallAggregator } from './hooks/useOverallAggregator';
+import ScienceDirectView from './components/ScienceDirectView';
+import { useScienceDirectTopics } from './hooks/useScienceDirectTopics';
 
 function WorkRow({ w }) {
   return (
@@ -172,11 +174,12 @@ export default function App() {
   const pulse = usePulse();
   const fieldIntel = useFieldIntelligence();
   const aggregator = useOverallAggregator();
+  const scienceDirect = useScienceDirectTopics();
   const [inputTopic, setInputTopic] = useState('');
   const [shake, setShake] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [view, setView] = useState('canon');
-  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'doctoral' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'spectrum' | 'deepdive' | 'pulse' | 'intelligence' | 'math' | 'concepts' | 'udc' | 'academia' | 'overall'
+  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'doctoral' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'spectrum' | 'deepdive' | 'pulse' | 'intelligence' | 'math' | 'concepts' | 'udc' | 'academia' | 'overall' | 'sciencedirect'
 
   const parsed = useMemo(() => parseCanon(gen.content), [gen.content]);
 
@@ -273,6 +276,7 @@ export default function App() {
       case 'inquiry':      inquiry.generate(topicName);      break;
       case 'spectrum':     spectrum.submitDirectQuestion(topicName); break;
       case 'intelligence': fieldIntel.generate(topicName);   break;
+      case 'overall':      setAppMode('overall'); aggregator.run(topicName); break;
       default:
         setInputTopic(topicName);
         gen.generateCanon(topicName, 'subfield');
@@ -477,6 +481,16 @@ export default function App() {
                   Academia
                 </button>
                 <button
+                  onClick={() => { setAppMode('sciencedirect'); if (scienceDirect.status === 'idle') scienceDirect.load(); }}
+                  className={`px-4 py-2.5 text-sm font-mono -mb-px transition-colors ${
+                    appMode === 'sciencedirect'
+                      ? 'border-b-2 border-orange-600 text-orange-700 font-semibold'
+                      : 'border-b-2 border-transparent text-orange-500 hover:text-orange-700'
+                  }`}
+                >
+                  ScienceDirect
+                </button>
+                <button
                   onClick={() => setAppMode('overall')}
                   className={`ml-4 px-5 py-2 text-sm font-mono font-bold -mb-px transition-all ${
                     appMode === 'overall'
@@ -520,6 +534,8 @@ export default function App() {
                   ? 'Universal Decimal Classification — 9,000+ subject codes from ETH Zurich\'s library across 9 main classes. Select a mode, click any code to generate. Check for newly added codes.'
                   : appMode === 'academia'
                   ? 'Academia.edu topic hierarchy — 25 disciplines, 661 subtopics, and 200,000+ research interest tags across all fields of scholarship. 3 levels deep, fully searchable.'
+                  : appMode === 'sciencedirect'
+                  ? 'ScienceDirect topic hierarchy — 352,924 research topics across 20 scientific disciplines, organized by subject area. Each topic links directly to ScienceDirect, has an AI-generated definition, and connects to all generation modes.'
                   : appMode === 'overall'
                   ? 'One question. Nine sections generated in parallel — orientation, historical development, intellectual landscape, hidden assumptions, every discipline\'s answer, essential works, what you need first, the open frontier, and the path to mastery.'
                   : ''}
@@ -1196,6 +1212,23 @@ export default function App() {
                 onCheckForUpdates={academia.checkForUpdates}
                 scanStatus={academia.scanStatus}
                 newTopics={academia.newTopics}
+              />
+            )}
+
+            {/* ScienceDirect Topics */}
+            {appMode === 'sciencedirect' && (
+              <ScienceDirectView
+                status={scienceDirect.status}
+                subjects={scienceDirect.subjects}
+                topicsBySubject={scienceDirect.topicsBySubject}
+                total={scienceDirect.total}
+                crawlDate={scienceDirect.crawlDate}
+                error={scienceDirect.error}
+                onLoad={scienceDirect.load}
+                onSelect={handleDoctoralTopicClick}
+                scanStatus={scienceDirect.scanStatus}
+                newTopics={scienceDirect.newTopics}
+                onCheckForUpdates={scienceDirect.checkForUpdates}
               />
             )}
 
