@@ -259,7 +259,7 @@ function titlesMatch(a, b) {
   return shared >= Math.max(1, Math.floor(Math.min(wa.length, wb.length) * 0.6));
 }
 
-function mergeWorks(lists) {
+export function mergeWorks(lists) {
   const merged = [];
   for (const work of lists.flat()) {
     const existing = merged.find(m => titlesMatch(m.title, work.title));

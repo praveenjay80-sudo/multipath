@@ -127,16 +127,45 @@ function TopicRow({ topic, subjectSlug, onSelect }) {
   );
 }
 
-const INITIAL_SHOW = 150;
+function groupByFirstWord(topics) {
+  const map = new Map();
+  for (const t of topics) {
+    const word = t.n.split(' ')[0];
+    const key = word.toLowerCase();
+    if (!map.has(key)) map.set(key, { label: word, topics: [] });
+    map.get(key).topics.push(t);
+  }
+  return [...map.values()].sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function GroupRow({ group, subjectSlug, onSelect }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div>
+      <div
+        className="flex items-center gap-2 pl-4 pr-3 py-1.5 hover:bg-stone-50 cursor-pointer transition-colors"
+        onClick={() => setExpanded(e => !e)}
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+          className={`transition-transform shrink-0 text-stone-400 ${expanded ? 'rotate-90' : ''}`}>
+          <path d="M3 2l4 3-4 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        <span className="text-xs font-semibold text-stone-700">{group.label}</span>
+        <span className="text-xs font-mono text-stone-300">{group.topics.length.toLocaleString()}</span>
+      </div>
+      {expanded && group.topics.map(t => (
+        <TopicRow key={t.s} topic={t} subjectSlug={subjectSlug} onSelect={onSelect} />
+      ))}
+    </div>
+  );
+}
 
 function SubjectRow({ subject, topics, onSelect, searchActive }) {
   const [expanded, setExpanded] = useState(false);
-  const [showAll, setShowAll] = useState(false);
   const hasTopics = topics.length > 0;
-
-  // Auto-expand when searching
   const isExpanded = searchActive || expanded;
-  const visible = showAll || searchActive ? topics : topics.slice(0, INITIAL_SHOW);
+
+  const groups = useMemo(() => groupByFirstWord(topics), [topics]);
 
   return (
     <div className="border border-stone-200 rounded">
@@ -176,17 +205,14 @@ function SubjectRow({ subject, topics, onSelect, searchActive }) {
 
       {isExpanded && hasTopics && (
         <div className="border-t border-stone-100">
-          {visible.map(t => (
-            <TopicRow key={t.s} topic={t} subjectSlug={subject.slug} onSelect={onSelect} />
-          ))}
-          {!showAll && !searchActive && topics.length > INITIAL_SHOW && (
-            <button
-              onClick={() => setShowAll(true)}
-              className="pl-6 py-1.5 text-xs text-stone-400 hover:text-stone-600 font-mono"
-            >
-              +{(topics.length - INITIAL_SHOW).toLocaleString()} more…
-            </button>
-          )}
+          {searchActive
+            ? topics.map(t => (
+                <TopicRow key={t.s} topic={t} subjectSlug={subject.slug} onSelect={onSelect} />
+              ))
+            : groups.map(g => (
+                <GroupRow key={g.label} group={g} subjectSlug={subject.slug} onSelect={onSelect} />
+              ))
+          }
         </div>
       )}
       {isExpanded && !hasTopics && (
