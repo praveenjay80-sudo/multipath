@@ -55,6 +55,8 @@ import OverallAggregatorView from './components/OverallAggregatorView';
 import { useOverallAggregator } from './hooks/useOverallAggregator';
 import ScienceDirectView from './components/ScienceDirectView';
 import { useScienceDirectTopics } from './hooks/useScienceDirectTopics';
+import OntologicalAtlasView from './components/OntologicalAtlasView';
+import { useOntologicalAtlas } from './hooks/useOntologicalAtlas';
 
 function WorkRow({ w }) {
   return (
@@ -175,11 +177,12 @@ export default function App() {
   const fieldIntel = useFieldIntelligence();
   const aggregator = useOverallAggregator();
   const scienceDirect = useScienceDirectTopics();
+  const oAtlas = useOntologicalAtlas();
   const [inputTopic, setInputTopic] = useState('');
   const [shake, setShake] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [view, setView] = useState('canon');
-  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'doctoral' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'spectrum' | 'deepdive' | 'pulse' | 'intelligence' | 'math' | 'concepts' | 'udc' | 'academia' | 'overall' | 'sciencedirect'
+  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'doctoral' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'spectrum' | 'deepdive' | 'pulse' | 'intelligence' | 'math' | 'concepts' | 'udc' | 'academia' | 'overall' | 'sciencedirect' | 'ontologicalatlas'
 
   const parsed = useMemo(() => parseCanon(gen.content), [gen.content]);
 
@@ -491,6 +494,16 @@ export default function App() {
                   ScienceDirect
                 </button>
                 <button
+                  onClick={() => { setAppMode('ontologicalatlas'); if (oAtlas.status === 'idle') oAtlas.load(); }}
+                  className={`px-4 py-2.5 text-sm font-mono -mb-px transition-colors ${
+                    appMode === 'ontologicalatlas'
+                      ? 'border-b-2 border-violet-600 text-violet-700 font-semibold'
+                      : 'border-b-2 border-transparent text-violet-500 hover:text-violet-700'
+                  }`}
+                >
+                  ONTOLOGICAL ATLAS
+                </button>
+                <button
                   onClick={() => setAppMode('overall')}
                   className={`ml-4 px-5 py-2 text-sm font-mono font-bold -mb-px transition-all ${
                     appMode === 'overall'
@@ -538,6 +551,8 @@ export default function App() {
                   ? 'ScienceDirect topic hierarchy — 352,924 research topics across 20 scientific disciplines, organized by subject area. Each topic links directly to ScienceDirect, has an AI-generated definition, and connects to all generation modes.'
                   : appMode === 'overall'
                   ? 'One question. Nine sections generated in parallel — orientation, historical development, intellectual landscape, hidden assumptions, every discipline\'s answer, essential works, what you need first, the open frontier, and the path to mastery.'
+                  : appMode === 'ontologicalatlas'
+                  ? 'Ontological Atlas — 208 schools of thought, 1,888 classified works, 461 thinker personas, and 57 ethical dilemmas. Six ontological dimensions: Time, Space, Matter, Observer, Energy, Information. Click any entry to generate a canon, curriculum, or reading path.'
                   : ''}
               </p>
             </header>
@@ -1229,6 +1244,21 @@ export default function App() {
                 scanStatus={scienceDirect.scanStatus}
                 newTopics={scienceDirect.newTopics}
                 onCheckForUpdates={scienceDirect.checkForUpdates}
+              />
+            )}
+
+            {/* Ontological Atlas */}
+            {appMode === 'ontologicalatlas' && (
+              <OntologicalAtlasView
+                status={oAtlas.status}
+                schools={oAtlas.schools}
+                works={oAtlas.works}
+                personas={oAtlas.personas}
+                dilemmas={oAtlas.dilemmas}
+                crawlDate={oAtlas.crawlDate}
+                error={oAtlas.error}
+                onLoad={oAtlas.load}
+                onSelect={handleDoctoralTopicClick}
               />
             )}
 
