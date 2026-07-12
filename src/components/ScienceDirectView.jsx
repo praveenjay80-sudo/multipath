@@ -127,15 +127,16 @@ function TopicRow({ topic, subjectSlug, onSelect }) {
   );
 }
 
-function groupByFirstWord(topics) {
+function groupByLetter(topics) {
   const map = new Map();
   for (const t of topics) {
-    const word = t.n.split(' ')[0];
-    const key = word.toLowerCase();
-    if (!map.has(key)) map.set(key, { label: word, topics: [] });
-    map.get(key).topics.push(t);
+    const letter = t.n[0].toUpperCase();
+    if (!map.has(letter)) map.set(letter, []);
+    map.get(letter).push(t);
   }
-  return [...map.values()].sort((a, b) => a.label.localeCompare(b.label));
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([letter, topics]) => ({ label: letter, topics }));
 }
 
 function GroupRow({ group, subjectSlug, onSelect }) {
@@ -165,7 +166,7 @@ function SubjectRow({ subject, topics, onSelect, searchActive }) {
   const hasTopics = topics.length > 0;
   const isExpanded = searchActive || expanded;
 
-  const groups = useMemo(() => groupByFirstWord(topics), [topics]);
+  const groups = useMemo(() => groupByLetter(topics), [topics]);
 
   return (
     <div className="border border-stone-200 rounded">
