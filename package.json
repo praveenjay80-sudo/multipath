@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "start": "node server.js",
     "generate-concepts": "node scripts/build-concepts.mjs",
-    "prebuild": "node scripts/build-concepts.mjs"
+    "prebuild": "node scripts/build-concepts.mjs",
+    "postinstall": "vite build"
   },
   "dependencies": {
     "express": "^4.22.2",
