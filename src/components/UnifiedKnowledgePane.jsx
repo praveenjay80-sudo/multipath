@@ -368,13 +368,16 @@ function ProgressBar({ completedCount, activeCount, total }) {
 // ── Connectivity Dashboard ───────────────────────────────────────────────────
 
 function ConnectivityDashboard({ parsedEntities, entityIndex, harvestedPapers, onEntityClick }) {
-  if (parsedEntities.works.length === 0 && parsedEntities.concepts.length === 0 && parsedEntities.researchers.length === 0) {
-    return null;
-  }
-
   const topAuthors = Array.from(entityIndex.authorProfile.values())
     .sort((a, b) => b.totalCitations - a.totalCitations)
-    .slice(0, 8);
+    .slice(0, 12);
+
+  // Show harvested papers sorted by citation count in the works column
+  const topHarvested = [...harvestedPapers]
+    .sort((a, b) => (b.citationCount || 0) - (a.citationCount || 0));
+
+  const hasAnything = parsedEntities.concepts.length > 0 || harvestedPapers.length > 0 || topAuthors.length > 0;
+  if (!hasAnything) return null;
 
   return (
     <div className="mb-6 border border-stone-200 bg-white">
@@ -382,56 +385,68 @@ function ConnectivityDashboard({ parsedEntities, entityIndex, harvestedPapers, o
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-stone-900">Connectivity</h3>
           <span className="text-xs text-stone-400 font-mono">
-            {parsedEntities.works.length} works · {parsedEntities.concepts.length} concepts · {parsedEntities.researchers.length} researchers
+            {harvestedPapers.length} papers · {parsedEntities.concepts.length} concepts · {topAuthors.length} authors
           </span>
         </div>
       </div>
       <div className="p-5">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
           <div>
             <div className="font-mono text-stone-400 mb-1.5">CONCEPTS ({parsedEntities.concepts.length})</div>
-            <div className="flex flex-wrap gap-1 max-h-40 overflow-y-auto">
-              {parsedEntities.concepts.map(c => (
-                <button
-                  key={c.name}
-                  onClick={() => onEntityClick({ type: 'concept', name: c.name, definition: c.definition, tier: c.tier })}
-                  className="px-2 py-1 bg-violet-50 border border-violet-200 text-violet-800 hover:bg-violet-100 transition-colors"
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
+            {parsedEntities.concepts.length > 0 ? (
+              <div className="flex flex-wrap gap-1 max-h-48 overflow-y-auto">
+                {parsedEntities.concepts.map(c => (
+                  <button
+                    key={c.name}
+                    onClick={() => onEntityClick({ type: 'concept', name: c.name, definition: c.definition, tier: c.tier })}
+                    className="px-2 py-1 bg-violet-50 border border-violet-200 text-violet-800 hover:bg-violet-100 transition-colors"
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-stone-300 font-mono text-[10px]">Generating...</div>
+            )}
           </div>
           <div>
-            <div className="font-mono text-stone-400 mb-1.5">WORKS ({parsedEntities.works.length})</div>
-            <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
-              {parsedEntities.works.map(w => {
-                const matched = harvestedPapers.find(h => h.title === w.title);
-                return (
+            <div className="font-mono text-stone-400 mb-1.5">PAPERS ({topHarvested.length})</div>
+            {topHarvested.length > 0 ? (
+              <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+                {topHarvested.map(w => (
                   <button
                     key={w.title}
-                    onClick={() => onEntityClick({ type: 'work', name: w.title, work: matched })}
-                    className="text-left px-2 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 transition-colors line-clamp-1"
+                    onClick={() => onEntityClick({ type: 'work', name: w.title, work: w })}
+                    className="text-left px-2 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 transition-colors"
                   >
-                    {w.title}
+                    <div className="line-clamp-1 font-medium">{w.title}</div>
+                    {w.citationCount > 0 && (
+                      <div className="text-[10px] text-emerald-600 mt-0.5">{w.citationCount.toLocaleString()} citations</div>
+                    )}
                   </button>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-stone-300 font-mono text-[10px]">Harvesting...</div>
+            )}
           </div>
           <div>
             <div className="font-mono text-stone-400 mb-1.5">AUTHORS ({topAuthors.length})</div>
-            <div className="flex flex-wrap gap-1 max-h-40 overflow-y-auto">
-              {topAuthors.map(a => (
-                <button
-                  key={a.name}
-                  onClick={() => onEntityClick({ type: 'author', name: a.name, profile: a })}
-                  className="px-2 py-1 bg-indigo-50 border border-indigo-200 text-indigo-800 hover:bg-indigo-100 transition-colors"
-                >
-                  {a.name}
-                </button>
-              ))}
-            </div>
+            {topAuthors.length > 0 ? (
+              <div className="flex flex-wrap gap-1 max-h-48 overflow-y-auto">
+                {topAuthors.map(a => (
+                  <button
+                    key={a.name}
+                    onClick={() => onEntityClick({ type: 'author', name: a.name, profile: a })}
+                    className="px-2 py-1 bg-indigo-50 border border-indigo-200 text-indigo-800 hover:bg-indigo-100 transition-colors"
+                  >
+                    {a.name}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-stone-300 font-mono text-[10px]">Harvesting...</div>
+            )}
           </div>
         </div>
       </div>

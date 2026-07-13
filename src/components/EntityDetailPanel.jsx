@@ -95,13 +95,10 @@ function ConceptPanel({ entity, index, onOpen }) {
 
       {relevant.length > 0 && (
         <Section title="Relevant works" count={relevant.length}>
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 max-h-[32rem] overflow-y-auto pr-1">
             {relevant.map(({ work, score }) => {
-              const matched = work.matchedWork || {
-                title: work.title,
-                authors: work.allAuthors,
-                year: work.year,
-              };
+              const w = work.matchedWork || work;
+              const authors = w.authors || w.allAuthors || '';
               return (
                 <div key={work.title} className="flex items-start gap-2">
                   <span className={`shrink-0 mt-2 text-[10px] font-mono px-1 py-0.5 ${
@@ -110,13 +107,20 @@ function ConceptPanel({ entity, index, onOpen }) {
                     {score === 2 ? 'match' : 'related'}
                   </span>
                   <button
-                    onClick={() => onOpen({ type: 'work', name: matched.title, work: matched })}
+                    onClick={() => onOpen({ type: 'work', name: w.title, work: w })}
                     className="min-w-0 flex-1 text-left p-2 bg-white border border-stone-200 hover:border-stone-400 hover:bg-stone-50 transition-colors"
                   >
-                    <div className="text-sm font-medium text-stone-800 line-clamp-2">{matched.title}</div>
-                    <div className="text-xs text-stone-500 mt-0.5">
-                      {matched.authors?.split(',')[0]}{matched.year ? ` · ${matched.year}` : ''}
+                    <div className="text-sm font-medium text-stone-800 line-clamp-2">{w.title}</div>
+                    <div className="flex flex-wrap gap-x-3 text-xs text-stone-500 mt-0.5">
+                      <span>{authors.split(',')[0]}{w.year ? ` · ${w.year}` : ''}</span>
+                      {w.citationCount > 0 && (
+                        <span>{w.citationCount.toLocaleString()} citations</span>
+                      )}
+                      {w.fwci != null && <span>FWCI {w.fwci.toFixed(2)}</span>}
                     </div>
+                    {w.isOA && w.oaUrl && (
+                      <span className="text-[10px] text-emerald-600 mt-0.5 block">Open Access</span>
+                    )}
                   </button>
                 </div>
               );
@@ -132,7 +136,7 @@ function ConceptPanel({ entity, index, onOpen }) {
             className="w-full px-4 py-2.5 text-sm border border-stone-300 bg-white text-stone-700 hover:bg-stone-50 transition-colors flex items-center justify-between"
           >
             <span className="font-medium">
-              {showCanon ? 'Hide' : 'Show'} {inCanon.length} other canon works
+              {showCanon ? 'Hide' : 'Show'} {inCanon.length} other harvested works
             </span>
             <span className="text-xs font-mono text-stone-500">
               {showCanon ? '▲' : '▾'}
@@ -142,20 +146,18 @@ function ConceptPanel({ entity, index, onOpen }) {
             <div className="mt-2 border border-stone-200 bg-stone-50 max-h-72 overflow-y-auto">
               <div className="divide-y divide-stone-100">
                 {inCanon.map(({ work }) => {
-                  const matched = work.matchedWork || {
-                    title: work.title,
-                    authors: work.allAuthors,
-                    year: work.year,
-                  };
+                  const w = work.matchedWork || work;
+                  const authors = w.authors || w.allAuthors || '';
                   return (
                     <button
                       key={work.title}
-                      onClick={() => onOpen({ type: 'work', name: matched.title, work: matched })}
+                      onClick={() => onOpen({ type: 'work', name: w.title, work: w })}
                       className="w-full text-left px-3 py-2 bg-white hover:bg-stone-50 transition-colors"
                     >
-                      <div className="text-xs font-medium text-stone-800 line-clamp-1">{matched.title}</div>
-                      <div className="text-[10px] text-stone-500 mt-0.5">
-                        {matched.authors?.split(',')[0]}{matched.year ? ` · ${matched.year}` : ''}
+                      <div className="text-xs font-medium text-stone-800 line-clamp-1">{w.title}</div>
+                      <div className="flex gap-3 text-[10px] text-stone-500 mt-0.5">
+                        <span>{authors.split(',')[0]}{w.year ? ` · ${w.year}` : ''}</span>
+                        {w.citationCount > 0 && <span>{w.citationCount.toLocaleString()} cit.</span>}
                       </div>
                     </button>
                   );
