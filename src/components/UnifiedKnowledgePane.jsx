@@ -365,56 +365,114 @@ function ProgressBar({ completedCount, activeCount, total }) {
   );
 }
 
-// ── Connectivity Dashboard ───────────────────────────────────────────────────
+// ── Concept Hierarchy Panel ─────────────────────────────────────────────────
 
-function ConnectivityDashboard({ parsedEntities, entityIndex, harvestedPapers, onEntityClick, activeCount }) {
+const TIER_META = {
+  '1': { label: 'Prerequisites', sub: 'Required before engaging', bg: 'bg-sky-50', border: 'border-sky-200', text: 'text-sky-800', badge: 'bg-sky-100 text-sky-600', arrow: 'text-sky-300' },
+  '2': { label: 'Core',          sub: 'Central to the field',     bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-800', badge: 'bg-violet-100 text-violet-600', arrow: 'text-violet-300' },
+  '3': { label: 'Advanced',      sub: 'Research frontier',        bg: 'bg-fuchsia-50', border: 'border-fuchsia-200', text: 'text-fuchsia-800', badge: 'bg-fuchsia-100 text-fuchsia-600', arrow: 'text-fuchsia-300' },
+};
+
+function ConceptHierarchyPanel({ concepts, entityIndex, onEntityClick, activeCount }) {
+  if (concepts.length === 0 && activeCount === 0) {
+    return (
+      <div className="mb-6 border border-stone-200 bg-white px-5 py-4 text-xs text-stone-400 font-mono">
+        Include "Complete Concept Map" section to build the concept hierarchy.
+      </div>
+    );
+  }
+  if (concepts.length === 0) return null;
+
+  const byTier = { '1': [], '2': [], '3': [] };
+  for (const c of concepts) {
+    const t = c.tier === '1' || c.tier === '2' || c.tier === '3' ? c.tier : '2';
+    byTier[t].push(c);
+  }
+
+  return (
+    <div className="mb-6 border border-stone-200 bg-white">
+      <div className="px-5 py-3 border-b border-stone-200 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-stone-900">Concept Hierarchy</h3>
+        <span className="text-xs text-stone-400 font-mono">{concepts.length} concepts</span>
+      </div>
+      <div className="p-5">
+        <div className="grid grid-cols-[1fr_28px_1fr_28px_1fr] gap-0 items-start">
+          {['1','2','3'].map((tier, i) => {
+            const meta = TIER_META[tier];
+            const tierConcepts = byTier[tier];
+            return (
+              <>
+                <div key={tier} className="min-w-0">
+                  <div className={`px-2 py-1.5 mb-2 text-[10px] font-mono font-semibold ${meta.text} border-b ${meta.border}`}>
+                    TIER {tier} · {meta.label.toUpperCase()}
+                    <div className="font-normal opacity-70">{meta.sub}</div>
+                  </div>
+                  <div className="space-y-1">
+                    {tierConcepts.map(c => {
+                      const relevantCount = (entityIndex.conceptToWorks.get(c.name) || []).filter(w => w.score >= 1).length;
+                      return (
+                        <button
+                          key={c.name}
+                          onClick={() => onEntityClick({ type: 'concept', name: c.name, definition: c.definition, tier: c.tier })}
+                          className={`w-full text-left px-2.5 py-2 border ${meta.border} ${meta.bg} hover:opacity-80 transition-opacity`}
+                        >
+                          <div className={`text-xs font-semibold ${meta.text} line-clamp-1`}>{c.name}</div>
+                          {c.definition && (
+                            <div className="text-[10px] text-stone-500 mt-0.5 line-clamp-2 leading-relaxed">{c.definition}</div>
+                          )}
+                          {relevantCount > 0 && (
+                            <div className={`text-[10px] mt-1 font-mono ${meta.badge.split(' ')[1]} inline-block px-1 py-0.5 rounded-none ${meta.badge.split(' ')[0]}`}>
+                              {relevantCount} work{relevantCount !== 1 ? 's' : ''} →
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                    {tierConcepts.length === 0 && (
+                      <div className="text-[10px] text-stone-300 font-mono py-3 text-center">—</div>
+                    )}
+                  </div>
+                </div>
+                {i < 2 && (
+                  <div key={`arrow-${tier}`} className="flex items-center justify-center pt-12 text-stone-300 text-lg select-none">→</div>
+                )}
+              </>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Connectivity Dashboard (papers + authors only) ───────────────────────────
+
+function ConnectivityDashboard({ parsedEntities, entityIndex, harvestedPapers, onEntityClick }) {
   const topAuthors = Array.from(entityIndex.authorProfile.values())
     .sort((a, b) => b.totalCitations - a.totalCitations)
     .slice(0, 12);
 
-  // Show harvested papers sorted by citation count in the works column
   const topHarvested = [...harvestedPapers]
     .sort((a, b) => (b.citationCount || 0) - (a.citationCount || 0));
 
-  const hasAnything = parsedEntities.concepts.length > 0 || harvestedPapers.length > 0 || topAuthors.length > 0;
-  if (!hasAnything) return null;
+  if (topHarvested.length === 0 && topAuthors.length === 0) return null;
 
   return (
     <div className="mb-6 border border-stone-200 bg-white">
       <div className="px-5 py-3 border-b border-stone-200">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-stone-900">Connectivity</h3>
+          <h3 className="text-sm font-semibold text-stone-900">Harvested Works</h3>
           <span className="text-xs text-stone-400 font-mono">
-            {harvestedPapers.length} papers · {parsedEntities.concepts.length} concepts · {topAuthors.length} authors
+            {topHarvested.length} papers · {topAuthors.length} authors
           </span>
         </div>
       </div>
       <div className="p-5">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           <div>
-            <div className="font-mono text-stone-400 mb-1.5">CONCEPTS ({parsedEntities.concepts.length})</div>
-            {parsedEntities.concepts.length > 0 ? (
-              <div className="flex flex-wrap gap-1 max-h-48 overflow-y-auto">
-                {parsedEntities.concepts.map(c => (
-                  <button
-                    key={c.name}
-                    onClick={() => onEntityClick({ type: 'concept', name: c.name, definition: c.definition, tier: c.tier })}
-                    className="px-2 py-1 bg-violet-50 border border-violet-200 text-violet-800 hover:bg-violet-100 transition-colors"
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="text-stone-300 font-mono text-[10px]">
-                {activeCount > 0 ? 'Generating...' : 'Generate the "Complete Concept Map" section to see concepts'}
-              </div>
-            )}
-          </div>
-          <div>
-            <div className="font-mono text-stone-400 mb-1.5">PAPERS ({topHarvested.length})</div>
+            <div className="font-mono text-stone-400 mb-1.5">PAPERS BY CITATIONS</div>
             {topHarvested.length > 0 ? (
-              <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+              <div className="flex flex-col gap-1 max-h-56 overflow-y-auto">
                 {topHarvested.map(w => (
                   <button
                     key={w.title}
@@ -422,9 +480,10 @@ function ConnectivityDashboard({ parsedEntities, entityIndex, harvestedPapers, o
                     className="text-left px-2 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 transition-colors"
                   >
                     <div className="line-clamp-1 font-medium">{w.title}</div>
-                    {w.citationCount > 0 && (
-                      <div className="text-[10px] text-emerald-600 mt-0.5">{w.citationCount.toLocaleString()} citations</div>
-                    )}
+                    <div className="flex gap-3 text-[10px] text-emerald-600 mt-0.5">
+                      {w.citationCount > 0 && <span>{w.citationCount.toLocaleString()} citations</span>}
+                      {w.year && <span>{w.year}</span>}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -433,16 +492,19 @@ function ConnectivityDashboard({ parsedEntities, entityIndex, harvestedPapers, o
             )}
           </div>
           <div>
-            <div className="font-mono text-stone-400 mb-1.5">AUTHORS ({topAuthors.length})</div>
+            <div className="font-mono text-stone-400 mb-1.5">KEY AUTHORS</div>
             {topAuthors.length > 0 ? (
-              <div className="flex flex-wrap gap-1 max-h-48 overflow-y-auto">
+              <div className="flex flex-col gap-1 max-h-56 overflow-y-auto">
                 {topAuthors.map(a => (
                   <button
                     key={a.name}
                     onClick={() => onEntityClick({ type: 'author', name: a.name, profile: a })}
-                    className="px-2 py-1 bg-indigo-50 border border-indigo-200 text-indigo-800 hover:bg-indigo-100 transition-colors"
+                    className="text-left px-2 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-800 hover:bg-indigo-100 transition-colors"
                   >
-                    {a.name}
+                    <div className="font-medium">{a.name}</div>
+                    <div className="text-[10px] text-indigo-600 mt-0.5">
+                      {a.works.length} works · {a.totalCitations.toLocaleString()} citations
+                    </div>
                   </button>
                 ))}
               </div>
@@ -533,6 +595,11 @@ export default function UnifiedKnowledgePane({
           parsedEntities={parsedEntities}
           entityIndex={entityIndex}
           harvestedPapers={harvestedPapers}
+          onEntityClick={openEntity}
+        />
+        <ConceptHierarchyPanel
+          concepts={parsedEntities.concepts}
+          entityIndex={entityIndex}
           onEntityClick={openEntity}
           activeCount={activeCount}
         />

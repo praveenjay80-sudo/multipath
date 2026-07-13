@@ -76,9 +76,13 @@ export function extractConcepts(text) {
 
     if (currentTier === null) continue;
 
-    // - Concept Name — definition  /  1. Concept Name — definition  /  **Concept Name** — definition
-    const m = trimmed.match(/^(?:[-*]|\d+\.)\s+\*?\*?([^*\n—\-]{2,80}?)\*?\*?\s*[—\-]\s+(.{3,})/)
-           || trimmed.match(/^\*\*([^*\n—\-]{2,80}?)\*\*\s*[—\-]\s+(.{3,})/);
+    // Handle all formats Claude might use as the separator or leading marker:
+    // - **Name** — def  |  - **Name** – def  |  - **Name**: def  |  - Name — def
+    // **Name** — def  |  **Name**: def  |  1. **Name** — def
+    const m = trimmed.match(/^(?:[-*•]|\d+\.)\s+\*?\*?([^*\n—–]{2,80}?)\*?\*?\s*[—–]\s+(.{3,})/)
+           || trimmed.match(/^\*\*([^*\n—–]{2,80}?)\*\*\s*[—–]\s+(.{3,})/)
+           || trimmed.match(/^(?:[-*•]|\d+\.)\s+\*?\*?([^*\n:]{2,60}?)\*?\*?:\s+(.{10,})/)
+           || trimmed.match(/^\*\*([^*\n:]{2,60}?)\*\*:\s+(.{10,})/);
     if (m) {
       const name = m[1].trim();
       const definition = m[2].trim();

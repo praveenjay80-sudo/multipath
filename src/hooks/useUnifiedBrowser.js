@@ -22,7 +22,7 @@ Use ### headers for each question. For each:
 
 List at least 8 questions. Start with the deepest, most foundational ones.`;
 
-const CONCEPTS_PROMPT = `Map every essential concept in the given topic. Organize into three tiers.
+const CONCEPTS_PROMPT = `Map every essential concept in the given topic. Organize into three tiers using exactly these ### headers.
 
 ### Tier 1: Prerequisite Concepts
 Concepts someone must understand before engaging with this topic at all.
@@ -33,7 +33,10 @@ The central concepts this field actually studies.
 ### Tier 3: Advanced Concepts
 Sophisticated concepts encountered in the research frontier.
 
-For each concept, write one clear sentence defining it. List at least 20 concepts total across all three tiers.`;
+For EVERY concept use this exact format (bullet, bold name, em dash, definition):
+- **Concept Name** — One clear sentence defining it in plain English.
+
+List at least 25 concepts total across the three tiers. Do not use numbered lists, colons, or any other separator — only the em dash (—).`;
 
 const SCHOOLS_PROMPT = `Map every significant school of thought within or bearing on the given topic.
 
