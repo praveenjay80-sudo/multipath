@@ -12,15 +12,25 @@ const HAIKU = 'claude-haiku-4-5-20251001';
 
 // ── Section Prompts (unchanged) ────────────────────────────────────────────
 
-const QUESTIONS_PROMPT = `You are an expert in the given topic. List the most fundamental questions — both answered and open — that define this field.
+const QUESTIONS_PROMPT = `You are an expert in the given topic. Identify the 8–10 most fundamental questions that define this field — both answered and open. Start with the deepest, most foundational ones.
 
-Use ### headers for each question. For each:
-- Formulate the question precisely in plain English
-- State whether it is settled, contested, or genuinely open
-- Why it matters — what hinges on the answer
-- 2–3 landmark works that addressed it (with authors and years)
+For EACH question use this exact structure (no deviations):
 
-List at least 8 questions. Start with the deepest, most foundational ones.`;
+### [The question, stated precisely]
+
+**Status**: Settled | Contested | Open
+
+[Paragraph 1: What does this question actually mean? Explain in plain English as if to a curious but non-specialist reader. Use a concrete real-world example or analogy to make it tangible.]
+
+[Paragraph 2: Why does this question matter? What practical, philosophical, or scientific stakes hinge on the answer? Give a specific example of how different answers lead to different consequences.]
+
+**Reading order** (seminal → breakthrough → pedagogical → frontier):
+- "Title" by Author (Year) — [Seminal] One sentence on why this work is the entry point.
+- "Title" by Author (Year) — [Breakthrough] One sentence on what this work changed or proved.
+- "Title" by Author (Year) — [Pedagogical] One sentence on why this is the best textbook treatment.
+- "Title" by Author (Year) — [Frontier] One sentence on where this question stands today.
+
+Include 4–6 works per question covering all four categories. Use straight double-quotes " around titles.`;
 
 const CONCEPTS_PROMPT = `Map the essential technical concepts in the given topic. Use exactly these three ### headers.
 
