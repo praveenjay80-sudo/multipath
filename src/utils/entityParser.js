@@ -85,7 +85,25 @@ export function extractConcepts(text) {
            || trimmed.match(/^\*\*([^*\n:]{2,60}?)\*\*:\s+(.{10,})/);
     if (m) {
       const name = m[1].trim();
-      const definition = m[2].trim();
+      const rawGroup2 = m[2].trim();
+      // Split definition from Claude-generated canonical works (pipe separator)
+      const pipeIdx = rawGroup2.indexOf(' | ');
+      const definition = pipeIdx >= 0 ? rawGroup2.slice(0, pipeIdx).trim() : rawGroup2;
+      const worksStr = pipeIdx >= 0 ? rawGroup2.slice(pipeIdx + 3) : '';
+
+      // Parse canonical works embedded in the concept line
+      const canonicalWorks = [];
+      if (worksStr) {
+        for (const pattern of WORK_PATTERNS) {
+          const re = new RegExp(pattern.source, pattern.flags);
+          let wm;
+          while ((wm = re.exec(worksStr)) !== null) {
+            const firstAuthor = wm[2].trim().split(/,\s*|\s+and\s+|\s+&\s+/)[0].trim();
+            canonicalWorks.push({ title: wm[1].trim(), author: firstAuthor, year: parseInt(wm[3], 10) });
+          }
+        }
+      }
+
       const key = name.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
@@ -94,6 +112,7 @@ export function extractConcepts(text) {
         definition,
         tier: currentTier,
         tierName: currentTierName,
+        canonicalWorks,
       });
     }
   }

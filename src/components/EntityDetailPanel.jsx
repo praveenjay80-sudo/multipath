@@ -48,10 +48,10 @@ function PersonCard({ name, profile, onClick, small }) {
   );
 }
 
-function ConceptCard({ name, definition, tier, onClick }) {
+function ConceptCard({ name, definition, tier, canonicalWorks, onClick }) {
   return (
     <button
-      onClick={() => onClick({ type: 'concept', name, definition, tier })}
+      onClick={() => onClick({ type: 'concept', name, definition, tier, canonicalWorks })}
       className="w-full text-left p-2.5 bg-white border border-stone-200 hover:border-stone-400 hover:bg-stone-50 transition-colors"
     >
       <div className="flex items-center gap-2">
@@ -67,10 +67,16 @@ function ConceptCard({ name, definition, tier, onClick }) {
   );
 }
 function ConceptPanel({ entity, index, onOpen }) {
-  const [showCanon, setShowCanon] = useState(false);
+  const [showHarvested, setShowHarvested] = useState(false);
+  const canonicalWorks = entity.canonicalWorks || [];
   const allScored = index.conceptToWorks.get(entity.name) || [];
-  const relevant = allScored.filter(s => s.score >= 1).sort((a, b) => b.score - a.score);
-  const inCanon = allScored.filter(s => s.score === 0);
+  // Harvested works that OA-tagged as this concept (score >= 1), excluding any already in canonical list
+  const canonTitlesLc = new Set(canonicalWorks.map(w => w.title.toLowerCase().trim()));
+  const harvested = allScored
+    .filter(s => s.score >= 1)
+    .filter(s => !canonTitlesLc.has((s.work.matchedWork?.title || s.work.title || '').toLowerCase().trim()))
+    .sort((a, b) => b.score - a.score);
+  const inBackground = allScored.filter(s => s.score === 0);
 
   return (
     <div className="space-y-5">
@@ -93,35 +99,43 @@ function ConceptPanel({ entity, index, onOpen }) {
         </div>
       )}
 
-      {relevant.length > 0 && (
-        <Section title="Relevant works" count={relevant.length}>
-          <div className="space-y-1.5 max-h-[32rem] overflow-y-auto pr-1">
-            {relevant.map(({ work, score }) => {
-              const w = work.matchedWork || work;
-              const authors = w.authors || w.allAuthors || '';
+      {/* Claude's canonical works — always shown when present */}
+      {canonicalWorks.length > 0 && (
+        <Section title="Key works" count={canonicalWorks.length}>
+          <div className="space-y-1.5">
+            {canonicalWorks.map(cw => {
+              // Try to find a matching harvested work with full metadata
+              const scored = allScored.find(s => {
+                const t = (s.work.matchedWork?.title || s.work.title || '').toLowerCase();
+                return t.includes(cw.title.toLowerCase()) || cw.title.toLowerCase().includes(t.slice(0, 20));
+              });
+              const hw = scored?.work.matchedWork || scored?.work;
               return (
-                <div key={work.title} className="flex items-start gap-2">
-                  <span className={`shrink-0 mt-2 text-[10px] font-mono px-1 py-0.5 ${
-                    score === 2 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {score === 2 ? 'match' : 'related'}
+                <div key={cw.title} className="flex items-start gap-2">
+                  <span className="shrink-0 mt-2 text-[10px] font-mono px-1 py-0.5 bg-indigo-100 text-indigo-700">
+                    key
                   </span>
-                  <button
-                    onClick={() => onOpen({ type: 'work', name: w.title, work: w })}
-                    className="min-w-0 flex-1 text-left p-2 bg-white border border-stone-200 hover:border-stone-400 hover:bg-stone-50 transition-colors"
-                  >
-                    <div className="text-sm font-medium text-stone-800 line-clamp-2">{w.title}</div>
-                    <div className="flex flex-wrap gap-x-3 text-xs text-stone-500 mt-0.5">
-                      <span>{authors.split(',')[0]}{w.year ? ` · ${w.year}` : ''}</span>
-                      {w.citationCount > 0 && (
-                        <span>{w.citationCount.toLocaleString()} citations</span>
+                  {hw ? (
+                    <button
+                      onClick={() => onOpen({ type: 'work', name: hw.title, work: hw })}
+                      className="min-w-0 flex-1 text-left p-2 bg-white border border-stone-200 hover:border-stone-400 hover:bg-stone-50 transition-colors"
+                    >
+                      <div className="text-sm font-medium text-stone-800 line-clamp-2">{hw.title}</div>
+                      <div className="flex flex-wrap gap-x-3 text-xs text-stone-500 mt-0.5">
+                        <span>{(hw.authors || '').split(',')[0]}{hw.year ? ` · ${hw.year}` : ''}</span>
+                        {hw.citationCount > 0 && <span>{hw.citationCount.toLocaleString()} citations</span>}
+                        {hw.fwci != null && <span>FWCI {hw.fwci.toFixed(2)}</span>}
+                      </div>
+                      {hw.isOA && hw.oaUrl && (
+                        <span className="text-[10px] text-emerald-600 mt-0.5 block">Open Access</span>
                       )}
-                      {w.fwci != null && <span>FWCI {w.fwci.toFixed(2)}</span>}
+                    </button>
+                  ) : (
+                    <div className="min-w-0 flex-1 p-2 bg-stone-50 border border-stone-200">
+                      <div className="text-sm font-medium text-stone-800 line-clamp-2">{cw.title}</div>
+                      <div className="text-xs text-stone-500 mt-0.5">{cw.author}{cw.year ? ` · ${cw.year}` : ''}</div>
                     </div>
-                    {w.isOA && w.oaUrl && (
-                      <span className="text-[10px] text-emerald-600 mt-0.5 block">Open Access</span>
-                    )}
-                  </button>
+                  )}
                 </div>
               );
             })}
@@ -129,23 +143,22 @@ function ConceptPanel({ entity, index, onOpen }) {
         </Section>
       )}
 
-      {inCanon.length > 0 && (
+      {/* Harvested works with OA concept tag match */}
+      {harvested.length > 0 && (
         <div>
           <button
-            onClick={() => setShowCanon(s => !s)}
+            onClick={() => setShowHarvested(s => !s)}
             className="w-full px-4 py-2.5 text-sm border border-stone-300 bg-white text-stone-700 hover:bg-stone-50 transition-colors flex items-center justify-between"
           >
             <span className="font-medium">
-              {showCanon ? 'Hide' : 'Show'} {inCanon.length} other harvested works
+              {showHarvested ? 'Hide' : 'Show'} {harvested.length} related harvested work{harvested.length !== 1 ? 's' : ''}
             </span>
-            <span className="text-xs font-mono text-stone-500">
-              {showCanon ? '▲' : '▾'}
-            </span>
+            <span className="text-xs font-mono text-stone-500">{showHarvested ? '▲' : '▾'}</span>
           </button>
-          {showCanon && (
+          {showHarvested && (
             <div className="mt-2 border border-stone-200 bg-stone-50 max-h-72 overflow-y-auto">
               <div className="divide-y divide-stone-100">
-                {inCanon.map(({ work }) => {
+                {harvested.map(({ work, score }) => {
                   const w = work.matchedWork || work;
                   const authors = w.authors || w.allAuthors || '';
                   return (
@@ -154,10 +167,17 @@ function ConceptPanel({ entity, index, onOpen }) {
                       onClick={() => onOpen({ type: 'work', name: w.title, work: w })}
                       className="w-full text-left px-3 py-2 bg-white hover:bg-stone-50 transition-colors"
                     >
-                      <div className="text-xs font-medium text-stone-800 line-clamp-1">{w.title}</div>
-                      <div className="flex gap-3 text-[10px] text-stone-500 mt-0.5">
-                        <span>{authors.split(',')[0]}{w.year ? ` · ${w.year}` : ''}</span>
-                        {w.citationCount > 0 && <span>{w.citationCount.toLocaleString()} cit.</span>}
+                      <div className="flex items-start gap-1.5">
+                        <span className={`shrink-0 mt-0.5 text-[9px] font-mono px-1 py-0.5 ${
+                          score === 2 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                        }`}>{score === 2 ? 'match' : 'related'}</span>
+                        <div className="min-w-0">
+                          <div className="text-xs font-medium text-stone-800 line-clamp-1">{w.title}</div>
+                          <div className="flex gap-3 text-[10px] text-stone-500 mt-0.5">
+                            <span>{authors.split(',')[0]}{w.year ? ` · ${w.year}` : ''}</span>
+                            {w.citationCount > 0 && <span>{w.citationCount.toLocaleString()} cit.</span>}
+                          </div>
+                        </div>
                       </div>
                     </button>
                   );
@@ -168,9 +188,9 @@ function ConceptPanel({ entity, index, onOpen }) {
         </div>
       )}
 
-      {allScored.length === 0 && (
+      {canonicalWorks.length === 0 && allScored.length === 0 && (
         <div className="text-xs text-stone-400 font-mono">
-          No works parsed for this canon yet.
+          No works linked to this concept yet.
         </div>
       )}
     </div>
@@ -264,6 +284,7 @@ export default function EntityDetailPanel({ entity, index, onClose, onOpen }) {
                           name={cName}
                           definition={c?.definition}
                           tier={c?.tier}
+                          canonicalWorks={c?.canonicalWorks}
                           onClick={onOpen}
                         />
                       );

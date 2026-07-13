@@ -413,7 +413,7 @@ function ConceptHierarchyPanel({ concepts, entityIndex, onEntityClick, activeCou
                       return (
                         <button
                           key={c.name}
-                          onClick={() => onEntityClick({ type: 'concept', name: c.name, definition: c.definition, tier: c.tier })}
+                          onClick={() => onEntityClick({ type: 'concept', name: c.name, definition: c.definition, tier: c.tier, canonicalWorks: c.canonicalWorks })}
                           className={`w-full text-left px-2.5 py-2 border ${meta.border} ${meta.bg} hover:opacity-80 transition-opacity`}
                         >
                           <div className={`text-xs font-semibold ${meta.text} line-clamp-1`}>{c.name}</div>
