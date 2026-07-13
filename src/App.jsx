@@ -584,6 +584,7 @@ export default function App() {
                   ? 'Open Syllabus Project — the most-taught works across 9.4 million university course syllabi. Browse by discipline and field, filter by subfield, or search across all titles. Click any work to generate a reading list, curriculum, or research path.'
                   : appMode === 'unified'
                   ? 'One taxonomy for all human knowledge. Pick any field, subfield, or topic — get everything: fundamental questions, complete concept map, schools of thought, prerequisite path, canonical works by learning stage, key researchers, methodologies, adjacent fields, consilience across disciplines, open problems and controversies, intellectual timeline, and key conferences & journals. All sections stream in parallel from 8 live data sources.'
+                  : ''}
               </p>
             </header>
 
