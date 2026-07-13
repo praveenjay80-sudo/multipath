@@ -9,8 +9,8 @@
 // ── Works: "Title" by Author (Year) ─ annotation ──────────────────────────
 
 const WORK_PATTERNS = [
-  // "Title" by Author (Year) — annotation
-  /[""]([^""]{3,200})[""]\s+by\s+([^()]+?)\s*\((\d{4})\)/g,
+  // "Title" by Author (Year) — annotation (handles straight, left-curly, right-curly quotes)
+  /["""]([^"""]{3,200})["""]\s+by\s+([^()]+?)\s*\((\d{4})\)/g,
   // **Title** by Author (Year)
   /\*\*([^*]{3,200})\*\*\s+by\s+([^()]+?)\s*\((\d{4})\)/g,
 ];

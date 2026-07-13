@@ -1313,7 +1313,7 @@ export default function App() {
 
             {appMode === 'unified' && unified.phase === 'idle' && (
               <UnifiedTaxonomySelector
-                onSelectTopic={(name, path) => unified.run(name)}
+                onSelectTopic={(name, path, sections) => unified.run(name, sections)}
                 disabled={false}
               />
             )}
@@ -1332,6 +1332,7 @@ export default function App() {
                 openEntity={unified.openEntity}
                 closeEntity={unified.closeEntity}
                 onReset={unified.reset}
+                onRegenerate={unified.regenerateSection}
               />
             )}
 

@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { ACADEMIC_TAXONOMY, getSubfields, getSubSubfields } from '../constants/academicTaxonomy';
+import { SECTION_DEFS } from '../hooks/useUnifiedBrowser';
 
 // ── Search index over all taxonomy sources ──────────────────────────────────
 
@@ -45,7 +46,8 @@ function scoreMatch(entry, query) {
   // Exact word match
   const words = name.split(/\s+/);
   if (words.some(w => w === q)) return 80;
-  if (words.some(w => w.startsWith(q))) return 70 - (w.length - q.length);
+  const startWord = words.find(w => w.startsWith(q));
+  if (startWord) return 70 - (startWord.length - q.length);
   // Substring match
   if (name.includes(q)) return 50;
   if (path.includes(q)) return 30;
@@ -98,6 +100,8 @@ export default function UnifiedTaxonomySelector({ onSelectTopic, disabled }) {
   const [selectedSubfield, setSelectedSubfield] = useState('');
   const [expandedField, setExpandedField] = useState(null);
   const [expandedSubfield, setExpandedSubfield] = useState(null);
+  const [pendingTopic, setPendingTopic] = useState(null);
+  const [selectedSections, setSelectedSections] = useState(() => new Set(SECTION_DEFS.map(d => d.key)));
   const inputRef = useRef(null);
   const resultsRef = useRef(null);
 
@@ -124,8 +128,8 @@ export default function UnifiedTaxonomySelector({ onSelectTopic, disabled }) {
   const handleSelectResult = useCallback((entry) => {
     setQuery(entry.path);
     setShowResults(false);
-    onSelectTopic(entry.name, entry.path);
-  }, [onSelectTopic]);
+    setPendingTopic({ name: entry.name, path: entry.path });
+  }, []);
 
   const handleFieldSelect = useCallback((field) => {
     setSelectedField(field);
@@ -143,8 +147,8 @@ export default function UnifiedTaxonomySelector({ onSelectTopic, disabled }) {
     const path = `${field} > ${subfield} > ${topic}`;
     setQuery(path);
     setShowResults(false);
-    onSelectTopic(topic, path);
-  }, [onSelectTopic]);
+    setPendingTopic({ name: topic, path });
+  }, []);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter' && results.length > 0) {
@@ -157,8 +161,92 @@ export default function UnifiedTaxonomySelector({ onSelectTopic, disabled }) {
 
   const fieldNames = Object.keys(ACADEMIC_TAXONOMY).sort();
 
+  const toggleSection = useCallback((key) => {
+    setSelectedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) { if (next.size > 1) next.delete(key); }
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const handleGenerate = useCallback(() => {
+    if (!pendingTopic) return;
+    onSelectTopic(pendingTopic.name, pendingTopic.path, Array.from(selectedSections));
+    setPendingTopic(null);
+  }, [pendingTopic, selectedSections, onSelectTopic]);
+
   return (
     <div className="space-y-6">
+      {/* Section picker — shown after topic is selected */}
+      {pendingTopic && (
+        <div className="border border-stone-300 bg-white p-5 space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-xs font-mono text-stone-400 mb-0.5">Selected topic</div>
+              <div className="text-base font-semibold text-stone-900">{pendingTopic.name}</div>
+              <div className="text-xs text-stone-400 mt-0.5">{pendingTopic.path}</div>
+            </div>
+            <button
+              onClick={() => setPendingTopic(null)}
+              className="text-xs text-stone-400 hover:text-stone-700 transition-colors"
+            >
+              ✕ Change
+            </button>
+          </div>
+
+          <div>
+            <div className="text-xs font-mono text-stone-400 mb-2">
+              Sections to generate ({selectedSections.size}/{SECTION_DEFS.length})
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
+              {SECTION_DEFS.map(def => {
+                const on = selectedSections.has(def.key);
+                return (
+                  <button
+                    key={def.key}
+                    onClick={() => toggleSection(def.key)}
+                    className={`text-left px-3 py-2 text-xs border transition-colors ${
+                      on
+                        ? 'bg-stone-900 text-white border-stone-900'
+                        : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'
+                    }`}
+                  >
+                    <span className={`font-mono mr-1 ${on ? 'text-stone-300' : 'text-stone-300'}`}>
+                      {on ? '✓' : '○'}
+                    </span>
+                    {def.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => setSelectedSections(new Set(SECTION_DEFS.map(d => d.key)))}
+                className="text-[10px] font-mono text-stone-400 hover:text-stone-700 transition-colors"
+              >
+                Select all
+              </button>
+              <span className="text-stone-200">|</span>
+              <button
+                onClick={() => setSelectedSections(new Set([SECTION_DEFS[0].key]))}
+                className="text-[10px] font-mono text-stone-400 hover:text-stone-700 transition-colors"
+              >
+                Select none
+              </button>
+            </div>
+          </div>
+
+          <button
+            onClick={handleGenerate}
+            disabled={disabled || selectedSections.size === 0}
+            className="w-full py-3 bg-stone-900 text-white text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-40"
+          >
+            Generate {selectedSections.size} section{selectedSections.size !== 1 ? 's' : ''} on {pendingTopic.name}
+          </button>
+        </div>
+      )}
+
       {/* Search bar */}
       <div className="relative">
         <div className="flex items-center gap-3 border border-stone-300 bg-white px-4 py-3 focus-within:border-stone-700 transition-colors">
@@ -303,7 +391,7 @@ export default function UnifiedTaxonomySelector({ onSelectTopic, disabled }) {
               key={topic}
               onClick={() => {
                 setQuery(topic);
-                onSelectTopic(topic, topic);
+                setPendingTopic({ name: topic, path: topic });
               }}
               disabled={disabled}
               className="px-3 py-1.5 text-xs border border-stone-200 bg-white text-stone-600 hover:border-stone-400 hover:text-stone-800 transition-colors disabled:opacity-40"

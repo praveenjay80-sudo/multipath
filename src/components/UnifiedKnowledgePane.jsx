@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { SECTION_DEFS } from '../hooks/useUnifiedBrowser';
 import EntityDetailPanel from './EntityDetailPanel';
-import ConceptCooccurrenceGraph from './ConceptCooccurrenceGraph';
 
 // ── Color palette per section ────────────────────────────────────────────────
 
@@ -41,8 +40,8 @@ function splitByHeaders(text) {
 // Detect a list item that might be a "Title" by Author (Year) entry
 // Returns {type, name, _year, _firstAuthor, _allAuthors} or null
 function detectWorkEntity(line) {
-  // "Title" by Author (Year) — annotation
-  let m = line.match(/^[-*]\s+[""]([^""]{3,200})[""]\s+by\s+([^()]+?)\s*\((\d{4})\)/);
+  // "Title" by Author (Year) — annotation (straight or curly quotes)
+  let m = line.match(/^[-*]\s+["""]([^"""]{3,200})["""]\s+by\s+([^()]+?)\s*\((\d{4})\)/);
   if (m) {
     return {
       type: 'work',
@@ -271,8 +270,8 @@ function wordCount(text) {
   return Math.round((text || '').trim().split(/\s+/).filter(Boolean).length);
 }
 
-function SectionCard({ def, section, topic, onEntityClick, index }) {
-  const [collapsed, setCollapsed] = useState(false);
+function SectionCard({ def, section, topic, onEntityClick, index, onRegenerate }) {
+  const [collapsed, setCollapsed] = useState(true);
   const colors = COLOR_MAP[def.key] || COLOR_MAP.conferences;
   const isComplete = section.phase === 'complete';
   const isStreaming = section.phase === 'streaming';
@@ -304,6 +303,15 @@ function SectionCard({ def, section, topic, onEntityClick, index }) {
             {section.phase === 'error' && 'Failed'}
           </div>
         </div>
+        {onRegenerate && (isComplete || section.phase === 'error') && (
+          <button
+            onClick={e => { e.stopPropagation(); onRegenerate(def.key); }}
+            title="Regenerate this section"
+            className="shrink-0 text-xs px-2 py-1 border border-stone-200 text-stone-400 hover:text-stone-700 hover:border-stone-400 transition-colors"
+          >
+            ↺
+          </button>
+        )}
         {hasContent && (
           <span className={`text-xs transition-transform ${collapsed ? '' : 'rotate-180'}`}>
             ▼
@@ -313,6 +321,16 @@ function SectionCard({ def, section, topic, onEntityClick, index }) {
 
       {!collapsed && hasContent && section.content.trim() && (
         <div className={`px-5 py-4 border-t ${colors.border}`}>
+          {isComplete && (
+            <div className="flex justify-end mb-3">
+              <button
+                onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(section.content); }}
+                className="text-[10px] font-mono px-2 py-1 border border-stone-200 text-stone-400 hover:text-stone-700 hover:border-stone-400 transition-colors"
+              >
+                Copy
+              </button>
+            </div>
+          )}
           <ConnectedSectionContent
             text={section.content}
             isStreaming={isStreaming}
@@ -369,29 +387,11 @@ function ConnectivityDashboard({ parsedEntities, entityIndex, harvestedPapers, o
         </div>
       </div>
       <div className="p-5">
-        <ConceptCooccurrenceGraph
-          concepts={parsedEntities.concepts}
-          works={parsedEntities.works}
-          authors={topAuthors.map(a => a.name)}
-          onNodeClick={(node) => {
-            if (node.type === 'concept') {
-              onEntityClick({ type: 'concept', name: node.label });
-            } else if (node.type === 'work') {
-              const w = harvestedPapers.find(x => x.title?.startsWith(node.label.slice(0, 20)));
-              if (w) onEntityClick({ type: 'work', name: w.title, work: w });
-            } else if (node.type === 'author') {
-              const profile = entityIndex.authorProfile.get(node.label.toLowerCase().replace(/[.,]/g, '').replace(/\s+/g, ' '));
-              onEntityClick({ type: 'author', name: node.label, profile });
-            }
-          }}
-          width={760}
-          height={320}
-        />
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
           <div>
-            <div className="font-mono text-stone-400 mb-1.5">TOP CONCEPTS</div>
-            <div className="flex flex-wrap gap-1">
-              {parsedEntities.concepts.slice(0, 6).map(c => (
+            <div className="font-mono text-stone-400 mb-1.5">CONCEPTS ({parsedEntities.concepts.length})</div>
+            <div className="flex flex-wrap gap-1 max-h-40 overflow-y-auto">
+              {parsedEntities.concepts.map(c => (
                 <button
                   key={c.name}
                   onClick={() => onEntityClick({ type: 'concept', name: c.name, definition: c.definition, tier: c.tier })}
@@ -403,9 +403,9 @@ function ConnectivityDashboard({ parsedEntities, entityIndex, harvestedPapers, o
             </div>
           </div>
           <div>
-            <div className="font-mono text-stone-400 mb-1.5">TOP WORKS</div>
-            <div className="flex flex-col gap-1">
-              {parsedEntities.works.slice(0, 4).map(w => {
+            <div className="font-mono text-stone-400 mb-1.5">WORKS ({parsedEntities.works.length})</div>
+            <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
+              {parsedEntities.works.map(w => {
                 const matched = harvestedPapers.find(h => h.title === w.title);
                 return (
                   <button
@@ -420,9 +420,9 @@ function ConnectivityDashboard({ parsedEntities, entityIndex, harvestedPapers, o
             </div>
           </div>
           <div>
-            <div className="font-mono text-stone-400 mb-1.5">TOP AUTHORS</div>
-            <div className="flex flex-wrap gap-1">
-              {topAuthors.slice(0, 6).map(a => (
+            <div className="font-mono text-stone-400 mb-1.5">AUTHORS ({topAuthors.length})</div>
+            <div className="flex flex-wrap gap-1 max-h-40 overflow-y-auto">
+              {topAuthors.map(a => (
                 <button
                   key={a.name}
                   onClick={() => onEntityClick({ type: 'author', name: a.name, profile: a })}
@@ -446,9 +446,9 @@ export default function UnifiedKnowledgePane({
   sections, completedCount, activeCount,
   parsedEntities, entityIndex, harvestedPapers,
   selectedEntity, openEntity, closeEntity,
-  onReset,
+  onReset, onRegenerate,
 }) {
-  const totalSections = SECTION_DEFS.length;
+  const totalSections = SECTION_DEFS.filter(d => sections[d.key]?.phase !== 'skipped').length;
 
   return (
     <div className="mt-10">
@@ -459,12 +459,28 @@ export default function UnifiedKnowledgePane({
             <div className="text-xs font-mono text-stone-400 mb-1">Knowledge Browser</div>
             <h2 className="text-2xl font-bold text-stone-900">{topic}</h2>
           </div>
-          <button
-            onClick={onReset}
-            className="shrink-0 px-4 py-2 text-sm border border-stone-300 text-stone-700 hover:bg-stone-50 transition-colors"
-          >
-            New Topic
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {completedCount > 0 && (
+              <button
+                onClick={() => {
+                  const text = SECTION_DEFS
+                    .filter(d => sections[d.key]?.phase === 'complete')
+                    .map(d => `## ${d.label}\n\n${sections[d.key].content}`)
+                    .join('\n\n---\n\n');
+                  navigator.clipboard.writeText(text);
+                }}
+                className="px-3 py-2 text-sm border border-stone-300 text-stone-600 hover:bg-stone-50 transition-colors"
+              >
+                Copy all
+              </button>
+            )}
+            <button
+              onClick={onReset}
+              className="px-4 py-2 text-sm border border-stone-300 text-stone-700 hover:bg-stone-50 transition-colors"
+            >
+              New Topic
+            </button>
+          </div>
         </div>
       </div>
 
@@ -502,7 +518,7 @@ export default function UnifiedKnowledgePane({
           harvestedPapers={harvestedPapers}
           onEntityClick={openEntity}
         />
-        {SECTION_DEFS.map(def => (
+        {SECTION_DEFS.filter(def => sections[def.key]?.phase !== 'skipped').map(def => (
           <SectionCard
             key={def.key}
             def={def}
@@ -510,11 +526,12 @@ export default function UnifiedKnowledgePane({
             topic={topic}
             onEntityClick={openEntity}
             index={entityIndex}
+            onRegenerate={onRegenerate}
           />
         ))}
       </div>
 
-      {completedCount === totalSections && (
+      {completedCount === totalSections && totalSections > 0 && (
         <div className="mt-8 pt-6 border-t border-stone-200 flex gap-3">
           <button
             onClick={onReset}

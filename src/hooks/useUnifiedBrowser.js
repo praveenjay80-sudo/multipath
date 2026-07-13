@@ -7,7 +7,7 @@ import { buildEntityIndex } from './useEntityIndex';
 const resolveApiKey = () =>
   import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('canon_api_key') || '';
 
-const SONNET = 'claude-sonnet-5';
+const SONNET = 'claude-sonnet-4-6';
 const HAIKU = 'claude-haiku-4-5-20251001';
 
 // ── Section Prompts (unchanged) ────────────────────────────────────────────
@@ -62,7 +62,7 @@ The standard undergraduate-level textbooks that establish the formal vocabulary 
 ### Phase 3: Core engagement (the canonical works everyone reads)
 The intermediate-to-advanced books and papers that define what every working scholar in this field has internalized. 5–8 entries. These are rigorous graduate-level works. Include the seminal textbooks AND the most-cited foundational papers.
 
-For every work, format as: **"Title"** by Author (Year) — one-sentence note on why this specific resource is at this phase.
+For every work, format as: "Title" by Author (Year) — one-sentence note on why this specific resource is at this phase.
 
 CRITICAL: Phase 0 must be background from OTHER fields, not works in this field. Phase 1 must be popular/non-technical. Phase 2 must be introductory textbooks. Only Phase 3 should be graduate/research-level. If you put a research paper in Phase 0/1/2, the learning path is broken.`;
 
@@ -75,7 +75,7 @@ Stage 3: Advanced Monographs & Surveys
 Stage 4: Contemporary Frontier
 Stage 5: Specialized Deep Cuts
 
-For each work, list: Title by Author (Year) — one-sentence annotation. Prefer landmark works.
+For each work, format as: "Title" by Author (Year) — one-sentence annotation. Prefer landmark works.
 
 Include at least 25 works across all stages. Never omit a canonical work.`;
 
@@ -276,6 +276,7 @@ export function useUnifiedBrowser() {
   const [harvestedTextbooks, setHarvestedTextbooks] = useState([]);
   const [selectedEntity, setSelectedEntity] = useState(null);
   const abortRef = useRef(null);
+  const dataBlockRef = useRef('');
 
   const completedCount = Object.values(sections).filter(s => s.phase === 'complete').length;
   const activeCount = Object.values(sections).filter(s => s.phase === 'streaming').length;
@@ -348,7 +349,7 @@ export function useUnifiedBrowser() {
     setSelectedEntity(null);
   }, []);
 
-  const run = useCallback(async (inputTopic) => {
+  const run = useCallback(async (inputTopic, sectionKeys = null) => {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -357,10 +358,19 @@ export function useUnifiedBrowser() {
     setTopic(inputTopic);
     setError(null);
     setDataCount(0);
-    setSections({ ...INIT_SECTIONS });
     setHarvestedPapers([]);
     setHarvestedTextbooks([]);
     setSelectedEntity(null);
+
+    // Mark skipped sections upfront
+    const selectedSet = sectionKeys ? new Set(sectionKeys) : null;
+    const initSections = Object.fromEntries(
+      SECTION_DEFS.map(s => [s.key, {
+        phase: selectedSet && !selectedSet.has(s.key) ? 'skipped' : 'idle',
+        content: '',
+      }])
+    );
+    setSections(initSections);
     setPhase('harvesting');
 
     const apiKey = resolveApiKey();
@@ -408,9 +418,14 @@ export function useUnifiedBrowser() {
     ).join('\n');
 
     const dataBlock = `\n\n=== HARVESTED WORKS ===\n${workLines || '(none)'}\n\n=== MOST TAUGHT (Open Syllabus) ===\n${ospLines || '(none)'}\n\n=== SEMINAL PAPERS ===\n${seminalLines || '(none)'}`;
+    dataBlockRef.current = dataBlock;
+
+    const defsToRun = selectedSet
+      ? SECTION_DEFS.filter(d => selectedSet.has(d.key))
+      : SECTION_DEFS;
 
     await Promise.all(
-      SECTION_DEFS.map(async (def) => {
+      defsToRun.map(async (def) => {
         if (signal.aborted) return;
         setSectionState(def.key, { phase: 'streaming', content: '' });
 
@@ -443,12 +458,34 @@ export function useUnifiedBrowser() {
     if (!signal.aborted) setPhase('complete');
   }, [setSectionState]);
 
+  const regenerateSection = useCallback(async (key) => {
+    const def = SECTION_DEFS.find(d => d.key === key);
+    if (!def || !topic) return;
+    const controller = new AbortController();
+    const { signal } = controller;
+    setSectionState(key, { phase: 'streaming', content: '' });
+    const userMsg = def.needsHarvest
+      ? `Topic: ${topic}${dataBlockRef.current}`
+      : `Topic: ${topic}`;
+    try {
+      await streamSection(
+        PROMPTS[key], userMsg, signal,
+        (text) => setSectionState(key, { phase: 'streaming', content: text }),
+        def.maxTokens, def.model
+      );
+      if (!signal.aborted) setSectionState(key, prev => ({ ...prev, phase: 'complete' }));
+    } catch (err) {
+      if (signal.aborted) return;
+      setSectionState(key, { phase: 'error', content: `*Failed: ${err.message}*` });
+    }
+  }, [topic, setSectionState]);
+
   return {
     phase, topic, error,
     sections, completedCount, activeCount,
     dataCount, harvestedPapers, harvestedTextbooks,
     parsedEntities, entityIndex,
     selectedEntity, openEntity, closeEntity,
-    run, reset,
+    run, reset, regenerateSection,
   };
 }

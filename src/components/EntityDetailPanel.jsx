@@ -67,13 +67,10 @@ function ConceptCard({ name, definition, tier, onClick }) {
   );
 }
 function ConceptPanel({ entity, index, onOpen }) {
-  const [showAll, setShowAll] = useState(false);
+  const [showCanon, setShowCanon] = useState(false);
   const allScored = index.conceptToWorks.get(entity.name) || [];
-  const direct = allScored.filter(s => s.score === 2);
-  const strong = allScored.filter(s => s.score === 1);
-  const related = [...direct, ...strong];
-  const browse = allScored.filter(s => s.score === 0);
-  const hasAny = allScored.length > 0;
+  const relevant = allScored.filter(s => s.score >= 1).sort((a, b) => b.score - a.score);
+  const inCanon = allScored.filter(s => s.score === 0);
 
   return (
     <div className="space-y-5">
@@ -96,65 +93,55 @@ function ConceptPanel({ entity, index, onOpen }) {
         </div>
       )}
 
-      {/* Direct matches: concept name appears in work title */}
-      {direct.length > 0 && (
-        <Section title="Direct matches" count={direct.length}>
+      {relevant.length > 0 && (
+        <Section title="Relevant works" count={relevant.length}>
           <div className="space-y-1.5">
-            {direct.map(({ work, score }) => (
-              <WorkCard
-                key={work.title}
-                w={work.matchedWork || {
-                  title: work.title,
-                  authors: work.allAuthors,
-                  year: work.year,
-                }}
-                onClick={onOpen}
-                small
-              />
-            ))}
+            {relevant.map(({ work, score }) => {
+              const matched = work.matchedWork || {
+                title: work.title,
+                authors: work.allAuthors,
+                year: work.year,
+              };
+              return (
+                <div key={work.title} className="flex items-start gap-2">
+                  <span className={`shrink-0 mt-2 text-[10px] font-mono px-1 py-0.5 ${
+                    score === 2 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {score === 2 ? 'match' : 'related'}
+                  </span>
+                  <button
+                    onClick={() => onOpen({ type: 'work', name: matched.title, work: matched })}
+                    className="min-w-0 flex-1 text-left p-2 bg-white border border-stone-200 hover:border-stone-400 hover:bg-stone-50 transition-colors"
+                  >
+                    <div className="text-sm font-medium text-stone-800 line-clamp-2">{matched.title}</div>
+                    <div className="text-xs text-stone-500 mt-0.5">
+                      {matched.authors?.split(',')[0]}{matched.year ? ` · ${matched.year}` : ''}
+                    </div>
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </Section>
       )}
 
-      {/* Strong matches: definition words match */}
-      {strong.length > 0 && (
-        <Section title="Strong matches" count={strong.length}>
-          <div className="space-y-1.5">
-            {strong.slice(0, 10).map(({ work }) => (
-              <WorkCard
-                key={work.title}
-                w={work.matchedWork || {
-                  title: work.title,
-                  authors: work.allAuthors,
-                  year: work.year,
-                }}
-                onClick={onOpen}
-                small
-              />
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {/* View all works link */}
-      {hasAny && (
+      {inCanon.length > 0 && (
         <div>
           <button
-            onClick={() => setShowAll(s => !s)}
+            onClick={() => setShowCanon(s => !s)}
             className="w-full px-4 py-2.5 text-sm border border-stone-300 bg-white text-stone-700 hover:bg-stone-50 transition-colors flex items-center justify-between"
           >
             <span className="font-medium">
-              {showAll ? 'Hide' : 'View all'} {allScored.length} works in this canon
+              {showCanon ? 'Hide' : 'Show'} {inCanon.length} other canon works
             </span>
             <span className="text-xs font-mono text-stone-500">
-              {showAll ? '▲ collapse' : '▾ expand'}
+              {showCanon ? '▲' : '▾'}
             </span>
           </button>
-
-          {showAll && (
-            <div className="mt-2 border border-stone-200 bg-stone-50 max-h-96 overflow-y-auto">
+          {showCanon && (
+            <div className="mt-2 border border-stone-200 bg-stone-50 max-h-72 overflow-y-auto">
               <div className="divide-y divide-stone-100">
-                {allScored.map(({ work, score }) => {
+                {inCanon.map(({ work }) => {
                   const matched = work.matchedWork || {
                     title: work.title,
                     authors: work.allAuthors,
@@ -164,21 +151,12 @@ function ConceptPanel({ entity, index, onOpen }) {
                     <button
                       key={work.title}
                       onClick={() => onOpen({ type: 'work', name: matched.title, work: matched })}
-                      className="w-full text-left px-3 py-2 bg-white hover:bg-stone-50 transition-colors flex items-start gap-2"
+                      className="w-full text-left px-3 py-2 bg-white hover:bg-stone-50 transition-colors"
                     >
-                      <span className={`shrink-0 mt-1 text-[10px] font-mono px-1 py-0.5 ${
-                        score === 2 ? 'bg-emerald-100 text-emerald-700' :
-                        score === 1 ? 'bg-amber-100 text-amber-700' :
-                        'bg-stone-100 text-stone-500'
-                      }`}>
-                        {score === 2 ? 'match' : score === 1 ? 'related' : 'canon'}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <div className="text-xs font-medium text-stone-800 line-clamp-1">{work.title}</div>
-                        <div className="text-[10px] text-stone-500 mt-0.5">
-                          {work.firstAuthor || work.allAuthors?.split(',')[0]}{work.year ? ` · ${work.year}` : ''}
-                        </div>
-                      </span>
+                      <div className="text-xs font-medium text-stone-800 line-clamp-1">{matched.title}</div>
+                      <div className="text-[10px] text-stone-500 mt-0.5">
+                        {matched.authors?.split(',')[0]}{matched.year ? ` · ${matched.year}` : ''}
+                      </div>
                     </button>
                   );
                 })}
@@ -188,7 +166,7 @@ function ConceptPanel({ entity, index, onOpen }) {
         </div>
       )}
 
-      {!hasAny && (
+      {allScored.length === 0 && (
         <div className="text-xs text-stone-400 font-mono">
           No works parsed for this canon yet.
         </div>
