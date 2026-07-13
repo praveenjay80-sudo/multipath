@@ -57,6 +57,8 @@ import ScienceDirectView from './components/ScienceDirectView';
 import { useScienceDirectTopics } from './hooks/useScienceDirectTopics';
 import OntologicalAtlasView from './components/OntologicalAtlasView';
 import { useOntologicalAtlas } from './hooks/useOntologicalAtlas';
+import MostTaughtView from './components/MostTaughtView';
+import { useMostTaught } from './hooks/useMostTaught';
 
 function WorkRow({ w }) {
   return (
@@ -178,11 +180,12 @@ export default function App() {
   const aggregator = useOverallAggregator();
   const scienceDirect = useScienceDirectTopics();
   const oAtlas = useOntologicalAtlas();
+  const mostTaught = useMostTaught();
   const [inputTopic, setInputTopic] = useState('');
   const [shake, setShake] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [view, setView] = useState('canon');
-  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'doctoral' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'spectrum' | 'deepdive' | 'pulse' | 'intelligence' | 'math' | 'concepts' | 'udc' | 'academia' | 'overall' | 'sciencedirect' | 'ontologicalatlas'
+  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'doctoral' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'spectrum' | 'deepdive' | 'pulse' | 'intelligence' | 'math' | 'concepts' | 'udc' | 'academia' | 'overall' | 'sciencedirect' | 'ontologicalatlas' | 'mosttaught'
 
   const parsed = useMemo(() => parseCanon(gen.content), [gen.content]);
 
@@ -504,6 +507,16 @@ export default function App() {
                   ONTOLOGICAL ATLAS
                 </button>
                 <button
+                  onClick={() => { setAppMode('mosttaught'); if (mostTaught.status === 'idle') mostTaught.load(); }}
+                  className={`px-4 py-2.5 text-sm font-mono -mb-px transition-colors ${
+                    appMode === 'mosttaught'
+                      ? 'border-b-2 border-emerald-600 text-emerald-700 font-semibold'
+                      : 'border-b-2 border-transparent text-emerald-500 hover:text-emerald-700'
+                  }`}
+                >
+                  MOST TAUGHT
+                </button>
+                <button
                   onClick={() => setAppMode('overall')}
                   className={`ml-4 px-5 py-2 text-sm font-mono font-bold -mb-px transition-all ${
                     appMode === 'overall'
@@ -553,6 +566,8 @@ export default function App() {
                   ? 'One question. Nine sections generated in parallel — orientation, historical development, intellectual landscape, hidden assumptions, every discipline\'s answer, essential works, what you need first, the open frontier, and the path to mastery.'
                   : appMode === 'ontologicalatlas'
                   ? 'Ontological Atlas — 208 schools of thought, 1,888 classified works, 461 thinker personas, and 57 ethical dilemmas. Six ontological dimensions: Time, Space, Matter, Observer, Energy, Information. Click any entry to generate a canon, curriculum, or reading path.'
+                  : appMode === 'mosttaught'
+                  ? 'Open Syllabus Project — the most-taught works across 9.4 million university course syllabi. Browse by discipline and field, filter by subfield, or search across all titles. Click any work to generate a reading list, curriculum, or research path.'
                   : ''}
               </p>
             </header>
@@ -1258,6 +1273,24 @@ export default function App() {
                 crawlDate={oAtlas.crawlDate}
                 error={oAtlas.error}
                 onLoad={oAtlas.load}
+                onSelect={handleDoctoralTopicClick}
+              />
+            )}
+
+            {/* Most Taught */}
+            {appMode === 'mosttaught' && (
+              <MostTaughtView
+                status={mostTaught.status}
+                fields={mostTaught.fields}
+                titlesByField={mostTaught.titlesByField}
+                subfieldsByField={mostTaught.subfieldsByField}
+                subfieldNames={mostTaught.subfieldNames}
+                globalTop={mostTaught.globalTop}
+                disciplineGroups={mostTaught.disciplineGroups}
+                meta={mostTaught.meta}
+                crawlDate={mostTaught.crawlDate}
+                error={mostTaught.error}
+                onLoad={mostTaught.load}
                 onSelect={handleDoctoralTopicClick}
               />
             )}
