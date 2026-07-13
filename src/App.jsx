@@ -60,6 +60,9 @@ import { useOntologicalAtlas } from './hooks/useOntologicalAtlas';
 import MostTaughtView from './components/MostTaughtView';
 import { useMostTaught } from './hooks/useMostTaught';
 
+import UnifiedTaxonomySelector from './components/UnifiedTaxonomySelector';
+import UnifiedKnowledgePane from './components/UnifiedKnowledgePane';
+import { useUnifiedBrowser } from './hooks/useUnifiedBrowser';
 function WorkRow({ w }) {
   return (
     <div className="pb-3 border-b border-stone-100 last:border-0 last:pb-0">
@@ -181,11 +184,12 @@ export default function App() {
   const scienceDirect = useScienceDirectTopics();
   const oAtlas = useOntologicalAtlas();
   const mostTaught = useMostTaught();
+  const unified = useUnifiedBrowser();
   const [inputTopic, setInputTopic] = useState('');
   const [shake, setShake] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [view, setView] = useState('canon');
-  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'doctoral' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'spectrum' | 'deepdive' | 'pulse' | 'intelligence' | 'math' | 'concepts' | 'udc' | 'academia' | 'overall' | 'sciencedirect' | 'ontologicalatlas' | 'mosttaught'
+  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'doctoral' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'spectrum' | 'deepdive' | 'pulse' | 'intelligence' | 'math' | 'concepts' | 'udc' | 'academia' | 'overall' | 'sciencedirect' | 'ontologicalatlas' | 'mosttaught' | 'unified'
 
   const parsed = useMemo(() => parseCanon(gen.content), [gen.content]);
 
@@ -526,6 +530,16 @@ export default function App() {
                 >
                   OVERALL AGGREGATOR
                 </button>
+                <button
+                  onClick={() => setAppMode('unified')}
+                  className={`ml-4 px-5 py-2 text-sm font-mono font-bold -mb-px transition-all ${
+                    appMode === 'unified'
+                      ? 'bg-violet-900 text-white border-b-2 border-violet-900'
+                      : 'border border-violet-400 border-b-2 border-b-transparent text-violet-700 hover:bg-violet-50'
+                  }`}
+                >
+                  KNOWLEDGE BROWSER
+                </button>
               </div>
 
               {/* Tab description */}
@@ -568,7 +582,8 @@ export default function App() {
                   ? 'Ontological Atlas — 208 schools of thought, 1,888 classified works, 461 thinker personas, and 57 ethical dilemmas. Six ontological dimensions: Time, Space, Matter, Observer, Energy, Information. Click any entry to generate a canon, curriculum, or reading path.'
                   : appMode === 'mosttaught'
                   ? 'Open Syllabus Project — the most-taught works across 9.4 million university course syllabi. Browse by discipline and field, filter by subfield, or search across all titles. Click any work to generate a reading list, curriculum, or research path.'
-                  : ''}
+                  : appMode === 'unified'
+                  ? 'One taxonomy for all human knowledge. Pick any field, subfield, or topic — get everything: fundamental questions, complete concept map, schools of thought, prerequisite path, canonical works by learning stage, key researchers, methodologies, adjacent fields, consilience across disciplines, open problems and controversies, intellectual timeline, and key conferences & journals. All sections stream in parallel from 8 live data sources.'
               </p>
             </header>
 
@@ -1292,6 +1307,26 @@ export default function App() {
                 error={mostTaught.error}
                 onLoad={mostTaught.load}
                 onSelect={handleDoctoralTopicClick}
+              />
+            )}
+
+            {/* Unified Knowledge Browser */}
+            {appMode === 'unified' && unified.phase === 'idle' && (
+              <UnifiedTaxonomySelector
+                onSelectTopic={(name, path) => unified.run(name)}
+                disabled={false}
+              />
+            )}
+            {appMode === 'unified' && unified.phase !== 'idle' && (
+              <UnifiedKnowledgePane
+                topic={unified.topic}
+                phase={unified.phase}
+                dataCount={unified.dataCount}
+                error={unified.error}
+                sections={unified.sections}
+                completedCount={unified.completedCount}
+                activeCount={unified.activeCount}
+                onReset={unified.reset}
               />
             )}
 
