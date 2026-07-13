@@ -1311,7 +1311,6 @@ export default function App() {
               />
             )}
 
-            {/* Unified Knowledge Browser */}
             {appMode === 'unified' && unified.phase === 'idle' && (
               <UnifiedTaxonomySelector
                 onSelectTopic={(name, path) => unified.run(name)}
@@ -1323,10 +1322,15 @@ export default function App() {
                 topic={unified.topic}
                 phase={unified.phase}
                 dataCount={unified.dataCount}
-                error={unified.error}
                 sections={unified.sections}
                 completedCount={unified.completedCount}
                 activeCount={unified.activeCount}
+                parsedEntities={unified.parsedEntities}
+                entityIndex={unified.entityIndex}
+                harvestedPapers={unified.harvestedPapers}
+                selectedEntity={unified.selectedEntity}
+                openEntity={unified.openEntity}
+                closeEntity={unified.closeEntity}
                 onReset={unified.reset}
               />
             )}

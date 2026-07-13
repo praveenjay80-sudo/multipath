@@ -1,0 +1,178 @@
+// Build a relationship index from harvested works + parsed entities.
+// Used to make concepts/works/authors clickable and show connections
+// (which works share an author, which works mention a concept, etc.)
+
+import { useMemo } from 'react';
+
+// Normalize a title for fuzzy matching
+function normTitle(s) {
+  return (s || '').toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !['the', 'and', 'for', 'with', 'from'].includes(w))
+    .join(' ');
+}
+
+// Normalize an author name for matching
+function normAuthor(s) {
+  return (s || '').toLowerCase().trim()
+    .replace(/[.,]/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+// Split a comma-separated author string into individual names
+function splitAuthors(authorStr) {
+  if (!authorStr) return [];
+  return authorStr.split(/,\s*|\s+and\s+|\s+&\s+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+// Fuzzy title match: ≥50% of significant words overlap
+function titlesMatch(a, b) {
+  const na = normTitle(a);
+  const nb = normTitle(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  if (na.includes(nb) || nb.includes(na)) return true;
+  const wa = new Set(na.split(/\s+/));
+  const wb = nb.split(/\s+/);
+  let match = 0;
+  for (const w of wb) if (wa.has(w)) match++;
+  return match / Math.max(wa.size, wb.length) >= 0.5;
+}
+
+// Author name match: last word of one must match last word of the other
+// (handles "C. Darwin" vs "Charles Darwin")
+function authorsMatch(a, b) {
+  const na = normAuthor(a);
+  const nb = normAuthor(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  const lastA = na.split(' ').pop();
+  const lastB = nb.split(' ').pop();
+  return lastA === lastB;
+}
+
+export function buildEntityIndex(harvestedWorks, parsedEntities) {
+  const workByTitle = new Map();
+  const workById = new Map();
+  const authorToWorks = new Map();
+  const workToAuthors = new Map();
+  const conceptToWorks = new Map();
+  const workToConcepts = new Map();
+  const authorProfile = new Map();
+
+  // Index harvested works
+  for (const w of harvestedWorks) {
+    workByTitle.set(normTitle(w.title), w);
+    if (w.doi) workById.set(w.doi, w);
+
+    const authors = splitAuthors(w.authors);
+    workToAuthors.set(w.title, authors);
+    for (const a of authors) {
+      const key = normAuthor(a);
+      if (!authorToWorks.has(key)) authorToWorks.set(key, []);
+      authorToWorks.get(key).push(w);
+
+      if (!authorProfile.has(key)) {
+        authorProfile.set(key, {
+          name: a,
+          works: [],
+          totalCitations: 0,
+          hIndexApprox: 0,
+          firstYear: null,
+          lastYear: null,
+        });
+      }
+      const p = authorProfile.get(key);
+      p.works.push(w);
+      p.totalCitations += w.citationCount || 0;
+      const y = w.year;
+      if (y) {
+        if (!p.firstYear || y < p.firstYear) p.firstYear = y;
+        if (!p.lastYear || y > p.lastYear) p.lastYear = y;
+      }
+    }
+  }
+
+  // Match parsed works against harvested works
+  for (const pw of (parsedEntities?.works || [])) {
+    let bestMatch = null;
+    for (const w of harvestedWorks) {
+      if (titlesMatch(pw.title, w.title) && authorsMatch(pw.firstAuthor, w.authors?.split(',')[0])) {
+        bestMatch = w;
+        break;
+      }
+    }
+    if (bestMatch) {
+      // Use harvested metadata
+      pw.matchedWork = bestMatch;
+    } else {
+      // Use parsed metadata as-is
+      pw.matchedWork = null;
+    }
+  }
+
+  // Match parsed concepts to works (which works mention each concept)
+  for (const c of (parsedEntities?.concepts || [])) {
+    const matching = (parsedEntities.works || []).filter(w =>
+      (w.title || '').toLowerCase().includes(c.name.toLowerCase()) ||
+      (w.allAuthors || '').toLowerCase().includes(c.name.toLowerCase())
+    );
+    conceptToWorks.set(c.name, matching);
+
+    // For each matching work, also add to workToConcepts
+    for (const w of matching) {
+      const key = w.title;
+      if (!workToConcepts.has(key)) workToConcepts.set(key, new Set());
+      workToConcepts.get(key).add(c.name);
+    }
+  }
+
+  // Match parsed researchers to authors in harvested data
+  for (const r of (parsedEntities?.researchers || [])) {
+    const key = normAuthor(r.name);
+    const profile = authorProfile.get(key);
+    if (profile) {
+      r.matchedAuthor = profile;
+    }
+    // Also build a concept->researcher relationship if we can
+  }
+
+  // Adjacent works: works that share at least one author
+  const workToAdjacentWorks = new Map();
+  for (const w of harvestedWorks) {
+    const authors = splitAuthors(w.authors).map(normAuthor);
+    const adjacent = new Set();
+    for (const a of authors) {
+      for (const otherWork of authorToWorks.get(a) || []) {
+        if (otherWork.title !== w.title) {
+          adjacent.add(otherWork.title);
+        }
+      }
+    }
+    workToAdjacentWorks.set(w.title, Array.from(adjacent)
+      .map(t => harvestedWorks.find(x => x.title === t))
+      .filter(Boolean)
+      .slice(0, 5));
+  }
+
+  return {
+    workByTitle,
+    workById,
+    authorToWorks,
+    workToAuthors,
+    workToConcepts,
+    conceptToWorks,
+    authorProfile,
+    workToAdjacentWorks,
+  };
+}
+
+export function useEntityIndex(harvestedWorks, parsedEntities) {
+  return useMemo(
+    () => buildEntityIndex(harvestedWorks, parsedEntities),
+    [harvestedWorks, parsedEntities]
+  );
+}

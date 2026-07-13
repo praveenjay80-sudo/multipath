@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { SECTION_DEFS } from '../hooks/useUnifiedBrowser';
+import EntityDetailPanel from './EntityDetailPanel';
+import ConceptCooccurrenceGraph from './ConceptCooccurrenceGraph';
 
 // ── Color palette per section ────────────────────────────────────────────────
 
@@ -18,79 +20,142 @@ const COLOR_MAP = {
   conferences:   { border: 'border-stone-200',  bg: 'bg-stone-50',  dot: 'bg-stone-500',  text: 'text-stone-700',  header: 'text-stone-800' },
 };
 
-const SECTION_ORDER = SECTION_DEFS.map(s => s.key);
+// ── Section markdown renderer with inline entity linking ─────────────────────
 
-// ── Section markdown renderer ─────────────────────────────────────────────────
-
-function renderInlineMarkdown(text) {
+function renderInlineMarkdown(text, onEntityClick) {
   if (!text) return '';
-  // Bold
   let html = text.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold">$1</strong>');
-  // Italic
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  // Inline code
   html = html.replace(/`(.+?)`/g, '<code class="bg-stone-100 text-stone-800 px-1 py-0.5 text-xs font-mono">$1</code>');
-  // Links
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer" class="underline text-current hover:opacity-70">$1</a>');
   return html;
 }
 
-// ── Status dot ────────────────────────────────────────────────────────────────
+// Split markdown by `### ` headers
+function splitByHeaders(text) {
+  return (text || '').split(/(?=### )/);
+}
 
-function StatusDot({ phase, dotColor }) {
-  if (phase === 'idle' || phase === 'waiting') return null;
+// Detect a list item that might be a "Title" by Author (Year) entry
+// Returns {type, name} or null
+function detectWorkEntity(line) {
+  // "Title" by Author (Year) — annotation
+  let m = line.match(/^[-*]\s+[""]([^""]{3,200})[""]\s+by\s+([^()]+?)\s*\((\d{4})\)/);
+  if (m) {
+    return { type: 'work', name: m[1], _full: line };
+  }
+  // **Title** by Author (Year)
+  m = line.match(/^[-*]\s+\*\*([^*]{3,200})\*\*\s+by\s+([^()]+?)\s*\((\d{4})\)/);
+  if (m) {
+    return { type: 'work', name: m[1], _full: line };
+  }
+  return null;
+}
+
+// Detect a list item that might be a concept (in Tier sections) or researcher
+function detectListEntity(line, sectionHeader) {
+  if (!sectionHeader) return null;
+  const isConcept = /Tier\s+\d|Concepts?$/i.test(sectionHeader);
+  const isResearcher = /Foundational|Active\s+Researchers/i.test(sectionHeader);
+
+  if (isConcept) {
+    // - Concept Name — definition
+    const m = line.match(/^[-*]\s+\*?\*?([^\n—\-]{2,80}?)\*?\*?\s*[—\-]\s+/);
+    if (m) return { type: 'concept', name: m[1].trim() };
+  }
+  if (isResearcher) {
+    const m = line.match(/^[-*]\s+\*?\*?([^\n—\-]{2,80}?)\*?\*?(?:\s*\(\d{4}[-–]\d{0,4}\))?\s*[—\-]\s+/);
+    if (m) return { type: 'researcher', name: m[1].replace(/\s*\(\d{4}[-–]\d{0,4}\)/, '').trim() };
+  }
+  return null;
+}
+
+// ── Connected line renderer ──────────────────────────────────────────────────
+
+function ConnectedLine({ line, sectionHeader, onEntityClick, index }) {
+  const entity = detectWorkEntity(line) || detectListEntity(line, sectionHeader);
+
+  if (!entity) {
+    const trimmed = line.trim();
+    const content = trimmed.replace(/^[-*]\s+/, '');
+    return (
+      <div className="flex gap-2 ml-1">
+        <span className="text-stone-400 shrink-0 mt-0.5">–</span>
+        <span dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(content) }} />
+      </div>
+    );
+  }
+
+  // Find matching data in index
+  let matchedData = null;
+  if (entity.type === 'work') {
+    const normTitle = (s) => (s || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2).join(' ');
+    const target = normTitle(entity.name);
+    for (const w of index.workByTitle.values()) {
+      if (normTitle(w.title) === target) { matchedData = { type: 'work', name: w.title, work: w }; break; }
+    }
+  } else if (entity.type === 'concept') {
+    matchedData = { type: 'concept', name: entity.name };
+  } else if (entity.type === 'researcher') {
+    const normAuthor = (s) => (s || '').toLowerCase().replace(/[.,]/g, '').replace(/\s+/g, ' ').trim();
+    const target = normAuthor(entity.name);
+    const profile = index.authorProfile.get(target);
+    if (profile) {
+      matchedData = { type: 'author', name: profile.name, profile };
+    } else {
+      matchedData = { type: 'researcher', name: entity.name };
+    }
+  }
+
   return (
-    <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${
-      phase === 'complete' ? dotColor :
-      phase === 'streaming' ? `${dotColor} animate-pulse` :
-      phase === 'error' ? 'bg-red-500' :
-      'bg-stone-300'
-    }`} />
+    <div className="flex gap-2 ml-1">
+      <span className="text-stone-400 shrink-0 mt-0.5">–</span>
+      <span>
+        <button
+          onClick={() => onEntityClick(matchedData)}
+          className={`font-medium underline decoration-dotted underline-offset-2 transition-colors ${
+            entity.type === 'work' ? 'text-emerald-700 hover:text-emerald-900' :
+            entity.type === 'concept' ? 'text-violet-700 hover:text-violet-900' :
+            'text-indigo-700 hover:text-indigo-900'
+          }`}
+        >
+          {entity.name}
+        </button>
+        {(() => {
+          // For work entities, show the rest of the line as plain text
+          if (entity.type === 'work') {
+            const rest = line.replace(/^[-*]\s+[""]([^""]{3,200})[""]|^[-*]\s+\*\*([^*]{3,200})\*\*/, '').trim();
+            const noTitle = rest.replace(/^by\s+[^()]+?\s*\(\d{4}\)\s*[—\-]?\s*/, '');
+            return <span dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(noTitle) }} />;
+          }
+          // For concept/researcher, show the rest of the line
+          const rest = line.replace(/^[-*]\s+[^—\-]+[—\-]\s+/, '').trim();
+          return <span dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(rest) }} />;
+        })()}
+      </span>
+    </div>
   );
 }
 
-// ── Loading dots animation ────────────────────────────────────────────────────
-
-function AnimatedDots() {
-  return (
-    <span className="flex gap-0.5">
-      <span className="loading-dot" />
-      <span className="loading-dot" />
-      <span className="loading-dot" />
-    </span>
-  );
-}
-
-// ── Section content (renders markdown to HTML) ────────────────────────────────
-
-function SectionContent({ text, isStreaming }) {
-  // Split by ### headers
-  const parts = (text || '').split(/(?=### )/);
+function ConnectedSectionContent({ text, isStreaming, onEntityClick, index }) {
+  const parts = splitByHeaders(text);
 
   return (
     <div className="space-y-4 text-sm leading-relaxed text-stone-700">
       {parts.map((part, i) => {
         const headerMatch = part.match(/^### (.+)/);
         if (headerMatch) {
+          const sectionHeader = headerMatch[1];
           const rest = part.slice(headerMatch[0].length).trim();
           return (
             <div key={i} className="pt-1">
               <h4 className="font-semibold text-sm text-stone-900 mb-2">
-                {headerMatch[1]}
+                {sectionHeader}
               </h4>
               <div className="space-y-2">
                 {rest.split('\n').map((line, j) => {
                   const trimmed = line.trim();
                   if (!trimmed) return null;
-                  // Bullet
-                  if (trimmed.startsWith('- ')) {
-                    return (
-                      <div key={j} className="flex gap-2 ml-1">
-                        <span className="text-stone-400 shrink-0 mt-0.5">–</span>
-                        <span dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(trimmed.slice(2)) }} />
-                      </div>
-                    );
-                  }
                   if (/^\d+\.\s/.test(trimmed)) {
                     return (
                       <div key={j} className="flex gap-2 ml-1">
@@ -100,14 +165,19 @@ function SectionContent({ text, isStreaming }) {
                     );
                   }
                   return (
-                    <p key={j} dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(trimmed) }} />
+                    <ConnectedLine
+                      key={j}
+                      line={line}
+                      sectionHeader={sectionHeader}
+                      onEntityClick={onEntityClick}
+                      index={index}
+                    />
                   );
                 })}
               </div>
             </div>
           );
         }
-        // Prose paragraphs
         return (
           <div key={i} className="space-y-2">
             {part.split('\n').filter(l => l.trim()).map((line, j) => {
@@ -137,19 +207,43 @@ function SectionContent({ text, isStreaming }) {
   );
 }
 
-// ── Section card ──────────────────────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────────────────────
 
-function SectionCard({ def, section, topic }) {
+function StatusDot({ phase, dotColor }) {
+  if (phase === 'idle' || phase === 'waiting') return null;
+  return (
+    <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${
+      phase === 'complete' ? dotColor :
+      phase === 'streaming' ? `${dotColor} animate-pulse` :
+      phase === 'error' ? 'bg-red-500' :
+      'bg-stone-300'
+    }`} />
+  );
+}
+
+function AnimatedDots() {
+  return (
+    <span className="flex gap-0.5">
+      <span className="loading-dot" />
+      <span className="loading-dot" />
+      <span className="loading-dot" />
+    </span>
+  );
+}
+
+function wordCount(text) {
+  return Math.round((text || '').trim().split(/\s+/).filter(Boolean).length);
+}
+
+function SectionCard({ def, section, topic, onEntityClick, index }) {
   const [collapsed, setCollapsed] = useState(false);
   const colors = COLOR_MAP[def.key] || COLOR_MAP.conferences;
   const isComplete = section.phase === 'complete';
   const isStreaming = section.phase === 'streaming';
-  const isEmpty = section.phase === 'idle' || section.phase === 'waiting';
   const hasContent = !!section.content;
 
   return (
-    <div className={`border ${colors.border} ${colors.bg} transition-colors`}>
-      {/* Header */}
+    <div className={`border ${colors.border} ${colors.bg}`}>
       <button
         onClick={() => hasContent && setCollapsed(c => !c)}
         className={`w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors ${hasContent ? 'hover:opacity-80 cursor-pointer' : 'cursor-default'}`}
@@ -181,21 +275,19 @@ function SectionCard({ def, section, topic }) {
         )}
       </button>
 
-      {/* Content */}
       {!collapsed && hasContent && section.content.trim() && (
         <div className={`px-5 py-4 border-t ${colors.border}`}>
-          <SectionContent text={section.content} isStreaming={isStreaming} />
+          <ConnectedSectionContent
+            text={section.content}
+            isStreaming={isStreaming}
+            onEntityClick={onEntityClick}
+            index={index}
+          />
         </div>
       )}
     </div>
   );
 }
-
-function wordCount(text) {
-  return Math.round((text || '').trim().split(/\s+/).filter(Boolean).length);
-}
-
-// ── Progress summary bar ──────────────────────────────────────────────────────
 
 function ProgressBar({ completedCount, activeCount, total }) {
   const pct = total > 0 ? Math.round((completedCount / total) * 100) : 0;
@@ -219,11 +311,105 @@ function ProgressBar({ completedCount, activeCount, total }) {
   );
 }
 
+// ── Connectivity Dashboard ───────────────────────────────────────────────────
+
+function ConnectivityDashboard({ parsedEntities, entityIndex, harvestedPapers, onEntityClick }) {
+  if (parsedEntities.works.length === 0 && parsedEntities.concepts.length === 0 && parsedEntities.researchers.length === 0) {
+    return null;
+  }
+
+  const topAuthors = Array.from(entityIndex.authorProfile.values())
+    .sort((a, b) => b.totalCitations - a.totalCitations)
+    .slice(0, 8);
+
+  return (
+    <div className="mb-6 border border-stone-200 bg-white">
+      <div className="px-5 py-3 border-b border-stone-200">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-stone-900">Connectivity</h3>
+          <span className="text-xs text-stone-400 font-mono">
+            {parsedEntities.works.length} works · {parsedEntities.concepts.length} concepts · {parsedEntities.researchers.length} researchers
+          </span>
+        </div>
+      </div>
+      <div className="p-5">
+        <ConceptCooccurrenceGraph
+          concepts={parsedEntities.concepts}
+          works={parsedEntities.works}
+          authors={topAuthors.map(a => a.name)}
+          onNodeClick={(node) => {
+            if (node.type === 'concept') {
+              onEntityClick({ type: 'concept', name: node.label });
+            } else if (node.type === 'work') {
+              const w = harvestedPapers.find(x => x.title?.startsWith(node.label.slice(0, 20)));
+              if (w) onEntityClick({ type: 'work', name: w.title, work: w });
+            } else if (node.type === 'author') {
+              const profile = entityIndex.authorProfile.get(node.label.toLowerCase().replace(/[.,]/g, '').replace(/\s+/g, ' '));
+              onEntityClick({ type: 'author', name: node.label, profile });
+            }
+          }}
+          width={760}
+          height={320}
+        />
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div>
+            <div className="font-mono text-stone-400 mb-1.5">TOP CONCEPTS</div>
+            <div className="flex flex-wrap gap-1">
+              {parsedEntities.concepts.slice(0, 6).map(c => (
+                <button
+                  key={c.name}
+                  onClick={() => onEntityClick({ type: 'concept', name: c.name, definition: c.definition, tier: c.tier })}
+                  className="px-2 py-1 bg-violet-50 border border-violet-200 text-violet-800 hover:bg-violet-100 transition-colors"
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="font-mono text-stone-400 mb-1.5">TOP WORKS</div>
+            <div className="flex flex-col gap-1">
+              {parsedEntities.works.slice(0, 4).map(w => {
+                const matched = harvestedPapers.find(h => h.title === w.title);
+                return (
+                  <button
+                    key={w.title}
+                    onClick={() => onEntityClick({ type: 'work', name: w.title, work: matched })}
+                    className="text-left px-2 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 transition-colors line-clamp-1"
+                  >
+                    {w.title}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <div className="font-mono text-stone-400 mb-1.5">TOP AUTHORS</div>
+            <div className="flex flex-wrap gap-1">
+              {topAuthors.slice(0, 6).map(a => (
+                <button
+                  key={a.name}
+                  onClick={() => onEntityClick({ type: 'author', name: a.name, profile: a })}
+                  className="px-2 py-1 bg-indigo-50 border border-indigo-200 text-indigo-800 hover:bg-indigo-100 transition-colors"
+                >
+                  {a.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export default function UnifiedKnowledgePane({
   topic, phase, dataCount, error,
   sections, completedCount, activeCount,
+  parsedEntities, entityIndex, harvestedPapers,
+  selectedEntity, openEntity, closeEntity,
   onReset,
 }) {
   const totalSections = SECTION_DEFS.length;
@@ -246,14 +432,12 @@ export default function UnifiedKnowledgePane({
         </div>
       </div>
 
-      {/* Error */}
       {error && (
         <div className="mb-6 p-4 border border-red-200 bg-red-50">
           <p className="text-sm text-red-800">{error}</p>
         </div>
       )}
 
-      {/* Progress */}
       {phase !== 'idle' && (
         <ProgressBar
           completedCount={completedCount}
@@ -262,14 +446,13 @@ export default function UnifiedKnowledgePane({
         />
       )}
 
-      {/* Data count */}
       {dataCount > 0 && (
         <div className="mb-6 text-xs text-stone-400 font-mono">
           Harvested {dataCount} works across OpenAlex, Semantic Scholar, and Open Syllabus
         </div>
       )}
 
-      {/* Sections */}
+      {/* Connectivity Dashboard */}
       {phase === 'idle' && (
         <div className="text-center py-16 text-stone-400">
           <p className="text-sm font-mono">Select a topic above to explore everything about it</p>
@@ -277,17 +460,24 @@ export default function UnifiedKnowledgePane({
       )}
 
       <div className="space-y-2">
+        <ConnectivityDashboard
+          parsedEntities={parsedEntities}
+          entityIndex={entityIndex}
+          harvestedPapers={harvestedPapers}
+          onEntityClick={openEntity}
+        />
         {SECTION_DEFS.map(def => (
           <SectionCard
             key={def.key}
             def={def}
             section={sections[def.key]}
             topic={topic}
+            onEntityClick={openEntity}
+            index={entityIndex}
           />
         ))}
       </div>
 
-      {/* Copy / export */}
       {completedCount === totalSections && (
         <div className="mt-8 pt-6 border-t border-stone-200 flex gap-3">
           <button
@@ -298,6 +488,14 @@ export default function UnifiedKnowledgePane({
           </button>
         </div>
       )}
+
+      {/* Entity detail panel */}
+      <EntityDetailPanel
+        entity={selectedEntity}
+        index={entityIndex}
+        onClose={closeEntity}
+        onOpen={openEntity}
+      />
     </div>
   );
 }

@@ -1,6 +1,8 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { harvestAll } from '../utils/harvestData';
 import { syllabusHarvest, seminalPapersHarvest } from '../utils/syllabusHarvest';
+import { parseAll } from '../utils/entityParser';
+import { buildEntityIndex } from './useEntityIndex';
 
 const resolveApiKey = () =>
   import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('canon_api_key') || '';
@@ -8,7 +10,7 @@ const resolveApiKey = () =>
 const SONNET = 'claude-sonnet-5';
 const HAIKU = 'claude-haiku-4-5-20251001';
 
-// ── Section Prompts ────────────────────────────────────────────────────────
+// ── Section Prompts (unchanged) ────────────────────────────────────────────
 
 const QUESTIONS_PROMPT = `You are an expert in the given topic. List the most fundamental questions — both answered and open — that define this field.
 
@@ -191,7 +193,7 @@ const INIT_SECTIONS = Object.fromEntries(
   SECTION_DEFS.map(s => [s.key, { phase: 'idle', content: '' }])
 );
 
-// ── Streaming helper (mirrors working Overall Aggregator) ───────────────────
+// ── Streaming helper ────────────────────────────────────────────────────────
 
 async function streamSection(system, userMsg, signal, onChunk, maxTokens, model) {
   const key = resolveApiKey();
@@ -254,17 +256,66 @@ async function streamSection(system, userMsg, signal, onChunk, maxTokens, model)
 // ── Hook ────────────────────────────────────────────────────────────────────
 
 export function useUnifiedBrowser() {
-  const [phase, setPhase] = useState('idle'); // idle | harvesting | streaming | complete | error
+  const [phase, setPhase] = useState('idle');
   const [topic, setTopic] = useState('');
   const [error, setError] = useState(null);
   const [sections, setSections] = useState(() => ({ ...INIT_SECTIONS }));
   const [dataCount, setDataCount] = useState(0);
   const [harvestedPapers, setHarvestedPapers] = useState([]);
   const [harvestedTextbooks, setHarvestedTextbooks] = useState([]);
+  const [selectedEntity, setSelectedEntity] = useState(null);
   const abortRef = useRef(null);
 
   const completedCount = Object.values(sections).filter(s => s.phase === 'complete').length;
   const activeCount = Object.values(sections).filter(s => s.phase === 'streaming').length;
+
+  // Parse entities from all completed sections
+  const parsedEntities = useMemo(() => {
+    const all = { works: [], concepts: [], researchers: [] };
+    for (const def of SECTION_DEFS) {
+      const sec = sections[def.key];
+      if (!sec?.content) continue;
+      const parsed = parseAll(sec.content);
+      all.works.push(...parsed.works);
+      all.concepts.push(...parsed.concepts);
+      all.researchers.push(...parsed.researchers);
+    }
+    // Dedupe
+    const seen = { works: new Set(), concepts: new Set(), researchers: new Set() };
+    const out = { works: [], concepts: [], researchers: [] };
+    for (const w of all.works) {
+      const k = `${w.title.toLowerCase()}|${w.firstAuthor.toLowerCase()}`;
+      if (seen.works.has(k)) continue;
+      seen.works.add(k);
+      out.works.push(w);
+    }
+    for (const c of all.concepts) {
+      if (seen.concepts.has(c.name.toLowerCase())) continue;
+      seen.concepts.add(c.name.toLowerCase());
+      out.concepts.push(c);
+    }
+    for (const r of all.researchers) {
+      if (seen.researchers.has(r.name.toLowerCase())) continue;
+      seen.researchers.has(r.name.toLowerCase());
+      seen.researchers.add(r.name.toLowerCase());
+      out.researchers.push(r);
+    }
+    return out;
+  }, [sections]);
+
+  // Build the relationship index from harvested data + parsed entities
+  const entityIndex = useMemo(
+    () => buildEntityIndex(harvestedPapers, parsedEntities),
+    [harvestedPapers, parsedEntities]
+  );
+
+  const openEntity = useCallback((entity) => {
+    setSelectedEntity(entity);
+  }, []);
+
+  const closeEntity = useCallback(() => {
+    setSelectedEntity(null);
+  }, []);
 
   const setSectionState = useCallback((key, update) => {
     setSections(prev => ({
@@ -283,22 +334,22 @@ export function useUnifiedBrowser() {
     setDataCount(0);
     setHarvestedPapers([]);
     setHarvestedTextbooks([]);
+    setSelectedEntity(null);
   }, []);
 
   const run = useCallback(async (inputTopic) => {
-    // Abort any previous run
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
     const { signal } = controller;
 
-    // Reset UI state without aborting the controller we just created
     setTopic(inputTopic);
     setError(null);
     setDataCount(0);
     setSections({ ...INIT_SECTIONS });
     setHarvestedPapers([]);
     setHarvestedTextbooks([]);
+    setSelectedEntity(null);
     setPhase('harvesting');
 
     const apiKey = resolveApiKey();
@@ -308,7 +359,6 @@ export function useUnifiedBrowser() {
       return;
     }
 
-    // Harvest data (fail soft — Claude can supplement from knowledge)
     let works = [];
     let ospWorks = [];
     let seminalWorks = [];
@@ -336,7 +386,6 @@ export function useUnifiedBrowser() {
     if (signal.aborted) return;
     setPhase('streaming');
 
-    // Build context block for harvest-dependent sections
     const workLines = works.slice(0, 60).map(w =>
       `- "${w.title}" by ${w.authors || 'Unknown'}${w.year ? ` (${w.year})` : ''} — ${w.citationCount || 0} citations`
     ).join('\n');
@@ -349,7 +398,6 @@ export function useUnifiedBrowser() {
 
     const dataBlock = `\n\n=== HARVESTED WORKS ===\n${workLines || '(none)'}\n\n=== MOST TAUGHT (Open Syllabus) ===\n${ospLines || '(none)'}\n\n=== SEMINAL PAPERS ===\n${seminalLines || '(none)'}`;
 
-    // Fire all 12 sections in parallel
     await Promise.all(
       SECTION_DEFS.map(async (def) => {
         if (signal.aborted) return;
@@ -388,6 +436,8 @@ export function useUnifiedBrowser() {
     phase, topic, error,
     sections, completedCount, activeCount,
     dataCount, harvestedPapers, harvestedTextbooks,
+    parsedEntities, entityIndex,
+    selectedEntity, openEntity, closeEntity,
     run, reset,
   };
 }
