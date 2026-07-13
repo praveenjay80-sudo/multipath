@@ -20,21 +20,40 @@ function isSerial(title) {
   return SERIAL_WORDS.some(w => t.startsWith(w) || t.includes(` ${w}`));
 }
 
-// Topic relevance: the topic phrase or majority of topic words must appear in the title.
-// This prevents full-text-search results (papers that mention the topic in passing) from
-// polluting the list with completely off-topic papers.
+// Generic academic words that appear in many unrelated paper titles — excluded from
+// significant-word matching so we don't require "theory" in every "X Theory" search.
+const GENERIC_TITLE_WORDS = new Set([
+  'the','and','for','with','from','theory','theories','study','studies','analysis',
+  'method','methods','approach','approaches','model','models','review','survey',
+  'introduction','advanced','modern','new','recent','application','applications',
+  'research','general','basic','elementary','principles','fundamentals','aspects',
+  'problems','problem','overview','framework','system','systems','use','using','based',
+]);
+
 function topicWords(topic) {
   return topic.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length >= 3);
 }
 
+// Returns topic words that are content-specific (not generic academic filler).
+function significantTopicWords(topic) {
+  const tw = topicWords(topic);
+  const sig = tw.filter(w => !GENERIC_TITLE_WORDS.has(w));
+  return sig.length > 0 ? sig : tw; // fall back to all words if everything is "generic"
+}
+
+// Whole-word check: "ring" matches "ring theory" but not "boring"
+function wordInText(word, text) {
+  return new RegExp(`\\b${word}\\b`).test(text);
+}
+
+// Relevance filter applied to keyword-search results only (concept-filtered results skip this).
+// Requires: full topic phrase in title OR at least one significant topic word as whole word.
 function isTopicRelevant(title, topic) {
   const t = (title || '').toLowerCase();
   const topicPhrase = topic.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
   if (t.includes(topicPhrase)) return true;
-  const tw = topicWords(topic);
-  if (!tw.length) return true;
-  const matched = tw.filter(w => t.includes(w)).length;
-  return matched >= Math.max(1, Math.ceil(tw.length * 0.6));
+  const sig = significantTopicWords(topic);
+  return sig.some(w => wordInText(w, t));
 }
 
 function fetchWithTimeout(url, ms = 12000) {
@@ -59,6 +78,37 @@ function oaWork(w, sourceTag) {
     influentialCitationCount: null,
     editionCount: null,
   };
+}
+
+// ── 0. OpenAlex: concept-classifier search ───────────────────────────────────
+// OpenAlex tags every paper with concepts using ML classifiers. Searching by
+// concept ID gives papers actually in the field, not papers that mention the
+// topic in passing. This is the primary paper source when a concept match exists.
+
+async function findOAConceptId(topic) {
+  const url = `${OA_BASE}/concepts?search=${encodeURIComponent(topic)}&per_page=5&mailto=${MAILTO}`;
+  try {
+    const res = await fetchWithTimeout(url, 8000);
+    if (!res.ok) return null;
+    const { results = [] } = await res.json();
+    if (!results.length) return null;
+    const topicLower = topic.toLowerCase();
+    const exact = results.find(c => c.display_name?.toLowerCase() === topicLower);
+    return (exact || results[0])?.id || null;
+  } catch { return null; }
+}
+
+async function harvestOAByConcept(conceptId, limit, type = 'article') {
+  const fields = 'title,authorships,publication_year,cited_by_count,fwci,type,open_access,primary_location,doi';
+  const url = `${OA_BASE}/works?filter=concepts.id:${encodeURIComponent(conceptId)},type:${type}&select=${fields}&per_page=${limit}&sort=cited_by_count:desc&mailto=${MAILTO}${openAlexAuth()}`;
+  try {
+    const res = await fetchWithTimeout(url);
+    if (!res.ok) return [];
+    const { results = [] } = await res.json();
+    return results
+      .filter(w => w.title && (w.cited_by_count || 0) > 5)
+      .map(w => oaWork(w, `openalex-concept-${type}`));
+  } catch { return []; }
 }
 
 // ── 1. OpenAlex: top papers by all-time citations ────────────────────────────
@@ -298,10 +348,20 @@ export function mergeWorks(lists) {
 export async function harvestAll(topic, onProgress) {
   onProgress?.('Querying OpenAlex, Semantic Scholar, Open Syllabus...');
 
-  // Fire all 8 sources in parallel
-  const [oaPapers, oaBooks, oaRecent, s2Papers, s2Textbooks, gbBooks, olBooks, syllabusBooks] = await Promise.all([
-    harvestOAPapers(topic, 60),
-    harvestOABooks(topic, 30),
+  // Concept-based papers: find the OpenAlex concept ID then pull papers tagged
+  // with that concept. This is more accurate than keyword search for established
+  // academic topics. Runs in parallel with keyword sources.
+  const conceptWorksPromise = findOAConceptId(topic).then(id =>
+    id ? Promise.all([
+      harvestOAByConcept(id, 60, 'article'),
+      harvestOAByConcept(id, 30, 'book'),
+    ]).then(([articles, books]) => [...articles, ...books]) : []
+  );
+
+  const [conceptWorks, oaPapers, oaBooks, oaRecent, s2Papers, s2Textbooks, gbBooks, olBooks, syllabusBooks] = await Promise.all([
+    conceptWorksPromise,
+    harvestOAPapers(topic, 40),      // keyword fallback / supplement
+    harvestOABooks(topic, 20),
     harvestOARecent(topic, 20),
     harvestS2Papers(topic, 40),
     harvestS2Textbooks(topic, 20),
@@ -311,6 +371,7 @@ export async function harvestAll(topic, onProgress) {
   ]);
 
   const counts = {
+    'OA concept':     conceptWorks.length,
     'OA papers':      oaPapers.length,
     'OA books':       oaBooks.length,
     'OA recent':      oaRecent.length,
@@ -321,9 +382,9 @@ export async function harvestAll(topic, onProgress) {
     'Open Syllabus':  syllabusBooks.length,
   };
 
-  onProgress?.(`Merging ${Object.values(counts).reduce((a,b)=>a+b,0)} raw results from 8 sources...`);
+  onProgress?.(`Merging ${Object.values(counts).reduce((a,b)=>a+b,0)} raw results from 9 sources...`);
 
-  const merged = mergeWorks([oaPapers, oaBooks, oaRecent, s2Papers, s2Textbooks, gbBooks, olBooks, syllabusBooks]);
+  const merged = mergeWorks([conceptWorks, oaPapers, oaBooks, oaRecent, s2Papers, s2Textbooks, gbBooks, olBooks, syllabusBooks]);
 
   return { merged, counts };
 }
