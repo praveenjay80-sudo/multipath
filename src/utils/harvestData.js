@@ -77,6 +77,7 @@ function oaWork(w, sourceTag) {
     source: sourceTag,
     influentialCitationCount: null,
     editionCount: null,
+    openAlexConcepts: (w.concepts || []).filter(c => (c.score || 0) > 0.3).map(c => c.display_name).filter(Boolean),
   };
 }
 
@@ -93,27 +94,39 @@ async function findOAConceptId(topic) {
     const { results = [] } = await res.json();
     if (!results.length) return null;
     const topicLower = topic.toLowerCase();
-    const exact = results.find(c => c.display_name?.toLowerCase() === topicLower);
-    return (exact || results[0])?.id || null;
+    const tWords = topicLower.split(/\s+/).filter(w => w.length >= 3);
+
+    // Require ALL topic words to appear as whole words in the concept name.
+    // This prevents "Complex Analysis" matching "Analysis" (too broad) or
+    // "Systems Analysis" (wrong field) which would pull in irrelevant papers.
+    const isGoodMatch = (c) => {
+      const cn = (c.display_name || '').toLowerCase();
+      if (cn === topicLower) return true;
+      const cnWords = new Set(cn.split(/\s+/));
+      return tWords.every(w => cnWords.has(w));
+    };
+
+    const best = results.find(isGoodMatch);
+    return best?.id || null; // null → fall back to keyword search
   } catch { return null; }
 }
 
-async function harvestOAByConcept(conceptId, limit, type = 'article') {
-  const fields = 'title,authorships,publication_year,cited_by_count,fwci,type,open_access,primary_location,doi';
+async function harvestOAByConcept(conceptId, topic, limit, type = 'article') {
+  const fields = 'title,authorships,publication_year,cited_by_count,fwci,type,open_access,primary_location,doi,concepts';
   const url = `${OA_BASE}/works?filter=concepts.id:${encodeURIComponent(conceptId)},type:${type}&select=${fields}&per_page=${limit}&sort=cited_by_count:desc&mailto=${MAILTO}${openAlexAuth()}`;
   try {
     const res = await fetchWithTimeout(url);
     if (!res.ok) return [];
     const { results = [] } = await res.json();
     return results
-      .filter(w => w.title && (w.cited_by_count || 0) > 5)
+      .filter(w => w.title && (w.cited_by_count || 0) > 5 && isTopicRelevant(w.title, topic))
       .map(w => oaWork(w, `openalex-concept-${type}`));
   } catch { return []; }
 }
 
 // ── 1. OpenAlex: top papers by all-time citations ────────────────────────────
 async function harvestOAPapers(topic, limit = 60) {
-  const fields = 'title,authorships,publication_year,cited_by_count,fwci,type,open_access,primary_location,doi';
+  const fields = 'title,authorships,publication_year,cited_by_count,fwci,type,open_access,primary_location,doi,concepts';
   const url = `${OA_BASE}/works?search=${encodeURIComponent(topic)}&filter=type:article&select=${fields}&per_page=${limit}&sort=cited_by_count:desc&mailto=${MAILTO}${openAlexAuth()}`;
   try {
     const res = await fetchWithTimeout(url);
@@ -127,7 +140,7 @@ async function harvestOAPapers(topic, limit = 60) {
 
 // ── 2. OpenAlex: top books by citations ─────────────────────────────────────
 async function harvestOABooks(topic, limit = 30) {
-  const fields = 'title,authorships,publication_year,cited_by_count,fwci,type,open_access,primary_location,doi';
+  const fields = 'title,authorships,publication_year,cited_by_count,fwci,type,open_access,primary_location,doi,concepts';
   const url = `${OA_BASE}/works?search=${encodeURIComponent(topic)}&filter=type:book&select=${fields}&per_page=${limit}&sort=cited_by_count:desc&mailto=${MAILTO}${openAlexAuth()}`;
   try {
     const res = await fetchWithTimeout(url);
@@ -141,7 +154,7 @@ async function harvestOABooks(topic, limit = 30) {
 
 // ── 3. OpenAlex: recent works (last 15 years) for Contemporary section ───────
 async function harvestOARecent(topic, limit = 20) {
-  const fields = 'title,authorships,publication_year,cited_by_count,fwci,type,open_access,primary_location,doi';
+  const fields = 'title,authorships,publication_year,cited_by_count,fwci,type,open_access,primary_location,doi,concepts';
   const year = new Date().getFullYear() - 15;
   const url = `${OA_BASE}/works?search=${encodeURIComponent(topic)}&filter=publication_year:>${year}&select=${fields}&per_page=${limit}&sort=cited_by_count:desc&mailto=${MAILTO}${openAlexAuth()}`;
   try {
@@ -353,8 +366,8 @@ export async function harvestAll(topic, onProgress) {
   // academic topics. Runs in parallel with keyword sources.
   const conceptWorksPromise = findOAConceptId(topic).then(id =>
     id ? Promise.all([
-      harvestOAByConcept(id, 60, 'article'),
-      harvestOAByConcept(id, 30, 'book'),
+      harvestOAByConcept(id, topic, 60, 'article'),
+      harvestOAByConcept(id, topic, 30, 'book'),
     ]).then(([articles, books]) => [...articles, ...books]) : []
   );
 

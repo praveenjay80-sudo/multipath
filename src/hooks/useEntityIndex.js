@@ -115,12 +115,24 @@ export function buildEntityIndex(harvestedWorks, parsedEntities) {
   }
 
   // Match parsed concepts to works using ALL harvested papers + any parsed-only works.
-  // Score: 2 = concept name in title/author, 1 = definition words in title, 0 = rest.
+  // Score: 2 = OA concept tag matches OR concept name in title/author, 1 = definition words in title, 0 = rest.
   const STOPWORDS = new Set(['the','a','an','and','or','of','in','on','at','to','for','with','by','from','is','are','was','were','be','been','being','it','its','this','that','these','those','as','if','then','than','so','but','not','no','yes','all','any','some','such','same','other','into','over','after','before','also','used','use','using','one','two','three','many','much','more','most','less','least','very','just','about','between','among','how','what','which','who','whom','whose','where','when','why','can','could','may','might','should','would','will','shall','do','does','did','done','have','has','had','having','make','makes','made','based','their','they','them','he','she','his','her','its','our','we','you','your','my','me','i']);
   const sigWords = (s) => (s || '').toLowerCase()
     .replace(/[^a-z0-9\s]/g, '')
     .split(/\s+/)
     .filter(w => w.length >= 4 && !STOPWORDS.has(w));
+
+  // OpenAlex concept tag match: check if an OA-assigned concept tag matches the parsed concept name.
+  // Allows substring overlap for partial matches (e.g. "Holomorphic function" matches "Holomorphic Functions").
+  function oaConceptMatches(oaConceptName, conceptName) {
+    const a = (oaConceptName || '').toLowerCase().trim();
+    const b = (conceptName || '').toLowerCase().trim();
+    if (!a || !b) return false;
+    if (a === b) return true;
+    const shorter = a.length < b.length ? a : b;
+    const longer = a.length < b.length ? b : a;
+    return shorter.length >= 5 && longer.includes(shorter);
+  }
 
   // Build combined work pool: all harvested papers + parsed-only works not in harvested set
   const harvestedKeys = new Set(harvestedWorks.map(w => normTitle(w.title)));
@@ -144,7 +156,9 @@ export function buildEntityIndex(harvestedWorks, parsedEntities) {
       const titleLc = (w.title || '').toLowerCase();
       const authorLc = (w.authors || w.allAuthors || '').toLowerCase();
       let score = 0;
-      if (cName && (titleLc.includes(cName) || authorLc.includes(cName))) score = 2;
+      // OA ML concept tags give the strongest signal — a paper is semantically in this field
+      if (w.openAlexConcepts?.some(oc => oaConceptMatches(oc, c.name))) score = 2;
+      else if (cName && (titleLc.includes(cName) || authorLc.includes(cName))) score = 2;
       else if (cDefWords.some(dw => titleLc.includes(dw))) score = 1;
       scored.push({ work: w, score });
     }
