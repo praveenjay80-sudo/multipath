@@ -38,21 +38,38 @@ function splitByHeaders(text) {
 
 // Detect a list item that might be a "Title" by Author (Year) entry
 // Returns {type, name} or null
+// Detect a list item that might be a "Title" by Author (Year) entry
+// Returns {type, name, _year, _firstAuthor, _allAuthors} or null
 function detectWorkEntity(line) {
   // "Title" by Author (Year) — annotation
   let m = line.match(/^[-*]\s+[""]([^""]{3,200})[""]\s+by\s+([^()]+?)\s*\((\d{4})\)/);
   if (m) {
-    return { type: 'work', name: m[1], _full: line };
+    return {
+      type: 'work',
+      name: m[1],
+      _year: parseInt(m[3], 10),
+      _allAuthors: m[2].trim(),
+      _firstAuthor: m[2].split(/,\s*|\s+and\s+|\s+&\s+/)[0].trim(),
+      _full: line,
+    };
   }
   // **Title** by Author (Year)
   m = line.match(/^[-*]\s+\*\*([^*]{3,200})\*\*\s+by\s+([^()]+?)\s*\((\d{4})\)/);
   if (m) {
-    return { type: 'work', name: m[1], _full: line };
+    return {
+      type: 'work',
+      name: m[1],
+      _year: parseInt(m[3], 10),
+      _allAuthors: m[2].trim(),
+      _firstAuthor: m[2].split(/,\s*|\s+and\s+|\s+&\s+/)[0].trim(),
+      _full: line,
+    };
   }
   return null;
 }
 
 // Detect a list item that might be a concept (in Tier sections) or researcher
+// Returns {type, name, _contribution} or null
 function detectListEntity(line, sectionHeader) {
   if (!sectionHeader) return null;
   const isConcept = /Tier\s+\d|Concepts?$/i.test(sectionHeader);
@@ -60,12 +77,16 @@ function detectListEntity(line, sectionHeader) {
 
   if (isConcept) {
     // - Concept Name — definition
-    const m = line.match(/^[-*]\s+\*?\*?([^\n—\-]{2,80}?)\*?\*?\s*[—\-]\s+/);
-    if (m) return { type: 'concept', name: m[1].trim() };
+    const m = line.match(/^[-*]\s+\*?\*?([^\n—\-]{2,80}?)\*?\*?\s*[—\-]\s+(.{3,})/);
+    if (m) return { type: 'concept', name: m[1].trim(), _contribution: m[2].trim() };
   }
   if (isResearcher) {
-    const m = line.match(/^[-*]\s+\*?\*?([^\n—\-]{2,80}?)\*?\*?(?:\s*\(\d{4}[-–]\d{0,4}\))?\s*[—\-]\s+/);
-    if (m) return { type: 'researcher', name: m[1].replace(/\s*\(\d{4}[-–]\d{0,4}\)/, '').trim() };
+    const m = line.match(/^[-*]\s+\*?\*?([^\n—\-]{2,80}?)\*?\*?(?:\s*\(\d{4}[-–]\d{0,4}\))?\s*[—\-]\s+(.{3,})/);
+    if (m) return {
+      type: 'researcher',
+      name: m[1].replace(/\s*\(\d{4}[-–]\d{0,4}\)/, '').trim(),
+      _contribution: m[2].trim(),
+    };
   }
   return null;
 }
@@ -87,24 +108,39 @@ function ConnectedLine({ line, sectionHeader, onEntityClick, index }) {
   }
 
   // Find matching data in index
+  // Find matching data in index. Always produce a non-null entity so the
+  // panel opens even when no harvested match was found.
   let matchedData = null;
   if (entity.type === 'work') {
     const normTitle = (s) => (s || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2).join(' ');
     const target = normTitle(entity.name);
+    let harvested = null;
     for (const w of index.workByTitle.values()) {
-      if (normTitle(w.title) === target) { matchedData = { type: 'work', name: w.title, work: w }; break; }
+      if (normTitle(w.title) === target) { harvested = w; break; }
     }
+    matchedData = {
+      type: 'work',
+      name: harvested?.title || entity.name,
+      work: harvested || {
+        title: entity.name,
+        authors: entity._firstAuthor || entity._allAuthors,
+        year: entity._year,
+        citationCount: null,
+        _synthetic: true,
+      },
+    };
   } else if (entity.type === 'concept') {
     matchedData = { type: 'concept', name: entity.name };
   } else if (entity.type === 'researcher') {
     const normAuthor = (s) => (s || '').toLowerCase().replace(/[.,]/g, '').replace(/\s+/g, ' ').trim();
     const target = normAuthor(entity.name);
     const profile = index.authorProfile.get(target);
-    if (profile) {
-      matchedData = { type: 'author', name: profile.name, profile };
-    } else {
-      matchedData = { type: 'researcher', name: entity.name };
-    }
+    matchedData = {
+      type: 'author',
+      name: profile?.name || entity.name,
+      profile,
+      contribution: entity._contribution,
+    };
   }
 
   return (

@@ -114,19 +114,38 @@ export function buildEntityIndex(harvestedWorks, parsedEntities) {
     }
   }
 
-  // Match parsed concepts to works (which works mention each concept)
-  for (const c of (parsedEntities?.concepts || [])) {
-    const matching = (parsedEntities.works || []).filter(w =>
-      (w.title || '').toLowerCase().includes(c.name.toLowerCase()) ||
-      (w.allAuthors || '').toLowerCase().includes(c.name.toLowerCase())
-    );
-    conceptToWorks.set(c.name, matching);
+  // Match parsed concepts to works. Three sources of relevance:
+  //   1. Concept name appears in work title/author
+  //   2. Significant words from concept definition appear in work title
+  //   3. (Always include) every parsed work gets a "browse" entry
+  // Each work is tagged with a relevance score 0–2 so the panel can sort.
+  const STOPWORDS = new Set(['the','a','an','and','or','of','in','on','at','to','for','with','by','from','is','are','was','were','be','been','being','it','its','this','that','these','those','as','if','then','than','so','but','not','no','yes','all','any','some','such','same','other','into','over','after','before','also','used','use','using','one','two','three','many','much','more','most','less','least','very','just','about','between','among','how','what','which','who','whom','whose','where','when','why','can','could','may','might','should','would','will','shall','do','does','did','done','have','has','had','having','make','makes','made','based','their','they','them','he','she','his','her','its','our','we','you','your','my','me','i']);
+  const sigWords = (s) => (s || '').toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .split(/\s+/)
+    .filter(w => w.length >= 4 && !STOPWORDS.has(w));
 
-    // For each matching work, also add to workToConcepts
-    for (const w of matching) {
-      const key = w.title;
-      if (!workToConcepts.has(key)) workToConcepts.set(key, new Set());
-      workToConcepts.get(key).add(c.name);
+  for (const c of (parsedEntities?.concepts || [])) {
+    const cName = (c.name || '').toLowerCase();
+    const cDefWords = sigWords(c.definition);
+    const scored = [];
+    for (const w of (parsedEntities.works || [])) {
+      const titleLc = (w.title || '').toLowerCase();
+      const authorLc = (w.allAuthors || '').toLowerCase();
+      let score = 0;
+      if (cName && (titleLc.includes(cName) || authorLc.includes(cName))) score = 2;
+      else if (cDefWords.some(w2 => titleLc.includes(w2))) score = 1;
+      scored.push({ work: w, score });
+    }
+    // Sort: high-relevance first, then the rest (browse)
+    scored.sort((a, b) => b.score - a.score);
+    conceptToWorks.set(c.name, scored);
+
+    // For each high-relevance work, also add to workToConcepts
+    for (const { work, score } of scored) {
+      if (score === 0) continue;
+      if (!workToConcepts.has(work.title)) workToConcepts.set(work.title, new Set());
+      workToConcepts.get(work.title).add(c.name);
     }
   }
 

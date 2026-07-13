@@ -46,14 +46,25 @@ Use ### headers for each school. For each:
 
 Include ALL significant schools, not just the currently dominant ones. Write in clear English.`;
 
-const PREREQUISITES_PROMPT = `Design the complete entry path for someone who wants to seriously engage with the given topic. Organize as 4 phases using ### headers.
+const PREREQUISITES_PROMPT = `You are designing a structured LEARNING PATH — the sequence of resources a complete beginner needs to acquire before they can meaningfully engage with the given topic at the research level.
 
-Phase 1: What to read first (gentle introductions, popular books)
-Phase 2: Foundational preparation (prerequisite textbooks, essential background)
-Phase 3: Core engagement (the central textbooks and papers everyone reads)
-Phase 4: Research readiness (what to read to join the conversation)
+Use exactly these four ### headers in this order. Each phase must show ONLY resources that are genuinely useful for someone learning the topic — no research papers or scholarly monographs in early phases.
 
-For each work, include: Title by Author (Year) — one-sentence why it matters. Be practical and honest.`;
+### Phase 0: What you need BEFORE this topic (background from other fields)
+The mathematical, scientific, or conceptual background someone needs from outside this field. Examples: linear algebra before quantum mechanics, basic probability before machine learning, intro sociology before political theory. List 4–6 specific resources that the average learner should already know or read first. Name actual books/courses/lectures.
+
+### Phase 1: Gentle introductions (popular books, essays, videos)
+Resources written for the educated layperson — no equations, no jargon, just the core ideas. 3–5 entries. These are NOT textbooks. They orient the learner to what the field is and why it matters.
+
+### Phase 2: Foundational preparation (introductory textbooks)
+The standard undergraduate-level textbooks that establish the formal vocabulary and basic techniques. 4–6 entries. These are rigorous but accessible to a first-time learner. Do NOT include graduate texts or research monographs here.
+
+### Phase 3: Core engagement (the canonical works everyone reads)
+The intermediate-to-advanced books and papers that define what every working scholar in this field has internalized. 5–8 entries. These are rigorous graduate-level works. Include the seminal textbooks AND the most-cited foundational papers.
+
+For every work, format as: **"Title"** by Author (Year) — one-sentence note on why this specific resource is at this phase.
+
+CRITICAL: Phase 0 must be background from OTHER fields, not works in this field. Phase 1 must be popular/non-technical. Phase 2 must be introductory textbooks. Only Phase 3 should be graduate/research-level. If you put a research paper in Phase 0/1/2, the learning path is broken.`;
 
 const CANON_PROMPT = `Produce the definitive reading list for the given topic. Organize into 6 learning stages using ### headers.
 
