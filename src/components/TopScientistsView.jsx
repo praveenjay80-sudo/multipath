@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { TOPSCI_FIELDS, TOPSCI_FIELD_SUBFIELDS, TOPSCI_ALL_SUBFIELDS, TOPSCI_COUNTRIES } from '../constants/topSciFacets.js';
+import { openAlexAuth } from '../utils/openAlexAuth.js';
 
 const WORKER_BASE = 'https://canon-enrichment.canonworks.workers.dev';
 
@@ -75,8 +76,61 @@ async function fetchBio(name, inst, field, subfield) {
   } catch { return null; }
 }
 
-async function fetchPublications(name, apiKey, skipCache = false) {
-  if (!skipCache && pubCache.has(name)) return pubCache.get(name);
+// "Last, First M." -> "First M. Last" — reads better to OpenAlex's author search
+function toSearchName(authfull) {
+  const parts = authfull.split(',').map(s => s.trim());
+  return parts.length === 2 ? `${parts[1]} ${parts[0]}` : authfull;
+}
+
+function tokenizeLoose(s) {
+  return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' ').filter(t => t.length > 3);
+}
+
+function institutionOverlap(a, b) {
+  const ta = new Set(tokenizeLoose(a));
+  const tb = tokenizeLoose(b);
+  return tb.filter(t => ta.has(t)).length;
+}
+
+// Real citation data straight from OpenAlex (same source Pulse's "Most Cited
+// Works" panel uses) — tried before Scholar/SerpAPI since it needs no key,
+// isn't quota-limited the same way, and disambiguates by institution rather
+// than a fuzzy title/author text search.
+async function fetchOpenAlexPublications(authfull, instName) {
+  try {
+    const searchName = toSearchName(authfull);
+    const params = new URLSearchParams({ search: searchName, 'per-page': '5', mailto: 'praveen.jay80@gmail.com' });
+    const res = await fetch(`https://api.openalex.org/authors?${params}${openAlexAuth()}`);
+    if (!res.ok) return { ok: false, results: [] };
+    const data = await res.json();
+    const candidates = data.results || [];
+    if (candidates.length === 0) return { ok: false, results: [] };
+
+    let best = candidates[0];
+    let bestScore = -1;
+    for (const c of candidates) {
+      const inst = c.last_known_institutions?.[0]?.display_name || c.affiliations?.[0]?.institution?.display_name || '';
+      const score = institutionOverlap(inst, instName) * 100 + Math.log10((c.cited_by_count || 0) + 1);
+      if (score > bestScore) { bestScore = score; best = c; }
+    }
+
+    const authorId = best.id.replace('https://openalex.org/', '');
+    const wParams = new URLSearchParams({
+      filter: `author.id:${authorId}`, sort: 'cited_by_count:desc', 'per-page': '8',
+      select: 'display_name,publication_year,cited_by_count,doi', mailto: 'praveen.jay80@gmail.com',
+    });
+    const wRes = await fetch(`https://api.openalex.org/works?${wParams}${openAlexAuth()}`);
+    if (!wRes.ok) return { ok: false, results: [] };
+    const wData = await wRes.json();
+    const results = (wData.results || []).map(w => ({
+      title: w.display_name, year: w.publication_year, citationCount: w.cited_by_count,
+      link: w.doi || null,
+    }));
+    return { ok: results.length > 0, results, source: 'openalex' };
+  } catch { return { ok: false, results: [] }; }
+}
+
+async function fetchScholarPublications(name, apiKey) {
   try {
     const params = new URLSearchParams({ q: name, num: '10' });
     if (apiKey) params.set('key', apiKey);
@@ -84,10 +138,18 @@ async function fetchPublications(name, apiKey, skipCache = false) {
     const data = await res.json().catch(() => null);
     if (!res.ok || !Array.isArray(data)) return { ok: false, results: [] };
     const sorted = [...data].sort((a, b) => (b.citationCount || 0) - (a.citationCount || 0));
-    const out = { ok: true, results: sorted.slice(0, 8) };
-    pubCache.set(name, out);
-    return out;
+    return { ok: true, results: sorted.slice(0, 8), source: 'scholar' };
   } catch { return { ok: false, results: [] }; }
+}
+
+async function fetchPublications(name, instName, apiKey, skipCache = false) {
+  if (!skipCache && pubCache.has(name)) return pubCache.get(name);
+  let out = await fetchOpenAlexPublications(name, instName);
+  if (!out.ok || out.results.length === 0) {
+    out = await fetchScholarPublications(name, apiKey);
+  }
+  if (out.ok) pubCache.set(name, out);
+  return out;
 }
 
 function ScholarKeyPrompt({ onSaved }) {
@@ -178,14 +240,15 @@ function ScientistDetail({ row, year, type, onSelect }) {
     setBioLoading(true);
     fetchBio(row.authfull, row.inst_name, row.field, row.subfield1).then(b => { setBio(b); setBioLoading(false); });
     setPubsLoading(true);
-    fetchPublications(row.authfull, localStorage.getItem('canon_serp_key') || '').then(p => { setPubs(p); setPubsLoading(false); });
+    fetchPublications(row.authfull, row.inst_name, localStorage.getItem('canon_serp_key') || '').then(p => { setPubs(p); setPubsLoading(false); });
     setDetailLoading(true);
     fetchDetail(year, type, row.id).then(d => { setDetail(d); setDetailLoading(false); });
   }
 
   async function retryPubsWithKey(key) {
     setPubsLoading(true);
-    const p = await fetchPublications(row.authfull, key, true);
+    const p = await fetchScholarPublications(row.authfull, key);
+    if (p.ok) pubCache.set(row.authfull, p);
     setPubs(p);
     setPubsLoading(false);
   }
@@ -224,7 +287,12 @@ function ScientistDetail({ row, year, type, onSelect }) {
 
       {/* Most cited publications */}
       <div>
-        <p className="text-xs font-mono text-stone-400 mb-1">Most Cited Publications</p>
+        <p className="text-xs font-mono text-stone-400 mb-1">
+          Most Cited Publications
+          {pubs?.ok && pubs.source && (
+            <span className="text-stone-300 font-normal"> — via {pubs.source === 'openalex' ? 'OpenAlex' : 'Google Scholar'}</span>
+          )}
+        </p>
         {pubsLoading && <p className="text-xs text-stone-300 italic font-mono">loading…</p>}
         {!pubsLoading && pubs?.ok && pubs.results.length > 0 && (
           <div className="space-y-1.5">
@@ -232,6 +300,7 @@ function ScientistDetail({ row, year, type, onSelect }) {
               <div key={i} className="text-xs">
                 <a href={p.link || scholarProfileSearchUrl(p.title)} target="_blank" rel="noreferrer"
                   className="text-blue-700 hover:underline">{p.title}</a>
+                {p.year && <span className="text-stone-300 ml-1.5">({p.year})</span>}
                 {p.citationCount != null && (
                   <span className="text-stone-400 font-mono ml-1.5">{p.citationCount.toLocaleString()} cit.</span>
                 )}
