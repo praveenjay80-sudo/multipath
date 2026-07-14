@@ -457,6 +457,51 @@ app.get('/api/topsci/detail', async (req, res) => {
   }
 });
 
+// Top Scientists' actual scientist rows are always live-queried, so only two
+// things can go stale: the app's hardcoded year list, and the one-time
+// facets crawl (src/constants/topSciFacets.js). This checks both cheaply —
+// candidate-year existence via a 1-row probe per type, and a same-page
+// field/subfield/country sample the client diffs against its known facets.
+app.get('/api/topsci/check-updates', async (req, res) => {
+  try {
+    const knownYears = (req.query.knownYears || '').split(',').map(y => parseInt(y, 10)).filter(Number.isFinite);
+    const maxKnownYear = knownYears.length ? Math.max(...knownYears) : 2024;
+    const candidateYear = String(maxKnownYear + 1);
+
+    const probe = (year, type) => pasanhuPostRetry('QueryWPData2', {
+      year, type, authfull: '', inst_name: '', cntry: '', sm_field: '', sm_subfield_1: '', sm_subfield_2: '',
+      page: 1, limit: 1, column: ['authfull'],
+    }).then(d => d.count).catch(() => 0);
+
+    const [singleCount, careerCount, sample] = await Promise.all([
+      probe(candidateYear, ''),
+      probe(candidateYear, 'CAREER'),
+      pasanhuPostRetry('QueryWPData2', {
+        year: String(maxKnownYear), type: '', authfull: '', inst_name: '', cntry: '',
+        sm_field: '', sm_subfield_1: '', sm_subfield_2: '', page: 1, limit: 500,
+        column: ['cntry', 'sm-field', 'sm-subfield-1', 'sm-subfield-2'],
+      }),
+    ]);
+
+    const sampleFields = new Set(), sampleSubfields = new Set(), sampleCountries = new Set();
+    for (const row of sample.data) {
+      const [cntry, field, sf1, sf2] = row.values;
+      if (cntry) sampleCountries.add(cntry);
+      if (field) sampleFields.add(field);
+      if (sf1) sampleSubfields.add(sf1);
+      if (sf2) sampleSubfields.add(sf2);
+    }
+
+    res.json({
+      candidateYear: (singleCount > 0 || careerCount > 0) ? candidateYear : null,
+      singleCount, careerCount,
+      sampleFields: [...sampleFields], sampleSubfields: [...sampleSubfields], sampleCountries: [...sampleCountries],
+    });
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
 // ── Generic HTML proxy (scan-for-updates in OntologicalAtlas, Academia, ScienceDirect) ──
 
 app.get('/api/html-proxy', async (req, res) => {

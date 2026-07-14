@@ -4,7 +4,31 @@ import { openAlexAuth } from '../utils/openAlexAuth.js';
 
 const WORKER_BASE = 'https://canon-enrichment.canonworks.workers.dev';
 
-const YEARS = ['2024', '2023', '2022', '2021', '2020'];
+const BASE_YEARS = ['2024', '2023', '2022', '2021', '2020'];
+
+function readPatch(key) {
+  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+}
+
+// Merges the one-time facets crawl with anything Check for Updates has
+// since patched into localStorage — self-healing without a redeploy.
+function useMergedFacets() {
+  return useMemo(() => {
+    const extraYears = readPatch('topsci_extra_years');
+    const extraFields = readPatch('topsci_extra_fields');
+    const extraSubfields = readPatch('topsci_extra_subfields');
+    const extraCountries = readPatch('topsci_extra_countries');
+    return {
+      years: [...new Set([...extraYears, ...BASE_YEARS])].sort((a, b) => b - a),
+      fields: [...new Set([...TOPSCI_FIELDS, ...extraFields])].sort(),
+      allSubfields: [...new Set([...TOPSCI_ALL_SUBFIELDS, ...extraSubfields])].sort(),
+      countries: [...new Set([...TOPSCI_COUNTRIES, ...extraCountries])].sort(),
+      // Newly-discovered subfields can't be reliably bucketed under their
+      // parent field from a flat sample — they only show up in the
+      // unconstrained Secondary Subfield dropdown until a full recrawl.
+    };
+  }, []);
+}
 
 const SORT_OPTIONS = [
   { key: 'rank',      label: 'Rank (composite score)', defaultDir: 'asc'  },
@@ -82,8 +106,19 @@ function toSearchName(authfull) {
   return parts.length === 2 ? `${parts[1]} ${parts[0]}` : authfull;
 }
 
+// Generic institutional words ("university", "college", "institute"...) would
+// otherwise give any two universities a false +1 overlap just for both being
+// universities — confirmed live: this inflated "University of Turin" over the
+// correct "University of Victoria" match by outweighing an 8x citation gap.
+const INSTITUTION_STOPWORDS = new Set([
+  'university','college','institute','institution','school','department','faculty',
+  'national','international','state','center','centre','research','academy',
+  'polytechnic','technical','technology','hospital','medical','graduate',
+]);
+
 function tokenizeLoose(s) {
-  return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' ').filter(t => t.length > 3);
+  return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' ')
+    .filter(t => t.length > 3 && !INSTITUTION_STOPWORDS.has(t));
 }
 
 function institutionOverlap(a, b) {
@@ -376,11 +411,19 @@ function FilterSelect({ label, value, onChange, options, disabled }) {
   );
 }
 
-export default function TopScientistsView({ status, filters, rows, count, capped, error, page, totalPages, onLoad, onSetFilters, onGoToPage, onSelect }) {
+export default function TopScientistsView({
+  status, filters, rows, count, capped, error, page, totalPages, onLoad, onSetFilters, onGoToPage, onSelect,
+  scanStatus, scanResult, onCheckForUpdates,
+}) {
   const [authInput, setAuthInput] = useState(filters.authfull);
   const [instInput, setInstInput] = useState(filters.inst_name);
+  const facets = useMergedFacets();
 
-  const subfield1Options = filters.sm_field ? (TOPSCI_FIELD_SUBFIELDS[filters.sm_field] || []) : TOPSCI_ALL_SUBFIELDS;
+  const subfield1Options = filters.sm_field ? (TOPSCI_FIELD_SUBFIELDS[filters.sm_field] || []) : facets.allSubfields;
+
+  const handleCheckForUpdates = useCallback(() => {
+    onCheckForUpdates(facets.years, facets.fields, facets.allSubfields, facets.countries);
+  }, [onCheckForUpdates, facets]);
 
   const handleSortChange = useCallback((sortBy) => {
     const opt = SORT_OPTIONS.find(o => o.key === sortBy);
@@ -410,11 +453,45 @@ export default function TopScientistsView({ status, filters, rows, count, capped
           <span className="text-2xl font-bold font-mono text-stone-900 tabular-nums">{count.toLocaleString()}</span>
           <span className="text-sm text-stone-500">scientists matching filters</span>
         </div>
-        <a href="https://www.pasanhu.cn/WorldTopScientists.aspx" target="_blank" rel="noreferrer"
-          className="text-xs text-stone-400 hover:text-blue-600 transition-colors font-mono flex items-center gap-1">
-          PASE <ExternalIcon />
-        </a>
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            onClick={handleCheckForUpdates}
+            disabled={scanStatus === 'scanning'}
+            className="text-xs font-mono text-stone-400 hover:text-stone-700 transition-colors disabled:opacity-40"
+          >
+            {scanStatus === 'scanning' ? 'scanning…' : 'Check for updates'}
+          </button>
+          <a href="https://www.pasanhu.cn/WorldTopScientists.aspx" target="_blank" rel="noreferrer"
+            className="text-xs text-stone-400 hover:text-blue-600 transition-colors font-mono flex items-center gap-1">
+            PASE <ExternalIcon />
+          </a>
+        </div>
       </div>
+
+      {scanStatus === 'done' && scanResult && (
+        (() => {
+          const { candidateYear, newFields, newSubfields, newCountries } = scanResult;
+          const total = newFields.length + newSubfields.length + newCountries.length;
+          if (!candidateYear && total === 0) {
+            return (
+              <div className="mb-4 border border-stone-200 bg-stone-50 p-3 rounded text-xs text-stone-500 font-mono">
+                Up to date — no new year or field/subfield/country vocabulary found.
+              </div>
+            );
+          }
+          return (
+            <div className="mb-4 border border-emerald-200 bg-emerald-50 p-3 rounded text-xs text-emerald-700 font-mono space-y-1">
+              {candidateYear && <p>Year {candidateYear} is now available — added to the dropdown above.</p>}
+              {newFields.length > 0 && <p>{newFields.length} new field(s): {newFields.join(', ')}</p>}
+              {newSubfields.length > 0 && <p>{newSubfields.length} new subfield(s) found — added to Secondary Subfield (not yet bucketed under a Field; run scripts/crawl-topsci-facets.mjs for that).</p>}
+              {newCountries.length > 0 && <p>{newCountries.length} new countr{newCountries.length === 1 ? 'y' : 'ies'}: {newCountries.join(', ').toUpperCase()}</p>}
+            </div>
+          );
+        })()
+      )}
+      {scanStatus === 'error' && (
+        <div className="mb-4 border border-amber-200 bg-amber-50 p-3 rounded text-xs text-amber-700 font-mono">{error}</div>
+      )}
 
       {capped && (
         <div className="mb-4 border border-amber-200 bg-amber-50 p-3 rounded text-xs text-amber-700 font-mono">
@@ -425,17 +502,17 @@ export default function TopScientistsView({ status, filters, rows, count, capped
       {/* Filters */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <FilterSelect label="Year" value={filters.year} onChange={v => onSetFilters({ year: v })}
-          options={YEARS.map(y => <option key={y} value={y}>{y}</option>)} />
+          options={facets.years.map(y => <option key={y} value={y}>{y}</option>)} />
         <FilterSelect label="Type" value={filters.type} onChange={v => onSetFilters({ type: v })}
           options={[<option key="" value="">Single Year</option>, <option key="c" value="CAREER">Career</option>]} />
         <FilterSelect label="Field" value={filters.sm_field} onChange={v => onSetFilters({ sm_field: v })}
-          options={[<option key="" value="">All fields</option>, ...TOPSCI_FIELDS.map(f => <option key={f} value={f}>{f}</option>)]} />
+          options={[<option key="" value="">All fields</option>, ...facets.fields.map(f => <option key={f} value={f}>{f}</option>)]} />
         <FilterSelect label="Subfield" value={filters.sm_subfield_1} onChange={v => onSetFilters({ sm_subfield_1: v })}
           options={[<option key="" value="">All subfields</option>, ...subfield1Options.map(s => <option key={s} value={s}>{s}</option>)]} />
         <FilterSelect label="Secondary Subfield" value={filters.sm_subfield_2} onChange={v => onSetFilters({ sm_subfield_2: v })}
-          options={[<option key="" value="">Any</option>, ...TOPSCI_ALL_SUBFIELDS.map(s => <option key={s} value={s}>{s}</option>)]} />
+          options={[<option key="" value="">Any</option>, ...facets.allSubfields.map(s => <option key={s} value={s}>{s}</option>)]} />
         <FilterSelect label="Country" value={filters.cntry} onChange={v => onSetFilters({ cntry: v })}
-          options={[<option key="" value="">All countries</option>, ...TOPSCI_COUNTRIES.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)]} />
+          options={[<option key="" value="">All countries</option>, ...facets.countries.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)]} />
         <FilterSelect label="Sort By" value={filters.sortBy} onChange={handleSortChange}
           options={SORT_OPTIONS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)} />
         <FilterSelect label="Direction" value={filters.sortDir} onChange={v => onSetFilters({ sortDir: v })}

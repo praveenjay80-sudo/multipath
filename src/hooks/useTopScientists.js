@@ -71,9 +71,50 @@ export function useTopScientists() {
     runQuery(filters, p);
   }, [filters, runQuery]);
 
+  const [scanStatus, setScanStatus] = useState('idle'); // 'idle' | 'scanning' | 'done' | 'error'
+  const [scanResult, setScanResult] = useState(null); // { candidateYear, newFields, newSubfields, newCountries }
+
+  // Only the hardcoded year list and the one-time facets crawl can go stale —
+  // the scientist rows themselves are always live. Self-heals into
+  // localStorage (mirrors Academia's patch pattern) so a newly-detected year
+  // or facet becomes selectable immediately, without waiting for a redeploy.
+  const checkForUpdates = useCallback(async (knownYears, knownFields, knownSubfields, knownCountries) => {
+    setScanStatus('scanning');
+    try {
+      const res = await fetch(`/api/topsci/check-updates?knownYears=${knownYears.join(',')}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+      if (data.candidateYear) {
+        const extra = JSON.parse(localStorage.getItem('topsci_extra_years') || '[]');
+        if (!extra.includes(data.candidateYear)) {
+          localStorage.setItem('topsci_extra_years', JSON.stringify([...extra, data.candidateYear]));
+        }
+      }
+      const patchList = (key, known, found) => {
+        const newOnes = found.filter(v => !known.includes(v));
+        if (newOnes.length === 0) return newOnes;
+        const extra = JSON.parse(localStorage.getItem(key) || '[]');
+        const merged = [...new Set([...extra, ...newOnes])];
+        localStorage.setItem(key, JSON.stringify(merged));
+        return newOnes;
+      };
+      const newFields = patchList('topsci_extra_fields', knownFields, data.sampleFields);
+      const newSubfields = patchList('topsci_extra_subfields', knownSubfields, data.sampleSubfields);
+      const newCountries = patchList('topsci_extra_countries', knownCountries, data.sampleCountries);
+
+      setScanResult({ candidateYear: data.candidateYear, newFields, newSubfields, newCountries });
+      setScanStatus('done');
+    } catch (e) {
+      setScanStatus('error');
+      setError(`Scan failed: ${e.message}`);
+    }
+  }, []);
+
   return {
     filters, page, status, rows, count, capped, error,
     pageLimit: PAGE_LIMIT, totalPages: Math.max(1, Math.ceil(count / PAGE_LIMIT)),
     load, setFilters, goToPage,
+    scanStatus, scanResult, checkForUpdates,
   };
 }

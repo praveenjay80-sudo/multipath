@@ -1341,6 +1341,9 @@ export default function App() {
                 onSetFilters={topScientists.setFilters}
                 onGoToPage={topScientists.goToPage}
                 onSelect={handleDoctoralTopicClick}
+                scanStatus={topScientists.scanStatus}
+                scanResult={topScientists.scanResult}
+                onCheckForUpdates={topScientists.checkForUpdates}
               />
             )}
 
