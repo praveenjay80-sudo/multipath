@@ -19,7 +19,6 @@ import { useCanonDrift } from './hooks/useCanonDrift';
 import { useConsilience } from './hooks/useConsilience';
 import { useInquiry } from './hooks/useInquiry';
 import { useSpectrum } from './hooks/useSpectrum';
-import { usePulse } from './hooks/usePulse';
 import { useFieldIntelligence } from './hooks/useFieldIntelligence';
 import { parseCanon } from './utils/parseCanon';
 import { copyMarkdown } from './utils/exportMarkdown';
@@ -28,8 +27,6 @@ import ReverseInput from './components/ReverseInput';
 import PrerequisiteView from './components/PrerequisiteView';
 import CurriculumInput from './components/CurriculumInput';
 import CurriculumView from './components/CurriculumView';
-import DoctoralTopicsView from './components/DoctoralTopicsView';
-import { useDoctoralTopics } from './hooks/useDoctoralTopics';
 import DissertationInput from './components/DissertationInput';
 import DissertationView from './components/DissertationView';
 import CanonDriftInput from './components/CanonDriftInput';
@@ -41,8 +38,6 @@ import InquiryView from './components/InquiryView';
 import SpectrumInput from './components/SpectrumInput';
 import SpectrumQuestionsView from './components/SpectrumQuestionsView';
 import SpectrumView from './components/SpectrumView';
-import PulseInput from './components/PulseInput';
-import PulseView from './components/PulseView';
 import FieldIntelligenceInput from './components/FieldIntelligenceInput';
 import FieldIntelligenceView from './components/FieldIntelligenceView';
 import MathExplorerView from './components/MathExplorerView';
@@ -53,8 +48,6 @@ import { useAcademiaTopics } from './hooks/useAcademiaTopics';
 import OverallAggregatorInput from './components/OverallAggregatorInput';
 import OverallAggregatorView from './components/OverallAggregatorView';
 import { useOverallAggregator } from './hooks/useOverallAggregator';
-import ScienceDirectView from './components/ScienceDirectView';
-import { useScienceDirectTopics } from './hooks/useScienceDirectTopics';
 import OntologicalAtlasView from './components/OntologicalAtlasView';
 import { useOntologicalAtlas } from './hooks/useOntologicalAtlas';
 import MostTaughtView from './components/MostTaughtView';
@@ -173,17 +166,14 @@ export default function App() {
   const readingOrder = useReadingOrder();
   const reverse = useReverseMode();
   const curriculum = useCurriculumMode();
-  const doctoral = useDoctoralTopics();
   const academia = useAcademiaTopics();
   const dissertation = useDissertationMode();
   const drift = useCanonDrift();
   const consilience = useConsilience();
   const inquiry = useInquiry();
   const spectrum = useSpectrum();
-  const pulse = usePulse();
   const fieldIntel = useFieldIntelligence();
   const aggregator = useOverallAggregator();
-  const scienceDirect = useScienceDirectTopics();
   const oAtlas = useOntologicalAtlas();
   const mostTaught = useMostTaught();
   const topScientists = useTopScientists();
@@ -192,7 +182,7 @@ export default function App() {
   const [shake, setShake] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [view, setView] = useState('canon');
-  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'doctoral' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'spectrum' | 'deepdive' | 'pulse' | 'intelligence' | 'math' | 'concepts' | 'udc' | 'academia' | 'overall' | 'sciencedirect' | 'ontologicalatlas' | 'mosttaught' | 'topscientists' | 'unified'
+  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'spectrum' | 'deepdive' | 'intelligence' | 'math' | 'concepts' | 'udc' | 'academia' | 'overall' | 'ontologicalatlas' | 'mosttaught' | 'topscientists' | 'unified'
 
   const parsed = useMemo(() => parseCanon(gen.content), [gen.content]);
 
@@ -432,17 +422,6 @@ export default function App() {
                   Spectrum
                 </button>
                 <button
-                  onClick={() => setAppMode('pulse')}
-                  className={`px-4 py-2.5 text-sm font-mono -mb-px transition-colors ${
-                    appMode === 'pulse'
-                      ? 'border-b-2 border-lime-600 text-lime-700 font-semibold'
-                      : 'border-b-2 border-transparent text-lime-600 hover:text-lime-800'
-                  }`}
-                >
-                  Master Reading List
-                </button>
-
-                <button
                   onClick={() => setAppMode('intelligence')}
                   className={`ml-3 px-4 py-2 text-sm font-mono -mb-px transition-all flex items-center gap-2 ${
                     appMode === 'intelligence'
@@ -464,16 +443,6 @@ export default function App() {
                   Concept Map
                 </button>
                 <button
-                  onClick={() => { setAppMode('doctoral'); if (doctoral.status === 'idle') doctoral.load(); }}
-                  className={`px-4 py-2.5 text-sm font-mono -mb-px transition-colors ${
-                    appMode === 'doctoral'
-                      ? 'border-b-2 border-rose-600 text-rose-700 font-semibold'
-                      : 'border-b-2 border-transparent text-rose-500 hover:text-rose-700'
-                  }`}
-                >
-                  Doctoral Topics
-                </button>
-                <button
                   onClick={() => setAppMode('udc')}
                   className={`px-4 py-2.5 text-sm font-mono -mb-px transition-colors ${
                     appMode === 'udc'
@@ -492,16 +461,6 @@ export default function App() {
                   }`}
                 >
                   Academia
-                </button>
-                <button
-                  onClick={() => { setAppMode('sciencedirect'); if (scienceDirect.status === 'idle') scienceDirect.load(); }}
-                  className={`px-4 py-2.5 text-sm font-mono -mb-px transition-colors ${
-                    appMode === 'sciencedirect'
-                      ? 'border-b-2 border-orange-600 text-orange-700 font-semibold'
-                      : 'border-b-2 border-transparent text-orange-500 hover:text-orange-700'
-                  }`}
-                >
-                  ScienceDirect
                 </button>
                 <button
                   onClick={() => { setAppMode('ontologicalatlas'); if (oAtlas.status === 'idle') oAtlas.load(); }}
@@ -573,22 +532,16 @@ export default function App() {
                   ? 'Enter any field or topic and get the open questions at its frontier — precisely formulated, with what makes each hard, what has been tried, who is working on it, and the best entry point.'
                   : appMode === 'spectrum'
                   ? 'Enter a topic and get real-life questions whose complete answer genuinely spans multiple disciplines — or type your own. Get a plain-language concept breakdown and a staged reading list grounded in real literature.'
-                  : appMode === 'pulse'
-                  ? 'Pick a field, subfield, and topic (optionally ask Claude to suggest more specific ones) — see live citation counts, citation velocity, influential papers, and Google Scholar results right now. The data itself is always raw numbers from OpenAlex, Semantic Scholar, and Google Scholar — never AI-generated.'
                   : appMode === 'intelligence'
                   ? 'Map any field\'s complete intellectual landscape — all schools of thought, key interlocutors, and the central argument structure. Then audit its hidden assumptions and paradigm status.'
                   : appMode === 'knowledge'
                   ? ''
                   : appMode === 'concepts'
                   ? '600+ fundamental scientific concepts — from pure logic to applied models — ordered across 7 tiers by generality. Generated by Claude on first load, cached permanently. Click any concept for a reading path.'
-                  : appMode === 'doctoral'
-                  ? 'Browse PhD research topics across every academic field — sourced live from phd.nthrys.com. Click any topic to generate its canon.'
                   : appMode === 'udc'
                   ? 'Universal Decimal Classification — 9,000+ subject codes from ETH Zurich\'s library across 9 main classes. Select a mode, click any code to generate. Check for newly added codes.'
                   : appMode === 'academia'
                   ? 'Academia.edu topic hierarchy — 25 disciplines, 661 subtopics, and 200,000+ research interest tags across all fields of scholarship. 3 levels deep, fully searchable.'
-                  : appMode === 'sciencedirect'
-                  ? 'ScienceDirect topic hierarchy — 352,924 research topics across 20 scientific disciplines, organized by subject area. Each topic links directly to ScienceDirect, has an AI-generated definition, and connects to all generation modes.'
                   : appMode === 'overall'
                   ? 'One question. Nine sections generated in parallel — orientation, historical development, intellectual landscape, hidden assumptions, every discipline\'s answer, essential works, what you need first, the open frontier, and the path to mastery.'
                   : appMode === 'ontologicalatlas'
@@ -664,13 +617,6 @@ export default function App() {
                 onGenerateQuestions={spectrum.generateQuestions}
                 onSubmitDirect={spectrum.submitDirectQuestion}
                 disabled={['listing', 'harvesting', 'generating'].includes(spectrum.phase)}
-              />
-            )}
-
-            {appMode === 'pulse' && (
-              <PulseInput
-                onSelect={pulse.select}
-                disabled={pulse.phase === 'loading'}
               />
             )}
 
@@ -1134,52 +1080,6 @@ export default function App() {
               </div>
             )}
 
-            {/* Pulse mode */}
-            {appMode === 'pulse' && pulse.phase === 'loading' && (
-              <div className="mt-8 border border-stone-200 bg-white px-6 py-5">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex gap-0.5">
-                    <span className="loading-dot" /><span className="loading-dot" /><span className="loading-dot" />
-                  </span>
-                  <span className="text-sm text-stone-500">Fetching live data...</span>
-                </div>
-              </div>
-            )}
-            {appMode === 'pulse' && pulse.phase === 'error' && (
-              <div className="mt-8 p-5 bg-red-50 border border-red-200">
-                <p className="font-medium text-red-900 text-sm">Failed</p>
-                <p className="text-sm text-red-700 mt-1">{pulse.error}</p>
-              </div>
-            )}
-            {appMode === 'pulse' && pulse.phase === 'complete' && (
-              <PulseView
-                topicName={pulse.topicName}
-                isTextMatch={pulse.isTextMatch}
-                wasClaudeValidated={pulse.wasClaudeValidated}
-                mostCited={pulse.mostCited}
-                topAuthors={pulse.topAuthors}
-                mostInfluential={pulse.mostInfluential}
-                scholar={pulse.scholar}
-                scholarLoading={pulse.scholarLoading}
-                scholarFailed={pulse.scholarFailed}
-                onScholarKeySaved={pulse.refreshScholar}
-                readingStageGroups={pulse.readingStageGroups}
-                readingStagesLoading={pulse.readingStagesLoading}
-                readingStagesFailed={pulse.readingStagesFailed}
-                onLoadReadingStages={pulse.loadReadingStages}
-              />
-            )}
-            {appMode === 'pulse' && pulse.phase === 'complete' && (
-              <div className="mt-8 pt-6 border-t border-stone-200 flex gap-2">
-                <button
-                  onClick={pulse.reset}
-                  className="px-4 py-2 text-sm bg-stone-900 text-white hover:bg-stone-700 transition-colors"
-                >
-                  New Topic
-                </button>
-              </div>
-            )}
-
             {/* Field Intelligence mode */}
             {appMode === 'intelligence' && fieldIntel.landscapePhase === 'error' && (
               <div className="mt-8 p-5 bg-red-50 border border-red-200">
@@ -1214,22 +1114,6 @@ export default function App() {
 
             {/* Concept Map */}
             {appMode === 'concepts' && <ConceptTiersView onGenerate={handleConceptGenerate} />}
-
-            {/* Doctoral Topics */}
-            {appMode === 'doctoral' && (
-              <DoctoralTopicsView
-                status={doctoral.status}
-                subjects={doctoral.subjects}
-                topicsBySubject={doctoral.topicsBySubject}
-                totalTopics={doctoral.totalTopics}
-                error={doctoral.error}
-                lastChecked={doctoral.lastChecked}
-                updateCount={doctoral.updateCount}
-                onLoad={doctoral.load}
-                onCheckForUpdates={doctoral.checkForUpdates}
-                onSelectTopic={handleDoctoralTopicClick}
-              />
-            )}
 
             {/* UDC */}
             {appMode === 'udc' && (
@@ -1273,23 +1157,6 @@ export default function App() {
                 onCheckForUpdates={academia.checkForUpdates}
                 scanStatus={academia.scanStatus}
                 newTopics={academia.newTopics}
-              />
-            )}
-
-            {/* ScienceDirect Topics */}
-            {appMode === 'sciencedirect' && (
-              <ScienceDirectView
-                status={scienceDirect.status}
-                subjects={scienceDirect.subjects}
-                topicsBySubject={scienceDirect.topicsBySubject}
-                total={scienceDirect.total}
-                crawlDate={scienceDirect.crawlDate}
-                error={scienceDirect.error}
-                onLoad={scienceDirect.load}
-                onSelect={handleDoctoralTopicClick}
-                scanStatus={scienceDirect.scanStatus}
-                newTopics={scienceDirect.newTopics}
-                onCheckForUpdates={scienceDirect.checkForUpdates}
               />
             )}
 
