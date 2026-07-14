@@ -186,115 +186,146 @@ export default function DDCGndView({ onGenerate }) {
   const totalRecords = flatData ? flatData.length : null;
   const translatedRecords = flatData ? flatData.filter(r => r.le && r.le !== r.l).length : null;
 
+  const pathActive = readingPath.status !== 'idle';
+
   return (
-    <div className="mt-8 space-y-5">
+    <div className="mt-8 flex gap-6 items-start">
 
-      <div className="border-b border-stone-200 pb-4">
-        <div className="flex items-baseline gap-3 mb-2 flex-wrap">
-          <h2 className="text-2xl font-bold tracking-tight text-stone-900">DDC – GND Classification</h2>
-          <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-stone-800 text-white">DNB SPARQL</span>
-          {totalRecords != null && (
-            <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-stone-700 text-white">
-              {totalRecords.toLocaleString()} GND records
-            </span>
-          )}
-          {translatedRecords != null && (
-            <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-emerald-700 text-white">
-              {translatedRecords.toLocaleString()} translated to English
-            </span>
-          )}
+      <div className={`space-y-5 min-w-0 ${pathActive ? 'flex-1' : 'w-full'}`}>
+
+        <div className="border-b border-stone-200 pb-4">
+          <div className="flex items-baseline gap-3 mb-2 flex-wrap">
+            <h2 className="text-2xl font-bold tracking-tight text-stone-900">DDC – GND Classification</h2>
+            <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-stone-800 text-white">DNB SPARQL</span>
+            {totalRecords != null && (
+              <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-stone-700 text-white">
+                {totalRecords.toLocaleString()} GND records
+              </span>
+            )}
+            {translatedRecords != null && (
+              <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 bg-emerald-700 text-white">
+                {translatedRecords.toLocaleString()} translated to English
+              </span>
+            )}
+          </div>
+          <p className="text-[10px] font-mono text-stone-400 mb-2">
+            DDC class/division/section captions adapted from Wikipedia's{' '}
+            <a href="https://en.wikipedia.org/wiki/List_of_Dewey_Decimal_classes" target="_blank" rel="noopener noreferrer" className="underline hover:text-stone-600">
+              List of Dewey Decimal classes
+            </a>{' '}
+            (CC BY-SA 4.0) — official Dewey captions are an OCLC-licensed product and are not reproduced here.
+          </p>
+          <p className="text-sm text-stone-500">
+            Every GND (Gemeinsame Normdatei) authority record aligned to a Dewey Decimal Classification number, sourced live from the German National Library's SPARQL endpoint.
+            Select a mode, then click any entry to generate.
+          </p>
         </div>
-        <p className="text-[10px] font-mono text-stone-400 mb-2">
-          DDC class/division/section captions adapted from Wikipedia's{' '}
-          <a href="https://en.wikipedia.org/wiki/List_of_Dewey_Decimal_classes" target="_blank" rel="noopener noreferrer" className="underline hover:text-stone-600">
-            List of Dewey Decimal classes
-          </a>{' '}
-          (CC BY-SA 4.0) — official Dewey captions are an OCLC-licensed product and are not reproduced here.
-        </p>
-        <p className="text-sm text-stone-500">
-          Every GND (Gemeinsame Normdatei) authority record aligned to a Dewey Decimal Classification number, sourced live from the German National Library's SPARQL endpoint.
-          Select a mode, then click any entry to generate.
-        </p>
-      </div>
 
-      <div>
-        <p className="text-[10px] font-mono text-stone-400 uppercase tracking-widest mb-2">Generate as</p>
-        <div className="flex flex-wrap gap-1.5">
-          {MODES.map(m => (
-            <button key={m.key} onClick={() => setMode(m.key)}
-              className={`px-3 py-1.5 text-xs font-mono border transition-all ${
-                mode === m.key
-                  ? 'bg-stone-900 text-white border-stone-900'
-                  : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400 hover:text-stone-800'
-              }`}>
-              {m.label}
-            </button>
-          ))}
+        <div>
+          <p className="text-[10px] font-mono text-stone-400 uppercase tracking-widest mb-2">Generate as</p>
+          <div className="flex flex-wrap gap-1.5">
+            {MODES.map(m => (
+              <button key={m.key} onClick={() => setMode(m.key)}
+                className={`px-3 py-1.5 text-xs font-mono border transition-all ${
+                  mode === m.key
+                    ? 'bg-stone-900 text-white border-stone-900'
+                    : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400 hover:text-stone-800'
+                }`}>
+                {m.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <input
-        type="text"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        placeholder="Search GND records or DDC codes…"
-        className="w-full max-w-sm px-3 py-1.5 text-sm border border-stone-300 font-mono focus:outline-none focus:border-stone-500"
-      />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search GND records or DDC codes…"
+          className="w-full max-w-sm px-3 py-1.5 text-sm border border-stone-300 font-mono focus:outline-none focus:border-stone-500"
+        />
 
-      {search.trim() ? (
-        <div className="border border-stone-200 bg-white">
-          {search.trim().length < 2
-            ? <div className="p-4 text-sm text-stone-400 font-mono">Type at least 2 characters…</div>
-            : !flatData
-            ? <div className="p-4 text-sm text-stone-400 font-mono">Search index still loading…</div>
-            : searchResults.length === 0
-            ? <div className="p-4 text-sm text-stone-400 font-mono">No matches</div>
-            : searchResults.map((r, i) => {
-              const label = recordLabel(r);
-              return (
-                <div key={r.id + i} className="group flex items-center gap-2 px-3 py-2 border-b border-stone-50 hover:bg-stone-50 transition-colors">
-                  <button
-                    onClick={() => handleGenerate(`${label} (DDC ${r.d})`, mode)}
-                    className="flex-1 flex flex-col text-left min-w-0 gap-0.5"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <CodeBadge code={r.d} />
-                      <span className="text-sm text-stone-800 hover:underline decoration-stone-300 truncate">{label}</span>
-                      {r.le && r.le !== r.l && (
-                        <span className="text-[9px] font-mono text-stone-300 truncate">({r.l})</span>
-                      )}
-                    </div>
-                    <span className="text-[10px] font-mono text-stone-400 pl-5 truncate">{r.t}</span>
-                  </button>
-                  <a
-                    href={`https://lobid.org/gnd/${r.id}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="opacity-0 group-hover:opacity-100 shrink-0 text-[9px] font-mono px-1.5 py-0.5 border border-stone-200 text-stone-400 hover:bg-stone-800 hover:text-white hover:border-stone-800 transition-all"
-                  >GND</a>
+        {search.trim() ? (
+          <div className="border border-stone-200 bg-white">
+            {search.trim().length < 2
+              ? <div className="p-4 text-sm text-stone-400 font-mono">Type at least 2 characters…</div>
+              : !flatData
+              ? <div className="p-4 text-sm text-stone-400 font-mono">Search index still loading…</div>
+              : searchResults.length === 0
+              ? <div className="p-4 text-sm text-stone-400 font-mono">No matches</div>
+              : searchResults.map((r, i) => {
+                const label = recordLabel(r);
+                return (
+                  <div key={r.id + i} className="group flex items-center gap-2 px-3 py-2 border-b border-stone-50 hover:bg-stone-50 transition-colors">
+                    <button
+                      onClick={() => handleGenerate(`${label} (DDC ${r.d})`, mode)}
+                      className="flex-1 flex flex-col text-left min-w-0 gap-0.5"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <CodeBadge code={r.d} />
+                        <span className="text-sm text-stone-800 hover:underline decoration-stone-300 truncate">{label}</span>
+                        {r.le && r.le !== r.l && (
+                          <span className="text-[9px] font-mono text-stone-300 truncate">({r.l})</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-mono text-stone-400 pl-5 truncate">{r.t}</span>
+                    </button>
+                    <a
+                      href={`https://lobid.org/gnd/${r.id}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="opacity-0 group-hover:opacity-100 shrink-0 text-[9px] font-mono px-1.5 py-0.5 border border-stone-200 text-stone-400 hover:bg-stone-800 hover:text-white hover:border-stone-800 transition-all"
+                    >GND</a>
+                  </div>
+                );
+              })
+            }
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {Object.entries(tree).map(([rootKey, nodes]) => (
+              <div key={rootKey} className="border border-stone-200 bg-white">
+                <div className="px-3 py-1.5 bg-stone-50 border-b border-stone-100">
+                  <span className="text-[9px] font-mono text-stone-500 uppercase tracking-wide">{TABLE_LABELS[rootKey] || rootKey}</span>
                 </div>
-              );
-            })
-          }
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {Object.entries(tree).map(([rootKey, nodes]) => (
-            <div key={rootKey} className="border border-stone-200 bg-white">
-              <div className="px-3 py-1.5 bg-stone-50 border-b border-stone-100">
-                <span className="text-[9px] font-mono text-stone-500 uppercase tracking-wide">{TABLE_LABELS[rootKey] || rootKey}</span>
+                {nodes.map(root => (
+                  <NodeRow key={root.bucketKey} node={root} depth={0}
+                    openSet={openSet} onToggle={onToggle}
+                    onGenerate={handleGenerate} mode={mode} bucketIndex={bucketIndex} />
+                ))}
               </div>
-              {nodes.map(root => (
-                <NodeRow key={root.bucketKey} node={root} depth={0}
-                  openSet={openSet} onToggle={onToggle}
-                  onGenerate={handleGenerate} mode={mode} bucketIndex={bucketIndex} />
-              ))}
+            ))}
+          </div>
+        )}
+
+      </div>
+
+      {pathActive && (
+        <div className="hidden lg:block w-[420px] shrink-0 sticky top-4 border border-stone-200 bg-white max-h-[calc(100vh-2rem)] overflow-y-auto">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200 bg-stone-50 sticky top-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-xs font-mono font-bold text-stone-700 shrink-0">Reading Path</span>
+              <span className="text-sm text-stone-500 truncate">{readingPath.topic}</span>
+              {readingPath.status === 'loading' && (
+                <span className="flex gap-0.5 shrink-0">
+                  <span className="loading-dot" /><span className="loading-dot" /><span className="loading-dot" />
+                </span>
+              )}
             </div>
-          ))}
+            <button
+              onClick={readingPath.clear}
+              className="shrink-0 text-[9px] font-mono text-stone-400 hover:text-stone-700 px-2 py-0.5 border border-stone-200 hover:border-stone-400 transition-colors"
+            >
+              ✕ close
+            </button>
+          </div>
+          <div className="p-4">
+            <ReadingOrderView content={readingPath.content} isStreaming={readingPath.status === 'loading'} />
+          </div>
         </div>
       )}
 
-      {readingPath.status !== 'idle' && (
-        <div className="border border-stone-200 bg-white">
+      {pathActive && (
+        <div className="lg:hidden w-full border border-stone-200 bg-white">
           <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200 bg-stone-50">
             <div className="flex items-center gap-3 min-w-0">
               <span className="text-xs font-mono font-bold text-stone-700 shrink-0">Reading Path</span>

@@ -312,8 +312,12 @@ export default function UDCView({ onGenerate }) {
     newByDate[d].push(e);
   }
 
+  const pathActive = readingPath.status !== 'idle';
+
   return (
-    <div className="mt-8 space-y-5">
+    <div className="mt-8 flex gap-6 items-start">
+
+      <div className={`space-y-5 min-w-0 ${pathActive ? 'flex-1' : 'w-full'}`}>
 
       {/* Header */}
       <div className="border-b border-stone-200 pb-4">
@@ -476,9 +480,35 @@ export default function UDCView({ onGenerate }) {
         </>
       )}
 
-      {/* Inline reading path result (mode === 'path') */}
-      {readingPath.status !== 'idle' && (
-        <div className="border border-stone-200 bg-white">
+      </div>
+
+      {pathActive && (
+        <div className="hidden lg:block w-[420px] shrink-0 sticky top-4 border border-stone-200 bg-white max-h-[calc(100vh-2rem)] overflow-y-auto">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200 bg-stone-50 sticky top-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-xs font-mono font-bold text-stone-700 shrink-0">Reading Path</span>
+              <span className="text-sm text-stone-500 truncate">{readingPath.topic}</span>
+              {readingPath.status === 'loading' && (
+                <span className="flex gap-0.5 shrink-0">
+                  <span className="loading-dot" /><span className="loading-dot" /><span className="loading-dot" />
+                </span>
+              )}
+            </div>
+            <button
+              onClick={readingPath.clear}
+              className="shrink-0 text-[9px] font-mono text-stone-400 hover:text-stone-700 px-2 py-0.5 border border-stone-200 hover:border-stone-400 transition-colors"
+            >
+              ✕ close
+            </button>
+          </div>
+          <div className="p-4">
+            <ReadingOrderView content={readingPath.content} isStreaming={readingPath.status === 'loading'} />
+          </div>
+        </div>
+      )}
+
+      {pathActive && (
+        <div className="lg:hidden w-full border border-stone-200 bg-white">
           <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200 bg-stone-50">
             <div className="flex items-center gap-3 min-w-0">
               <span className="text-xs font-mono font-bold text-stone-700 shrink-0">Reading Path</span>
