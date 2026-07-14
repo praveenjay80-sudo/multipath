@@ -48,6 +48,7 @@ import FieldIntelligenceView from './components/FieldIntelligenceView';
 import MathExplorerView from './components/MathExplorerView';
 import ConceptTiersView from './components/ConceptTiersView';
 import UDCView from './components/UDCView';
+import DDCGndView from './components/DDCGndView';
 import AcademiaTopicsView from './components/AcademiaTopicsView';
 import { useAcademiaTopics } from './hooks/useAcademiaTopics';
 import OverallAggregatorInput from './components/OverallAggregatorInput';
@@ -189,7 +190,7 @@ export default function App() {
   const [shake, setShake] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [view, setView] = useState('canon');
-  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'doctoral' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'spectrum' | 'deepdive' | 'pulse' | 'intelligence' | 'math' | 'concepts' | 'udc' | 'academia' | 'overall' | 'sciencedirect' | 'ontologicalatlas' | 'mosttaught' | 'unified'
+  const [appMode, setAppMode] = useState('canon'); // 'canon' | 'reverse' | 'curriculum' | 'doctoral' | 'dissertation' | 'drift' | 'consilience' | 'inquiry' | 'spectrum' | 'deepdive' | 'pulse' | 'intelligence' | 'math' | 'concepts' | 'udc' | 'ddcgnd' | 'academia' | 'overall' | 'sciencedirect' | 'ontologicalatlas' | 'mosttaught' | 'unified'
 
   const parsed = useMemo(() => parseCanon(gen.content), [gen.content]);
 
@@ -481,6 +482,16 @@ export default function App() {
                   UDC
                 </button>
                 <button
+                  onClick={() => setAppMode('ddcgnd')}
+                  className={`px-4 py-2.5 text-sm font-mono -mb-px transition-colors ${
+                    appMode === 'ddcgnd'
+                      ? 'border-b-2 border-cyan-600 text-cyan-700 font-semibold'
+                      : 'border-b-2 border-transparent text-cyan-500 hover:text-cyan-700'
+                  }`}
+                >
+                  DDC-GND
+                </button>
+                <button
                   onClick={() => { setAppMode('academia'); if (academia.status === 'idle') academia.load(); }}
                   className={`px-4 py-2.5 text-sm font-mono -mb-px transition-colors ${
                     appMode === 'academia'
@@ -572,6 +583,8 @@ export default function App() {
                   ? 'Browse PhD research topics across every academic field — sourced live from phd.nthrys.com. Click any topic to generate its canon.'
                   : appMode === 'udc'
                   ? 'Universal Decimal Classification — 9,000+ subject codes from ETH Zurich\'s library across 9 main classes. Select a mode, click any code to generate. Check for newly added codes.'
+                  : appMode === 'ddcgnd'
+                  ? 'Dewey Decimal Classification aligned to the GND (Gemeinsame Normdatei) — the German National Library\'s authority file. 266,000+ GND records across Main Classes 000–999 plus the DDC auxiliary tables, sourced live from DNB\'s SPARQL endpoint. Select a mode, click any record to generate.'
                   : appMode === 'academia'
                   ? 'Academia.edu topic hierarchy — 25 disciplines, 661 subtopics, and 200,000+ research interest tags across all fields of scholarship. 3 levels deep, fully searchable.'
                   : appMode === 'sciencedirect'
@@ -1219,6 +1232,11 @@ export default function App() {
             {/* UDC */}
             {appMode === 'udc' && (
               <UDCView onGenerate={handleDoctoralTopicClick} />
+            )}
+
+            {/* DDC-GND */}
+            {appMode === 'ddcgnd' && (
+              <DDCGndView onGenerate={handleDoctoralTopicClick} />
             )}
 
             {/* Overall Aggregator */}
