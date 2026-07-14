@@ -100,18 +100,22 @@ async function fetchBio(name, inst, field, subfield) {
   } catch { return null; }
 }
 
-// "Last, First M." -> ["First M. Last", "First Last"] — a stored middle
-// initial can make OpenAlex's search come up empty or garbage even when the
-// person is indexed under their plain name; confirmed live ("Barry R. Simon"
-// -> one garbage result; "Barry Simon" -> correct Caltech match, top hit).
+// "Last, First M." -> { primary: ["First M. Last", "First Last"], lastName }
+// A stored middle initial can make OpenAlex's search come up empty or
+// garbage even when the person is indexed under their plain name; confirmed
+// live ("Barry R. Simon" -> one garbage result; "Barry Simon" -> correct
+// Caltech match, top hit). Separately, pasanhu.cn sometimes concatenates a
+// compound first name with no separator at all ("Shingtung" for the real
+// "Shing-Tung Yau") — that string returns zero OpenAlex results outright,
+// so `lastName` is exposed for a last-resort surname-only fallback.
 function toSearchNames(authfull) {
   const parts = authfull.split(',').map(s => s.trim());
-  if (parts.length !== 2) return [authfull];
+  if (parts.length !== 2) return { primary: [authfull], lastName: authfull };
   const [last, firstPart] = parts;
   const full = `${firstPart} ${last}`;
   const firstToken = firstPart.split(/\s+/)[0];
   const short = `${firstToken} ${last}`;
-  return short === full ? [full] : [full, short];
+  return { primary: short === full ? [full] : [full, short], lastName: last };
 }
 
 // Generic institutional words ("university", "college", "institute"...) would
@@ -145,32 +149,56 @@ function institutionOverlap(a, b) {
 // an exact-name search and got shown as if it were correct.
 const MIN_CONFIDENT_CITATIONS = 100;
 
+async function searchOpenAlexAuthors(names) {
+  const responses = await Promise.all(names.map(name => {
+    const params = new URLSearchParams({ search: name, 'per-page': '5', mailto: 'praveen.jay80@gmail.com' });
+    return fetch(`https://api.openalex.org/authors?${params}${openAlexAuth()}`).then(r => r.ok ? r.json() : null);
+  }));
+  const candidates = [];
+  const seen = new Set();
+  for (const data of responses) {
+    for (const c of (data?.results || [])) {
+      if (!seen.has(c.id)) { seen.add(c.id); candidates.push(c); }
+    }
+  }
+  return candidates;
+}
+
+function bestCandidate(candidates, instName) {
+  let best = null, bestScore = -1, bestOverlap = 0;
+  for (const c of candidates) {
+    const inst = c.last_known_institutions?.[0]?.display_name || c.affiliations?.[0]?.institution?.display_name || '';
+    const overlap = institutionOverlap(inst, instName);
+    const score = overlap * 100 + Math.log10((c.cited_by_count || 0) + 1);
+    if (score > bestScore) { bestScore = score; best = c; bestOverlap = overlap; }
+  }
+  return { best, bestOverlap };
+}
+
 async function fetchOpenAlexPublications(authfull, instName) {
   try {
-    const searchNames = toSearchNames(authfull);
-    const responses = await Promise.all(searchNames.map(name => {
-      const params = new URLSearchParams({ search: name, 'per-page': '5', mailto: 'praveen.jay80@gmail.com' });
-      return fetch(`https://api.openalex.org/authors?${params}${openAlexAuth()}`).then(r => r.ok ? r.json() : null);
-    }));
-    const candidates = [];
-    const seen = new Set();
-    for (const data of responses) {
-      for (const c of (data?.results || [])) {
-        if (!seen.has(c.id)) { seen.add(c.id); candidates.push(c); }
+    const { primary, lastName } = toSearchNames(authfull);
+    let candidates = await searchOpenAlexAuthors(primary);
+    let best, bestOverlap;
+
+    if (candidates.length > 0) {
+      ({ best, bestOverlap } = bestCandidate(candidates, instName));
+      if (bestOverlap === 0 && (best.cited_by_count || 0) < MIN_CONFIDENT_CITATIONS) best = null;
+    }
+
+    // Full/short name search found nothing usable — last resort: surname
+    // only. Noisier (common surnames pull in unrelated people), so an actual
+    // institution match is required rather than falling back to citation
+    // magnitude alone.
+    if (!best && lastName !== authfull) {
+      candidates = await searchOpenAlexAuthors([lastName]);
+      if (candidates.length > 0) {
+        ({ best, bestOverlap } = bestCandidate(candidates, instName));
+        if (bestOverlap === 0) best = null;
       }
     }
-    if (candidates.length === 0) return { ok: false, results: [] };
 
-    let best = null, bestScore = -1, bestOverlap = 0;
-    for (const c of candidates) {
-      const inst = c.last_known_institutions?.[0]?.display_name || c.affiliations?.[0]?.institution?.display_name || '';
-      const overlap = institutionOverlap(inst, instName);
-      const score = overlap * 100 + Math.log10((c.cited_by_count || 0) + 1);
-      if (score > bestScore) { bestScore = score; best = c; bestOverlap = overlap; }
-    }
-    if (bestOverlap === 0 && (best.cited_by_count || 0) < MIN_CONFIDENT_CITATIONS) {
-      return { ok: false, results: [] };
-    }
+    if (!best) return { ok: false, results: [] };
 
     const authorId = best.id.replace('https://openalex.org/', '');
     const wParams = new URLSearchParams({
