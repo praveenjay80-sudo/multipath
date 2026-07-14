@@ -97,10 +97,13 @@ function NodeRow({ node, depth, openSet, onToggle, onGenerate, mode, bucketIndex
         </button>
         <div className="flex-1 min-w-0 flex items-baseline gap-2">
           <CodeBadge code={node.code} />
-          <span className={`leading-snug ${depth === 0 ? 'font-semibold text-stone-900 text-sm' : depth === 1 ? 'font-medium text-stone-800 text-sm' : 'text-stone-700 text-xs'}`}>
-            DDC {node.code}
+          <span className={`leading-snug truncate ${depth === 0 ? 'font-semibold text-stone-900 text-sm' : depth === 1 ? 'font-medium text-stone-800 text-sm' : 'text-stone-700 text-xs'}`}>
+            {node.label ? node.label : `DDC ${node.code}`}
           </span>
-          <span className="text-[9px] font-mono text-stone-300">{node.count.toLocaleString()}</span>
+          {node.label && (
+            <span className="text-[9px] font-mono text-stone-300 shrink-0">{node.code}</span>
+          )}
+          <span className="text-[9px] font-mono text-stone-300 shrink-0">{node.count.toLocaleString()}</span>
         </div>
       </div>
 
@@ -201,6 +204,13 @@ export default function DDCGndView({ onGenerate }) {
             </span>
           )}
         </div>
+        <p className="text-[10px] font-mono text-stone-400 mb-2">
+          DDC class/division/section captions adapted from Wikipedia's{' '}
+          <a href="https://en.wikipedia.org/wiki/List_of_Dewey_Decimal_classes" target="_blank" rel="noopener noreferrer" className="underline hover:text-stone-600">
+            List of Dewey Decimal classes
+          </a>{' '}
+          (CC BY-SA 4.0) — official Dewey captions are an OCLC-licensed product and are not reproduced here.
+        </p>
         <p className="text-sm text-stone-500">
           Every GND (Gemeinsame Normdatei) authority record aligned to a Dewey Decimal Classification number, sourced live from the German National Library's SPARQL endpoint.
           Select a mode, then click any entry to generate.
