@@ -75,10 +75,11 @@ async function fetchBio(name, inst, field, subfield) {
   } catch { return null; }
 }
 
-async function fetchPublications(name) {
-  if (pubCache.has(name)) return pubCache.get(name);
+async function fetchPublications(name, apiKey, skipCache = false) {
+  if (!skipCache && pubCache.has(name)) return pubCache.get(name);
   try {
     const params = new URLSearchParams({ q: name, num: '10' });
+    if (apiKey) params.set('key', apiKey);
     const res = await fetch(`${WORKER_BASE}/scholar-search?${params}`);
     const data = await res.json().catch(() => null);
     if (!res.ok || !Array.isArray(data)) return { ok: false, results: [] };
@@ -87,6 +88,43 @@ async function fetchPublications(name) {
     pubCache.set(name, out);
     return out;
   } catch { return { ok: false, results: [] }; }
+}
+
+function ScholarKeyPrompt({ onSaved }) {
+  const hasSavedKey = !!localStorage.getItem('canon_serp_key');
+  const [draft, setDraft] = useState(() => localStorage.getItem('canon_serp_key') || '');
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    const v = draft.trim();
+    if (!v) return;
+    localStorage.setItem('canon_serp_key', v);
+    setSaving(true);
+    await onSaved(v);
+    setSaving(false);
+  }
+
+  return (
+    <div className="mt-1">
+      <p className="text-xs text-stone-400 mb-1.5">
+        {hasSavedKey
+          ? 'A saved SerpAPI key still failed — the shared quota is exhausted and this key may need checking.'
+          : 'The shared Google Scholar lookup is quota-limited. Add your own SerpAPI key to see results.'}
+      </p>
+      <div className="flex gap-1.5">
+        <input
+          type="password" value={draft} onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && save()}
+          placeholder="serpapi key..."
+          className="flex-1 px-2 py-1 text-xs border border-stone-200 bg-white text-stone-900 placeholder-stone-300 focus:outline-none focus:border-stone-700 font-mono"
+        />
+        <button onClick={save} disabled={!draft.trim() || saving}
+          className="px-3 py-1 text-xs bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-40 transition-colors shrink-0">
+          {saving ? 'Checking…' : 'Save'}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 async function fetchDetail(year, type, id) {
@@ -140,9 +178,16 @@ function ScientistDetail({ row, year, type, onSelect }) {
     setBioLoading(true);
     fetchBio(row.authfull, row.inst_name, row.field, row.subfield1).then(b => { setBio(b); setBioLoading(false); });
     setPubsLoading(true);
-    fetchPublications(row.authfull).then(p => { setPubs(p); setPubsLoading(false); });
+    fetchPublications(row.authfull, localStorage.getItem('canon_serp_key') || '').then(p => { setPubs(p); setPubsLoading(false); });
     setDetailLoading(true);
     fetchDetail(year, type, row.id).then(d => { setDetail(d); setDetailLoading(false); });
+  }
+
+  async function retryPubsWithKey(key) {
+    setPubsLoading(true);
+    const p = await fetchPublications(row.authfull, key, true);
+    setPubs(p);
+    setPubsLoading(false);
   }
 
   const highlights = useMemo(() => {
@@ -195,7 +240,7 @@ function ScientistDetail({ row, year, type, onSelect }) {
           </div>
         )}
         {!pubsLoading && (!pubs?.ok || pubs.results.length === 0) && (
-          <p className="text-xs text-stone-300 italic">No publications found via Google Scholar search.</p>
+          <ScholarKeyPrompt onSaved={retryPubsWithKey} />
         )}
       </div>
 
