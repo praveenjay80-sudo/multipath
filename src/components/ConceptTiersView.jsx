@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useReadingPath } from '../hooks/useReadingPath';
 import ReadingOrderView from './ReadingOrderView';
+import ExplainContent from './ExplainContent';
+import { resolveAnthropicApiKey, streamExplanation } from '../utils/explainConcept';
 
 const TIER_COLORS = [
   { bg: 'bg-violet-700', text: 'text-violet-700', active: 'bg-violet-700 text-white border-violet-700', hover: 'hover:bg-violet-700 hover:text-white hover:border-violet-700' },
@@ -8,110 +10,6 @@ const TIER_COLORS = [
   { bg: 'bg-teal-700',   text: 'text-teal-700',   active: 'bg-teal-700 text-white border-teal-700',     hover: 'hover:bg-teal-700 hover:text-white hover:border-teal-700'     },
   { bg: 'bg-amber-700',  text: 'text-amber-700',  active: 'bg-amber-700 text-white border-amber-700',   hover: 'hover:bg-amber-700 hover:text-white hover:border-amber-700'   },
 ];
-
-const EXPLAIN_SYSTEM = `You explain scientific concepts to complete beginners — people with no maths, no science, no jargon.
-
-Write in exactly this structure, using the section labels as written:
-
-ANALOGY
-One vivid, concrete everyday comparison from something anyone has experienced. Make it specific and surprising.
-
-WHAT IT IS
-Two short paragraphs in plain language. No equations. Build the idea from the analogy, step by step.
-
-REAL-LIFE EXAMPLES
-Three specific, named examples of where this concept appears in the real world — technologies, products, natural phenomena, everyday situations.
-• [Example 1]
-• [Example 2]
-• [Example 3]
-
-WHY IT MATTERS
-One sentence on why this concept is important or useful.`;
-
-const EXPLAIN_HEADERS = new Set(['ANALOGY', 'WHAT IT IS', 'REAL-LIFE EXAMPLES', 'WHY IT MATTERS']);
-
-function resolveApiKey() {
-  return import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('canon_api_key') || '';
-}
-
-async function streamExplanation(concept, apiKey, signal, onChunk) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 700,
-      stream: true,
-      system: EXPLAIN_SYSTEM,
-      messages: [{ role: 'user', content: `Explain "${concept}" to a complete beginner.` }],
-    }),
-    signal,
-  });
-
-  if (!res.ok) {
-    let msg = `API error ${res.status}`;
-    try { const err = await res.json(); msg = err.error?.message || msg; } catch {}
-    throw new Error(msg);
-  }
-
-  const reader = res.body.getReader();
-  const dec = new TextDecoder();
-  let buf = '', text = '';
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += dec.decode(value, { stream: true });
-      const lines = buf.split('\n'); buf = lines.pop() ?? '';
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const d = line.slice(6).trim();
-        if (!d || d === '[DONE]') continue;
-        try {
-          const ev = JSON.parse(d);
-          if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
-            text += ev.delta.text;
-            onChunk(text);
-          }
-        } catch {}
-      }
-    }
-  } finally { reader.releaseLock(); }
-  return text;
-}
-
-function ExplainContent({ text }) {
-  const lines = text.split('\n');
-  return (
-    <div className="text-sm text-stone-700 leading-relaxed">
-      {lines.map((line, i) => {
-        const trimmed = line.trim();
-        if (!trimmed) return null;
-        if (EXPLAIN_HEADERS.has(trimmed)) {
-          return (
-            <div key={i} className="text-[9px] font-mono font-bold uppercase tracking-widest text-stone-400 mt-5 mb-1.5 first:mt-0">
-              {trimmed}
-            </div>
-          );
-        }
-        if (trimmed.startsWith('•')) {
-          return (
-            <div key={i} className="flex gap-2 py-0.5">
-              <span className="text-stone-400 flex-shrink-0">•</span>
-              <span>{trimmed.slice(1).trim()}</span>
-            </div>
-          );
-        }
-        return <p key={i} className="mb-2 last:mb-0">{trimmed}</p>;
-      })}
-    </div>
-  );
-}
 
 function LoadingDots() {
   return (
@@ -145,7 +43,7 @@ export default function ConceptTiersView() {
   }
 
   async function handleExplain(concept) {
-    const apiKey = resolveApiKey();
+    const apiKey = resolveAnthropicApiKey();
     if (!apiKey) return;
     explAbortRef.current?.abort();
     explAbortRef.current = new AbortController();

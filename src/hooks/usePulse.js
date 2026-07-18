@@ -1,11 +1,8 @@
 import { useState, useCallback, useRef } from 'react';
 import { fetchTopicWorks, fetchTopicWorksByText, resolveOpenAlexTopicId, aggregateTopAuthors, fetchAuthorStats } from '../utils/pulseOpenAlex';
+import { resolveAnthropicApiKey, filterRelevantByTitle } from '../utils/claudeRelevance';
 
 const WORKER_BASE = 'https://canon-enrichment.canonworks.workers.dev';
-
-function resolveApiKey() {
-  return import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('canon_api_key') || '';
-}
 
 // Every other Claude caller in this app streams and explicitly filters for
 // text_delta events, skipping any other content-block type (e.g. thinking).
@@ -23,48 +20,13 @@ function extractText(data) {
 // a work that's genuinely unrelated (confirmed: Lions' calculus-of-variations
 // paper matched "Topological Quantum Field Theory" because it carries
 // "Mathematical Physics" as one of its OpenAlex subfields and mentions
-// "quantum field theory" in passing). Asks Claude to keep only works that are
-// actually about the topic. Fails soft to the unfiltered list on any error —
-// showing possibly-noisy results beats a blank panel from a transient failure.
+// "quantum field theory" in passing). Thin wrapper over the shared
+// filterRelevantByTitle (see claudeRelevance.js) — kept as a plain works[]
+// return here since every call site already treats wasClaudeValidated as
+// unconditionally true right after calling this.
 async function claudeValidateWorks(topicName, works) {
-  const apiKey = resolveApiKey();
-  if (!apiKey || !works.length) return works;
-
-  const list = works.map((w, i) => `${i}. ${w.title}${w.authors ? ` — ${w.authors}` : ''}${w.year ? ` (${w.year})` : ''}`).join('\n');
-  const system = `You check whether academic works genuinely belong to a specific research topic. Be strict: a work that merely shares a word with the topic name, or is from a different subfield that happens to mention it in passing, does not count.`;
-  const user = `Topic: "${topicName}"
-
-Works:
-${list}
-
-List only the numbers of works that are genuinely, substantively about this topic. One number per line, nothing else. If none qualify, respond with exactly: NONE`;
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 500,
-        system,
-        messages: [{ role: 'user', content: user }],
-      }),
-    });
-    if (!res.ok) return works;
-    const data = await res.json();
-    const text = extractText(data).trim();
-    if (/^NONE$/i.test(text)) return [];
-    const keep = new Set(text.split('\n').map(l => parseInt(l.trim(), 10)).filter(n => !Number.isNaN(n)));
-    if (!keep.size) return works;
-    return works.filter((_, i) => keep.has(i));
-  } catch {
-    return works;
-  }
+  const { items } = await filterRelevantByTitle(topicName, works);
+  return items;
 }
 
 // A pedagogical reading sequence for the Works panel's optional "Reading Order"
@@ -108,7 +70,7 @@ function normalizeStageName(s) {
 // links on each entry are a real, deterministic search — not AI-generated
 // — for exactly that purpose).
 async function generateReadingOrder(topicName, subfieldName) {
-  const apiKey = resolveApiKey();
+  const apiKey = resolveAnthropicApiKey();
   if (!apiKey) return null;
 
   const stageBlock = READING_STAGES.map(s => `STAGE: ${s}\n(${STAGE_DEFINITIONS[s]})`).join('\n\n');
@@ -173,7 +135,7 @@ Plain text only — no markdown bold/italic (**...**, *...*), no headers (#), no
 // invent: broadening to adjacent/less-famous-but-real work is fine, making
 // something up is not.
 async function retryEmptyStage(topicName, subfieldName, stage, alreadyListedTitles) {
-  const apiKey = resolveApiKey();
+  const apiKey = resolveAnthropicApiKey();
   if (!apiKey) return [];
 
   const topicLine = subfieldName
